@@ -1,0 +1,226 @@
+{
+	"back_backpack": [
+		140.0,
+		201.0
+	],
+	"back_cape": [
+		220.5,
+		0.0
+	],
+	"back_wings": [
+		227.0,
+		182.0
+	],
+	"glasses_heart": [
+		233.0,
+		120.5
+	],
+	"glasses_monocle": [
+		203.0,
+		199.0
+	],
+	"glasses_round": [
+		247.0,
+		115.5
+	],
+	"glasses_sun": [
+		247.0,
+		83.0
+	],
+	"hat_beanie": [
+		185.0,
+		391.0
+	],
+	"hat_cap": [
+		216.0,
+		195.0
+	],
+	"hat_chef": [
+		173.0,
+		367.0
+	],
+	"hat_cowboy": [
+		215.5,
+		301.0
+	],
+	"hat_crown": [
+		173.5,
+		366.0
+	],
+	"hat_flowers": [
+		224.0,
+		205.0
+	],
+	"hat_party": [
+		123.5,
+		414.0
+	],
+	"hat_pirate": [
+		216.0,
+		349.0
+	],
+	"hat_top": [
+		188.5,
+		375.0
+	],
+	"hat_wizard": [
+		196.0,
+		326.0
+	],
+	"icon_agility": [
+		172.0,
+		193.5
+	],
+	"icon_calendar": [
+		192.0,
+		223.0
+	],
+	"icon_charm": [
+		218.5,
+		221.5
+	],
+	"icon_clean": [
+		221.0,
+		204.0
+	],
+	"icon_decorate": [
+		219.5,
+		217.5
+	],
+	"icon_draw": [
+		247.5,
+		228.0
+	],
+	"icon_energy": [
+		235.0,
+		200.5
+	],
+	"icon_food": [
+		212.0,
+		163.0
+	],
+	"icon_fun": [
+		226.0,
+		137.0
+	],
+	"icon_heart": [
+		223.0,
+		215.0
+	],
+	"icon_heart_empty": [
+		223.0,
+		215.0
+	],
+	"icon_home": [
+		217.0,
+		204.5
+	],
+	"icon_lock": [
+		156.0,
+		193.0
+	],
+	"icon_pantry": [
+		203.0,
+		204.0
+	],
+	"icon_ribbon_1": [
+		175.0,
+		230.5
+	],
+	"icon_ribbon_2": [
+		173.5,
+		235.0
+	],
+	"icon_ribbon_3": [
+		175.5,
+		233.5
+	],
+	"icon_shop": [
+		227.0,
+		206.0
+	],
+	"icon_smarts": [
+		194.0,
+		231.5
+	],
+	"icon_speed": [
+		156.5,
+		234.0
+	],
+	"icon_stamina": [
+		218.5,
+		128.0
+	],
+	"icon_star": [
+		213.5,
+		213.5
+	],
+	"icon_strength": [
+		206.0,
+		131.5
+	],
+	"icon_toys": [
+		201.0,
+		206.5
+	],
+	"icon_trophy": [
+		211.0,
+		209.5
+	],
+	"icon_wardrobe": [
+		230.5,
+		219.5
+	],
+	"marker_glitter": [
+		185.0,
+		172.0
+	],
+	"marker_gold": [
+		185.5,
+		171.5
+	],
+	"marker_rainbow": [
+		185.5,
+		172.0
+	],
+	"neck_bandana": [
+		225.0,
+		0.0
+	],
+	"neck_bowtie": [
+		218.0,
+		127.0
+	],
+	"neck_medal": [
+		148.5,
+		0.0
+	],
+	"neck_scarf": [
+		221.0,
+		0.0
+	],
+	"trick_bow": [
+		194.0,
+		206.0
+	],
+	"trick_jump": [
+		232.0,
+		194.5
+	],
+	"trick_roll": [
+		226.0,
+		144.0
+	],
+	"trick_sit": [
+		201.0,
+		220.0
+	],
+	"trick_spin": [
+		193.5,
+		189.0
+	],
+	"trick_wave": [
+		227.0,
+		228.5
+	]
+}

@@ -1,0 +1,198 @@
+{
+	"biscuit_body": [
+		207.0,
+		123.5
+	],
+	"biscuit_ear": [
+		72.0,
+		156.0
+	],
+	"biscuit_eye": [
+		72.0,
+		80.0
+	],
+	"biscuit_head": [
+		38.0,
+		192.0
+	],
+	"biscuit_leg": [
+		42.0,
+		40.0
+	],
+	"biscuit_mouth": [
+		94.0,
+		62.0
+	],
+	"biscuit_tail": [
+		145.0,
+		128.0
+	],
+	"captain_fins_body": [
+		214.5,
+		135.0
+	],
+	"captain_fins_eye": [
+		78.0,
+		79.0
+	],
+	"captain_fins_fin": [
+		78.0,
+		139.0
+	],
+	"captain_fins_leg": [
+		48.0,
+		30.0
+	],
+	"captain_fins_mouth": [
+		90.0,
+		79.0
+	],
+	"captain_fins_tail": [
+		192.0,
+		127.0
+	],
+	"duchess_body": [
+		235.5,
+		131.0
+	],
+	"duchess_eye": [
+		72.0,
+		117.0
+	],
+	"duchess_hair": [
+		113.0,
+		177.0
+	],
+	"duchess_head": [
+		29.0,
+		188.0
+	],
+	"duchess_leg": [
+		58.0,
+		24.0
+	],
+	"duchess_mouth": [
+		81.0,
+		67.0
+	],
+	"duchess_wing": [
+		93.0,
+		194.0
+	],
+	"mango_body": [
+		213.0,
+		105.0
+	],
+	"mango_ear": [
+		58.0,
+		178.0
+	],
+	"mango_eye": [
+		72.0,
+		80.0
+	],
+	"mango_head": [
+		42.0,
+		195.0
+	],
+	"mango_leg": [
+		36.0,
+		36.0
+	],
+	"mango_mouth": [
+		89.0,
+		57.0
+	],
+	"mango_tail": [
+		191.0,
+		209.0
+	],
+	"noodle_antenna": [
+		8.0,
+		207.0
+	],
+	"noodle_body": [
+		234.0,
+		96.5
+	],
+	"noodle_eye": [
+		80.0,
+		81.0
+	],
+	"noodle_head": [
+		34.0,
+		205.0
+	],
+	"noodle_leg": [
+		32.0,
+		29.0
+	],
+	"noodle_mouth": [
+		93.0,
+		55.0
+	],
+	"puffles_antenna": [
+		8.0,
+		226.0
+	],
+	"puffles_body": [
+		201.0,
+		183.0
+	],
+	"puffles_eye": [
+		79.0,
+		83.0
+	],
+	"puffles_mouth": [
+		78.0,
+		56.0
+	],
+	"rocky_arm": [
+		32.0,
+		13.0
+	],
+	"rocky_body": [
+		225.0,
+		199.5
+	],
+	"rocky_eye": [
+		71.0,
+		76.0
+	],
+	"rocky_leg": [
+		61.0,
+		51.0
+	],
+	"rocky_mouth": [
+		103.0,
+		55.0
+	],
+	"zippy_body": [
+		238.0,
+		89.0
+	],
+	"zippy_eye": [
+		81.0,
+		87.0
+	],
+	"zippy_head": [
+		35.0,
+		140.0
+	],
+	"zippy_leg": [
+		38.0,
+		38.0
+	],
+	"zippy_mouth": [
+		104.0,
+		58.0
+	],
+	"zippy_spike": [
+		61.0,
+		105.0
+	],
+	"zippy_tail": [
+		313.0,
+		64.0
+	]
+}
