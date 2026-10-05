@@ -44,7 +44,7 @@ func _ready() -> void:
 	var size_group := ButtonGroup.new()
 	for id in Creature.SIZE_ORDER:
 		var words: Array = Creature.SIZE_LABELS[id]
-		var b := UI.button("%s\n%s" % [words[0], words[1]], pick_size.bind(id), Vector2(0, 76), 20)
+		var b := UI.icon_button("size_" + id, words[0], pick_size.bind(id), 44, Vector2(0, 84))
 		b.toggle_mode = true
 		b.button_group = size_group
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL

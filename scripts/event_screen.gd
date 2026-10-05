@@ -43,7 +43,7 @@ func _choose_kind() -> void:
 	col.add_theme_constant_override("separation", 14)
 	root.add_child(UI.full_rect(UI.margin(col, 24)))
 	var top := HBoxContainer.new()
-	top.add_child(UI.button("Back", func(): game.go_calendar(), Vector2(120, 64), 24))
+	top.add_child(UI.icon_button("tool_back", "Back", func(): game.go_calendar(), 40, Vector2(100, 84)))
 	var heading := UI.title("Fun Fair! Practise any event", 40)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(heading)
@@ -73,7 +73,7 @@ func _build() -> void:
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
-	top.add_child(UI.button("Back", func(): game.go_calendar(), Vector2(120, 64), 24))
+	top.add_child(UI.icon_button("tool_back", "Back", func(): game.go_calendar(), 40, Vector2(100, 84)))
 	top.add_child(UI.icon(Stats.INFO[stat]["icon"], 64))
 	var heading := UI.title(info["name"] + (" (practice)" if event["kind"] == "fair" else ""), 42)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL

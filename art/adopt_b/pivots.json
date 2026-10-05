@@ -1,0 +1,294 @@
+{
+	"blaze_arm": [
+		36.0,
+		35.0
+	],
+	"blaze_body": [
+		196.5,
+		133.5
+	],
+	"blaze_claw_on_arm": [
+		33.0,
+		18.0
+	],
+	"blaze_eye": [
+		77.0,
+		85.0
+	],
+	"blaze_head": [
+		35.0,
+		198.0
+	],
+	"blaze_horn": [
+		75.0,
+		141.0
+	],
+	"blaze_leg": [
+		44.0,
+		50.0
+	],
+	"blaze_mouth": [
+		91.0,
+		52.0
+	],
+	"blaze_spike": [
+		55.0,
+		115.0
+	],
+	"blaze_tail": [
+		351.0,
+		102.0
+	],
+	"blaze_wing": [
+		180.0,
+		257.0
+	],
+	"comet_antenna": [
+		24.0,
+		244.0
+	],
+	"comet_body": [
+		225.5,
+		204.5
+	],
+	"comet_eye": [
+		74.0,
+		82.0
+	],
+	"comet_mouth": [
+		72.0,
+		44.0
+	],
+	"comet_wing": [
+		131.0,
+		98.0
+	],
+	"gizmo_body": [
+		166.0,
+		155.5
+	],
+	"gizmo_ear": [
+		69.0,
+		259.0
+	],
+	"gizmo_eye": [
+		78.0,
+		88.0
+	],
+	"gizmo_leg": [
+		23.0,
+		30.0
+	],
+	"gizmo_mouth": [
+		81.0,
+		49.0
+	],
+	"gizmo_wing": [
+		249.0,
+		287.0
+	],
+	"hoot_body": [
+		172.0,
+		178.0
+	],
+	"hoot_claw": [
+		37.0,
+		56.0
+	],
+	"hoot_ear": [
+		57.0,
+		179.0
+	],
+	"hoot_eye": [
+		97.0,
+		102.0
+	],
+	"hoot_leg": [
+		48.0,
+		23.0
+	],
+	"hoot_mouth": [
+		75.0,
+		70.0
+	],
+	"hoot_wing": [
+		153.0,
+		150.0
+	],
+	"pelly_body": [
+		229.0,
+		118.0
+	],
+	"pelly_eye": [
+		72.0,
+		115.0
+	],
+	"pelly_foot": [
+		26.0,
+		45.0
+	],
+	"pelly_head": [
+		35.0,
+		181.0
+	],
+	"pelly_leg": [
+		20.0,
+		29.0
+	],
+	"pelly_mouth": [
+		129.0,
+		148.0
+	],
+	"pelly_wing": [
+		114.0,
+		279.0
+	],
+	"petal_body": [
+		207.0,
+		110.5
+	],
+	"petal_ear": [
+		56.0,
+		154.0
+	],
+	"petal_eye": [
+		77.0,
+		83.0
+	],
+	"petal_head": [
+		37.0,
+		193.0
+	],
+	"petal_leg": [
+		36.0,
+		34.0
+	],
+	"petal_mouth": [
+		78.0,
+		52.0
+	],
+	"petal_tail": [
+		196.0,
+		200.0
+	],
+	"petal_wing": [
+		172.0,
+		297.0
+	],
+	"ptera_body": [
+		183.5,
+		106.5
+	],
+	"ptera_claw": [
+		36.0,
+		55.0
+	],
+	"ptera_eye": [
+		76.0,
+		79.0
+	],
+	"ptera_head": [
+		32.0,
+		140.0
+	],
+	"ptera_horn": [
+		183.0,
+		192.0
+	],
+	"ptera_leg": [
+		35.0,
+		33.0
+	],
+	"ptera_mouth": [
+		102.0,
+		75.0
+	],
+	"ptera_tail": [
+		368.0,
+		76.0
+	],
+	"ptera_wing": [
+		224.0,
+		402.0
+	],
+	"skye_body": [
+		200.5,
+		143.5
+	],
+	"skye_eye": [
+		77.0,
+		119.0
+	],
+	"skye_mouth": [
+		106.0,
+		49.0
+	],
+	"skye_tail": [
+		252.0,
+		162.0
+	],
+	"skye_wing": [
+		106.0,
+		189.0
+	],
+	"twinkle_antenna": [
+		8.0,
+		222.0
+	],
+	"twinkle_body": [
+		194.0,
+		115.0
+	],
+	"twinkle_eye": [
+		81.0,
+		123.0
+	],
+	"twinkle_hair": [
+		81.0,
+		139.0
+	],
+	"twinkle_head": [
+		32.0,
+		195.0
+	],
+	"twinkle_leg": [
+		25.0,
+		29.0
+	],
+	"twinkle_mouth": [
+		75.0,
+		47.0
+	],
+	"twinkle_wing": [
+		132.0,
+		192.0
+	],
+	"zephyr_body": [
+		213.5,
+		91.0
+	],
+	"zephyr_eye": [
+		82.0,
+		84.0
+	],
+	"zephyr_head": [
+		34.0,
+		171.0
+	],
+	"zephyr_leg": [
+		33.0,
+		35.0
+	],
+	"zephyr_mouth": [
+		89.0,
+		50.0
+	],
+	"zephyr_tail": [
+		371.0,
+		97.0
+	],
+	"zephyr_wing": [
+		136.0,
+		316.0
+	]
+}

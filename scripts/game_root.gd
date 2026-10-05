@@ -97,6 +97,49 @@ func go_place(home_id: String, focus := "", first_visit := false) -> void:
 	show_screen(s)
 
 
+## Building a home on an empty plot, then back home to see it.
+func go_build_home() -> void:
+	if game_free_plots() <= 0:
+		go_shop()
+		return
+	var s := BuildHomeScreen.new()
+	s.game = self
+	s.on_done = func(_h: Dictionary): go_home()
+	show_screen(s)
+
+
+func game_free_plots() -> int:
+	return profile.free_plots()
+
+
+## Adopting a pet from the shop: it chooses a home (building one if needed), the stars are paid
+## once it has moved in, and then you meet it at home.
+func adopt(id: String) -> void:
+	var price := Adoptables.price(id)
+	if profile.stars() < price:
+		toast("You need %d more stars." % (price - profile.stars()), "icon_star")
+		return
+	if not profile.can_add_pet():
+		toast("Every home is full! Get more room in the shop first.", "icon_home")
+		return
+	var pet := Adoptables.adopt(id)
+	var s := HomePickerScreen.new()
+	s.game = self
+	s.pet = pet
+	s.on_cancel = func(): go_shop()
+	s.on_done = func(h: Dictionary):
+		if not profile.spend(price):
+			go_shop()
+			return
+		profile.move_in(pet, h)
+		profile.adopted().append(id)
+		profile.save()
+		PetStore.save_pet(pet, true)
+		toast("%s is part of the family!" % pet["name"], "ui_adopt")
+		go_place(h["id"], pet["id"], true)
+	show_screen(s)
+
+
 func go_shop(back := Callable()) -> void:
 	var s := ShopScreen.new()
 	s.game = self

@@ -93,18 +93,38 @@ static func _add_shine(pet: Dictionary, part: Dictionary, type: String, shine: D
 	part["shine_image"] = file
 
 
-## Which drawing a type attaches to (the head if there is one and it is a face part, else the
-## body), and where on it as a fraction of its ink box.
-static func attach_ref(pet: Dictionary, type: String) -> Dictionary:
+## What a type goes on when nothing says otherwise: face parts on the head (or the body if
+## there is no head), hands on arms, feet and claws on legs, everything else on the body.
+static func default_host(pet: Dictionary, type: String) -> String:
+	var host: String = PartTypes.info(type).get("host", "body")
+	if host != "body" and not has_type(pet, host):
+		return "body"
+	return host
+
+
+## Every part an add-on can go on, of one host type - all four legs get a foot each.
+static func parts_of(pet: Dictionary, host: String) -> Array:
+	if host == "body":
+		return [find(pet, "body")]
+	var out := []
+	for p in pet["parts"]:
+		if p["type"] == host:
+			out.append(p)
+	return out
+
+
+## Where on the host's drawing a type attaches, as a fraction of its ink box. `headless` is a
+## creature whose face is on its body - arms then go under the face, not across it.
+static func anchor_uv(type: String, host: String, headless := false) -> Vector2:
 	var info := PartTypes.info(type)
-	var h := head(pet)
-	if info.get("ref", "body") == "head" and not h.is_empty():
-		return {"part": h, "uv": info["anchor"]}
-	var uv: Vector2 = info.get("body_anchor", info.get("anchor", Vector2(0.5, 0.5)))
-	return {"part": find(pet, "body"), "uv": uv}
+	if host == "body" and info.get("host", "body") == "head":
+		return info.get("body_anchor", info.get("anchor", Vector2(0.5, 0.5)))
+	if headless and info.has("headless_anchor"):
+		return info["headless_anchor"]
+	return info.get("anchor", Vector2(0.5, 0.5))
 
 
-## The anchor in the reference drawing's own pixels. With an edge direction it walks from the
+## The anchor in the host drawing's own pixels. With an edge direction it walks from the
 ## anchor to the last ink in that direction, then tucks back inside the outline a little, so a
 ## leg lands on the bottom of the body the kid actually drew rather than on its bounding box.
 static func anchor_px(img: Image, uv: Vector2, edge: Vector2) -> Vector2:
@@ -123,59 +143,92 @@ static func anchor_px(img: Image, uv: Vector2, edge: Vector2) -> Vector2:
 	return last - edge * 8.0
 
 
-## The reference drawing shown faintly on the sheet while a part is drawn, placed so the
-## anchor sits on the red dot at the sheet's zoom. Draw a leg over this and it comes out the
-## right size, in the right place, first time. Empty for the body.
-static func ghost(pet: Dictionary, type: String) -> Dictionary:
+## The host's drawing shown faintly on the sheet while a part is drawn, placed so the anchor
+## sits on the red dot at the sheet's zoom. Draw a leg over this and it comes out the right
+## size, in the right place, first time. Empty for the body.
+static func ghost(pet: Dictionary, type: String, host := "") -> Dictionary:
 	if type == "body" or not PartTypes.TYPES.has(type):
 		return {}
-	var ref := attach_ref(pet, type)
-	var rp: Dictionary = ref["part"]
-	if rp.is_empty():
+	if host == "":
+		host = default_host(pet, type)
+	var hosts := parts_of(pet, host)
+	if hosts.is_empty() or hosts[0].is_empty():
 		return {}
+	var hp: Dictionary = hosts[0]
+	return ghost_on(pet["_img"][hp["image"]], float(hp["draw_scale"]) * float(hp["scale"]), type, host,
+		not has_type(pet, "head"))
+
+
+## The same, from a host drawing that is not on the pet yet - the head still being drawn when
+## the kid adds its horns.
+static func ghost_on(host_img: Image, host_scale: float, type: String, host: String,
+		headless := false) -> Dictionary:
 	var info := PartTypes.info(type)
-	var img: Image = pet["_img"][rp["image"]]
-	var a := anchor_px(img, ref["uv"], info.get("edge", Vector2.ZERO))
-	var gs := float(info["zoom"]) * float(rp["draw_scale"]) * float(rp["scale"])
+	var a := anchor_px(host_img, anchor_uv(type, host, headless), info.get("edge", Vector2.ZERO))
+	var gs := float(info["zoom"]) * host_scale
 	var dot: Vector2 = info["dot"]
-	return {"image": img, "rect": Rect2(dot - a * gs, Vector2(img.get_size()) * gs)}
+	return {"image": host_img, "rect": Rect2(dot - a * gs, Vector2(host_img.get_size()) * gs)}
 
 
-## Adds `count` copies of one drawn part, laid out where they most likely go: legs fanned
-## along the bottom of the body in near/far pairs, eyes side by side on the head, and so on.
-## The kid can move all of it in the assembly screen; this just makes the first look good.
+## Adds `count` copies of one drawn part to EVERY part of the host type, laid out where they
+## most likely go: legs fanned along the bottom of the body in near/far pairs, eyes side by side
+## on each head, a hand on the end of each arm. The kid can move all of it in the assembly
+## screen; this just makes the first look good.
 static func add_parts(pet: Dictionary, type: String, count: int, img: Image, pivot: Vector2,
-		shine := {}) -> void:
-	var file := type + ".png"
+		shine := {}, host := "") -> void:
+	if host == "":
+		host = default_host(pet, type)
+	var file := type + ".png" if host == "body" or host == PartTypes.info(type).get("host", "body") 		else "%s_on_%s.png" % [type, host]
 	pet["_img"][file] = img
 	var info := PartTypes.info(type)
-	var ref := attach_ref(pet, type)
-	var rp: Dictionary = ref["part"]
-	var rimg: Image = pet["_img"][rp["image"]]
-	var rsize := Vector2(rimg.get_size())
-	var rscale := float(rp["draw_scale"]) * float(rp["scale"])
+	for hp in parts_of(pet, host):
+		if hp.is_empty():
+			continue
+		var rimg: Image = pet["_img"][hp["image"]]
+		var on_body := host == "body"
+		var spots := layout_on_host(type, host, count, rimg, sprite_xform(hp),
+			float(hp["draw_scale"]) * float(hp["scale"]), not has_type(pet, "head"))
+		for spot in spots:
+			pet["parts"].append({
+				"id": "%s_%d" % [type, _next_index(pet, type)], "type": type, "image": file,
+				"pivot": arr(pivot), "draw_scale": 1.0 / float(info["zoom"]), "scale": 1.0,
+				"pos": arr(spot["pos"]), "rot": 0.0 if on_body else float(hp["rot"]),
+				"flip": false if on_body else bool(hp["flip"]),
+				"behind": spot["behind"], "parent": hp["id"],
+				# A far-side host's add-ons are far-side too, so they are shaded with it.
+				"pair": spot["pair"], "side": maxi(int(spot["side"]), int(hp.get("side", 0))),
+			})
+			_add_shine(pet, pet["parts"][pet["parts"].size() - 1], type, shine)
+
+
+## Where `count` copies of a type go on one host drawing: [{pos, pair, side, behind}], with pos
+## mapped through `host_x` (host image pixels -> wherever the caller wants: body space for a
+## pet, the drawing sheet for a preview).
+static func layout_on_host(type: String, host: String, count: int, host_img: Image,
+		host_x: Transform2D, host_scale: float, headless := false) -> Array:
+	var info := PartTypes.info(type)
 	var paired: bool = info["pairs"]
 	var groups := ceili(count / 2.0) if paired else count
 	var spread: float = info["spread"]
+	var uv0 := anchor_uv(type, host, headless)
+	var size := Vector2(host_img.get_size())
+	var out := []
 	for i in count:
 		var g := i / 2 if paired else i
 		var side := i % 2 if paired else 0
-		var uv: Vector2 = ref["uv"]
+		var uv := uv0
 		if groups > 1:
 			uv.x += spread * (g / float(groups - 1) * 2.0 - 1.0)
-		var a := anchor_px(rimg, uv, info.get("edge", Vector2.ZERO))
-		var pos := v2(rp["pos"]) + (a - v2(rp["pivot"])) * rscale
-		if side == 1:
-			var far: Vector2 = info.get("far", Vector2(-0.07, -0.02))
-			pos += far * rsize * rscale
-		pet["parts"].append({
-			"id": "%s_%d" % [type, _next_index(pet, type)], "type": type, "image": file,
-			"pivot": arr(pivot), "draw_scale": 1.0 / float(info["zoom"]), "scale": 1.0,
-			"pos": arr(pos), "rot": 0.0, "flip": false,
-			"behind": side == 1 or BEHIND_TYPES.has(type), "parent": rp["id"],
-			"pair": g, "side": side,
-		})
-		_add_shine(pet, pet["parts"][pet["parts"].size() - 1], type, shine)
+		var far: Vector2 = info.get("far", Vector2(-0.07, -0.02)) if side == 1 else Vector2.ZERO
+		# The far copy is moved along BEFORE walking to the edge, so it lands on the outline
+		# there too - a far ear on a round head sits on the head, not in the air beside it.
+		uv.x += far.x
+		var a := anchor_px(host_img, uv, info.get("edge", Vector2.ZERO))
+		var pos: Vector2 = host_x * a
+		pos.y += far.y * size.y * host_scale
+		out.append({"pos": pos, "pair": g, "side": side,
+			"behind": side == 1 or BEHIND_TYPES.has(type)})
+	return out
 
 
 static func _next_index(pet: Dictionary, type: String) -> int:
@@ -287,15 +340,20 @@ static func flip_group(pet: Dictionary, id: String) -> void:
 		p["flip"] = not p["flip"]
 
 
-## After a drop: a part whose joint lands on the head's ink rides on the head from now on, and
-## one dragged off it goes back to the body.
+## After a drop: an add-on whose joint lands on a head's, arm's or leg's ink rides on that part
+## from then on; dropped anywhere else it rides on the body. Main parts always ride on the body.
 static func reattach(pet: Dictionary, id: String) -> void:
 	var p := find(pet, id)
-	var h := head(pet)
-	if p.is_empty() or p["type"] == "body" or p["type"] == "head":
+	if p.is_empty() or p["type"] == "body" or PartTypes.MAIN.has(p["type"]):
 		return
-	var on_head := not h.is_empty() and ink_at(pet, h, v2(p["pos"]))
-	p["parent"] = h["id"] if on_head else "body"
+	var at := v2(p["pos"])
+	var order := draw_order(pet)
+	order.reverse()
+	for h in order:
+		if PartTypes.MAIN.has(h["type"]) and h["id"] != id and ink_at(pet, h, at):
+			p["parent"] = h["id"]
+			return
+	p["parent"] = "body"
 
 
 static func copy_part(pet: Dictionary, id: String) -> Dictionary:

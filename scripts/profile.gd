@@ -142,12 +142,39 @@ func home(id: String) -> Dictionary:
 	return {}
 
 
+func free_plots() -> int:
+	return home_slots() - homes().size()
+
+
+## A home's name, falling back to its place for homes from before homes had names.
+static func home_name(h: Dictionary) -> String:
+	var n: String = h.get("name", "")
+	return n if n != "" else Places.display_name(h.get("place", "meadow"))
+
+
+func adopted() -> Array:
+	if not data.has("adopted"):
+		data["adopted"] = []
+	return data["adopted"]
+
+
 func home_slots() -> int:
 	return int(data["home_slots"])
 
 
-func add_home(place: String) -> Dictionary:
+## Builds a home on a free plot - a ready-built one from Homes.PREMADE, with the kid's name for it.
+func build_home(premade: String, home_name: String) -> Dictionary:
+	var info := Homes.info(premade)
+	var h := add_home(info.get("place", "meadow"), home_name)
+	h["premade"] = premade
+	h["items"] = Homes.starting_items(premade)
+	save()
+	return h
+
+
+func add_home(place: String, home_name := "") -> Dictionary:
 	var h := {"id": "home_%d" % (homes().size() + 1 + randi() % 1000), "place": place,
+		"name": home_name if home_name != "" else Places.display_name(place),
 		"rooms": START_ROOMS, "pets": [], "items": []}
 	homes().append(h)
 	save()

@@ -1,10 +1,16 @@
 class_name DrawScreen
 extends Control
 ## The drawing step: one sheet, a crayon box, and a prompt saying what to draw. Used for the
-## body, every part, the favourite food and the favourite toy.
+## body, heads, arms, legs and everything added to them, and for food, toys, furniture and
+## clothes. Every button is a picture (.ai/art-direction.md): an eraser button IS an eraser.
 ##
-## Set the fields, then add it to the tree. `on_done` gets {image, pivot}, or {} when the kid
-## skipped an optional part.
+## Drawing a host (the body, a head, an arm, a leg) it also shows the ADD-ONS - the things
+## that go on it: tap "Horns" and the horn sheet opens with this head faint on it; finish the
+## horn and you come back here, the horns now showing on the head. Some add-ons are required
+## (every creature needs eyes and a mouth) and Done says so until they are there.
+##
+## Set the fields, then add it to the tree. `on_done` gets {image, pivot, shine, count}, or {}
+## when the kid skipped an optional part.
 
 var subject := "body"
 var prompt := ""
@@ -18,22 +24,37 @@ var skip_text := "Skip"
 var markers := {}
 var on_done := Callable()
 
+## A "How many?" stepper when > 0 (add-on sheets): the starting count, and its limit.
+var count := 0
+var count_max := 1
+## Add-ons for a host: the types the kid can add, what they have added (type -> {count,
+## image}), which ones they must add, and what to call when one is tapped or removed.
+var host_label := ""
+var addons: Array = []
+var added := {}
+var required: Array = []
+var on_addon := Callable()
+var on_remove_addon := Callable()
+
 var canvas: DrawCanvas
 var _message: Label
 var _tool_buttons := {}
+var _addon_box: HFlowContainer
+var _addon_buttons := {}
+var _count_label: Label
 var _done := false
 
 
 func _ready() -> void:
 	add_child(UI.paper_background())
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 24)
-	add_child(UI.full_rect(UI.margin(row, 20)))
+	row.add_theme_constant_override("separation", 22)
+	add_child(UI.full_rect(UI.margin(row, 18)))
 
 	var holder := AspectRatioContainer.new()
 	holder.ratio = 1.0
 	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	holder.size_flags_stretch_ratio = 1.4
+	holder.size_flags_stretch_ratio = 1.35
 	row.add_child(holder)
 	canvas = DrawCanvas.new()
 	holder.add_child(canvas)
@@ -41,22 +62,22 @@ func _ready() -> void:
 
 	var side := VBoxContainer.new()
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	side.add_theme_constant_override("separation", 12)
+	side.add_theme_constant_override("separation", 8)
 	row.add_child(side)
 
 	if step_text != "":
-		var step := UI.label(step_text, 20)
+		var step := UI.label(step_text, 18)
 		step.add_theme_color_override("font_color", UI.INK_SOFT)
 		side.add_child(step)
-	side.add_child(UI.label(prompt, 26, true))
-	_message = UI.label("", 22, true)
+	side.add_child(UI.label(prompt, 22, true))
+	_message = UI.label("", 19, true)
 	_message.add_theme_color_override("font_color", Color("#d0482a"))
 	side.add_child(_message)
 
 	var colours := GridContainer.new()
-	colours.columns = 7
-	colours.add_theme_constant_override("h_separation", 8)
-	colours.add_theme_constant_override("v_separation", 8)
+	colours.columns = 8
+	colours.add_theme_constant_override("h_separation", 6)
+	colours.add_theme_constant_override("v_separation", 6)
 	var colour_group := ButtonGroup.new()
 	for c in UI.PALETTE:
 		colours.add_child(_swatch(c, colour_group))
@@ -64,45 +85,62 @@ func _ready() -> void:
 		colours.add_child(_marker_swatch(mode, int(markers[mode]), colour_group))
 	side.add_child(colours)
 
-	var sizes := HBoxContainer.new()
-	var size_group := ButtonGroup.new()
-	for entry in [["Thin", 6.0], ["Medium", 12.0], ["Thick", 24.0]]:
-		var b := _toggle(entry[0], size_group, func(): canvas.brush = entry[1])
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.button_pressed = entry[1] == 12.0
-		sizes.add_child(b)
-	side.add_child(sizes)
-
+	# Brush sizes, then the tools, then undo and clear - all pictures.
 	var tools := HBoxContainer.new()
+	tools.add_theme_constant_override("separation", 6)
+	var size_group := ButtonGroup.new()
+	for entry in [[6.0, 5.0], [12.0, 9.0], [24.0, 15.0]]:
+		var b := _picture_toggle("", size_group, func(): canvas.brush = entry[0])
+		var d := SizeDot.new()
+		d.radius = entry[1]
+		b.add_child(UI.full_rect(d))
+		b.button_pressed = entry[0] == 12.0
+		tools.add_child(b)
+	tools.add_child(VSeparator.new())
 	var tool_group := ButtonGroup.new()
-	var tool_list := [["Crayon", DrawCanvas.Tool.PEN], ["Fill", DrawCanvas.Tool.FILL],
-		["Eraser", DrawCanvas.Tool.ERASER]]
+	var tool_list := [["tool_crayon", DrawCanvas.Tool.PEN], ["tool_fill", DrawCanvas.Tool.FILL],
+		["tool_eraser", DrawCanvas.Tool.ERASER]]
 	if show_dot:
-		tool_list.append(["Move dot", DrawCanvas.Tool.DOT])
+		tool_list.append(["tool_dot", DrawCanvas.Tool.DOT])
 	for entry in tool_list:
-		var b := _toggle(entry[0], tool_group, func(): canvas.tool = entry[1])
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var b := _picture_toggle(entry[0], tool_group, func(): canvas.tool = entry[1])
 		b.button_pressed = entry[1] == DrawCanvas.Tool.PEN
 		_tool_buttons[entry[1]] = b
 		tools.add_child(b)
+	tools.add_child(VSeparator.new())
+	tools.add_child(_picture_button("tool_undo", func(): canvas.undo()))
+	tools.add_child(_picture_button("tool_clear", func(): canvas.clear()))
 	side.add_child(tools)
 
-	var edits := HBoxContainer.new()
-	for entry in [["Undo", func(): canvas.undo()], ["Clear", func(): canvas.clear()]]:
-		var b := UI.button(entry[0], entry[1], Vector2(0, 64), 24)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		edits.add_child(b)
-	side.add_child(edits)
+	if count > 0:
+		var stepper := HBoxContainer.new()
+		stepper.add_child(UI.label("How many?", 22))
+		stepper.add_child(_picture_button("ui_minus", func(): _change_count(-1)))
+		_count_label = UI.label(str(count), 30)
+		_count_label.custom_minimum_size = Vector2(40, 0)
+		_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stepper.add_child(_count_label)
+		stepper.add_child(_picture_button("ui_plus", func(): _change_count(1)))
+		side.add_child(stepper)
+
+	if not addons.is_empty():
+		side.add_child(UI.label("Add to %s:" % host_label, 20))
+		_addon_box = HFlowContainer.new()
+		_addon_box.add_theme_constant_override("h_separation", 6)
+		_addon_box.add_theme_constant_override("v_separation", 6)
+		side.add_child(_addon_box)
+		refresh_addons()
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(spacer)
 
 	var finish := HBoxContainer.new()
+	finish.add_theme_constant_override("separation", 8)
 	if can_skip:
-		var skip := UI.button(skip_text, func(): _finish({}), Vector2(140, 84))
-		finish.add_child(skip)
-	var done := UI.big_button("Done!", press_done)
+		finish.add_child(UI.icon_button("tool_skip" if skip_text == "Skip" else "tool_back", skip_text,
+			func(): _finish({}), 40, Vector2(110, 84)))
+	var done := UI.big_icon_button("tool_done", "Done!", press_done)
 	done.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	finish.add_child(done)
 	side.add_child(finish)
@@ -112,16 +150,75 @@ func _ready() -> void:
 		canvas.set_ghost(ghost["image"], ghost["rect"])
 
 
+## The add-on buttons: a part picture (or the kid's own drawing once added, with how many),
+## a cross to take it off again, and a red ring on the ones still needed.
+func refresh_addons() -> void:
+	if _addon_box == null:
+		return
+	for c in _addon_box.get_children():
+		c.queue_free()
+	_addon_buttons.clear()
+	for type in addons:
+		var has: bool = added.has(type)
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(76, 82)
+		b.tooltip_text = PartTypes.info(type)["plural"]
+		if required.has(type) and not has:
+			b.add_theme_stylebox_override("normal", UI._box(Color("#fff3f0"), Color("#d0482a"), 4))
+		elif has:
+			b.add_theme_stylebox_override("normal", UI._box(Color("#eef8e6"), UI.GOOD.darkened(0.3), 3))
+		var pic: TextureRect
+		if has:
+			pic = TextureRect.new()
+			pic.texture = ImageTexture.create_from_image(added[type]["image"])
+			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			pic.custom_minimum_size = Vector2(46, 46)
+			pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		else:
+			pic = UI.icon(PartTypes.icon(type), 46)
+		pic.position = Vector2(15, 4)
+		pic.size = Vector2(46, 46)
+		b.add_child(pic)
+		var l := UI.label(PartTypes.info(type)["plural"], 12)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.position = Vector2(0, 54)
+		l.size = Vector2(76, 22)
+		b.add_child(l)
+		if has:
+			var n := UI.title("x%d" % int(added[type]["count"]), 15)
+			n.position = Vector2(50, 0)
+			n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(n)
+			var x := UI.button("x", func(): on_remove_addon.call(type), Vector2(26, 26), 14)
+			x.position = Vector2(-6, -6)
+			b.add_child(x)
+		b.pressed.connect(func(): on_addon.call(type))
+		_addon_buttons[type] = b
+		_addon_box.add_child(b)
+
+
+## Shows the add-ons in place on the drawing so far (DrawCanvas.set_previews).
+func set_previews(list: Array) -> void:
+	canvas.set_previews(list)
+
+
+func _change_count(by: int) -> void:
+	count = clampi(count + by, 1, count_max)
+	_count_label.text = str(count)
+
+
 func _swatch(c: Color, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(52, 52)
+	b.custom_minimum_size = Vector2(48, 48)
 	var light := c.get_luminance() > 0.8
 	for state in ["normal", "hover"]:
-		b.add_theme_stylebox_override(state, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 26))
+		b.add_theme_stylebox_override(state, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 24))
 	for state in ["pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(state, UI._box(c, UI.ACCENT, 7, 26))
+		b.add_theme_stylebox_override(state, UI._box(c, UI.ACCENT, 7, 24))
 	b.button_pressed = c == UI.PALETTE[0]
 	b.pressed.connect(func():
 		canvas.color = c
@@ -132,13 +229,13 @@ func _swatch(c: Color, group: ButtonGroup) -> Button:
 
 
 ## A shiny marker: draws in gold, rainbow or glitter. Used up when the drawing is finished.
-func _marker_swatch(mode: String, count: int, group: ButtonGroup) -> Button:
+func _marker_swatch(mode: String, n: int, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(52, 52)
-	b.tooltip_text = "%s marker (%d left)" % [mode.capitalize(), count]
-	var pic := UI.icon(Items.MARKERS[mode][0], 44)
+	b.custom_minimum_size = Vector2(48, 48)
+	b.tooltip_text = "%s marker (%d left)" % [mode.capitalize(), n]
+	var pic := UI.icon(Items.MARKERS[mode][0], 40)
 	pic.position = Vector2(4, 4)
 	b.add_child(pic)
 	b.pressed.connect(func():
@@ -150,10 +247,28 @@ func _marker_swatch(mode: String, count: int, group: ButtonGroup) -> Button:
 	return b
 
 
-func _toggle(text: String, group: ButtonGroup, on_press: Callable) -> Button:
-	var b := UI.button(text, on_press, Vector2(0, 60), 22)
+func _picture_button(icon: String, on_press: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(56, 56)
+	b.tooltip_text = icon.trim_prefix("tool_").trim_prefix("ui_").capitalize()
+	b.pressed.connect(on_press)
+	var pic := UI.icon(icon, 42)
+	pic.position = Vector2(7, 7)
+	b.add_child(pic)
+	return b
+
+
+func _picture_toggle(icon: String, group: ButtonGroup, on_press: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(56, 56)
 	b.toggle_mode = true
 	b.button_group = group
+	b.pressed.connect(on_press)
+	if icon != "":
+		b.tooltip_text = icon.trim_prefix("tool_").capitalize()
+		var pic := UI.icon(icon, 42)
+		pic.position = Vector2(7, 7)
+		b.add_child(pic)
 	return b
 
 
@@ -169,10 +284,24 @@ func _say(text: String) -> void:
 func press_done() -> void:
 	if _done:
 		return
+	var missing := []
+	for type in required:
+		if not added.has(type):
+			missing.append(PartTypes.info(type)["plural"].to_lower())
+	if not missing.is_empty():
+		_say("Every creature needs %s! Tap them below to add them." % " and ".join(missing))
+		for type in required:
+			if _addon_buttons.has(type) and not added.has(type):
+				var b: Button = _addon_buttons[type]
+				var tween := b.create_tween()
+				tween.tween_property(b, "scale", Vector2(1.15, 1.15), 0.12)
+				tween.tween_property(b, "scale", Vector2.ONE, 0.12)
+		return
 	var result := await canvas.finish()
 	if result.is_empty():
-		_say("Draw something first!" if not can_skip else "Draw something - or tap Skip.")
+		_say("Draw something first!" if not can_skip else "Draw something - or tap %s." % skip_text)
 		return
+	result["count"] = count
 	_finish(result)
 
 
@@ -181,3 +310,14 @@ func _finish(result: Dictionary) -> void:
 		return
 	_done = true
 	on_done.call(result)
+
+
+## A brush size, drawn as a dot of that size.
+class SizeDot extends Control:
+	var radius := 8.0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		draw_circle(size / 2.0, radius, UI.INK)

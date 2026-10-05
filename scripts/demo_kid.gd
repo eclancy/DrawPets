@@ -14,11 +14,13 @@ var _n := 0
 
 func run() -> void:
 	game.profile.add_stars(400)
+	await _build_first_home()
 	var creator := game.start_creator()
 	await _wait(0.5)
 	await _make_pet(creator)
 	await _wait(2.0)
 	await _play_at_home()
+	await _adopt()
 	await _shop()
 	await _competitions()
 	game.go_home()
@@ -37,17 +39,39 @@ func _wait(seconds: float) -> void:
 	await get_tree().create_timer(seconds).timeout
 
 
+## An empty plot: pick a ready-built home and name it.
+func _build_first_home() -> void:
+	game.go_home()
+	await _wait(0.6)
+	await _shot("home_empty")
+	game.go_build_home()
+	await _wait(0.8)
+	var b := game.screen as BuildHomeScreen
+	await _shot("build_list")
+	b._name_it("meadow_cottage")
+	await _wait(0.5)
+	b.set_home_name("Zorp's Den")
+	await _shot("build_name")
+	b.press_build()
+	await _wait(0.8)
+	await _shot("home_built")
+
+
 # --- Making a pet ----------------------------------------------------------------------------
+
+## What the demo adds while drawing each host.
+const ADDONS := {"body": ["wing", "tail"], "head": ["eye", "mouth", "ear"], "arm": ["hand"],
+	"leg": ["foot"]}
+
 
 func _make_pet(creator: Creator) -> void:
 	var picker := creator.current as PartPickerScreen
-	for entry in [["head", 1], ["ear", 2], ["leg", 4], ["tail", 1], ["wing", 2]]:
-		for i in entry[1]:
-			picker.change(entry[0], 1)
+	picker.change("arm", 2)
 	await _shot("parts")
 	picker.press_next()
 
 	var food_drawn := false
+	var shot_addon := false
 	while is_instance_valid(creator) and creator.is_inside_tree():
 		await _wait(0.4)
 		if not is_instance_valid(creator):
@@ -55,8 +79,20 @@ func _make_pet(creator: Creator) -> void:
 		var s := creator.current
 		if s is DrawScreen:
 			var d := s as DrawScreen
-			await _draw(d.subject, d.canvas)
-			await _shot("draw_" + d.subject)
+			var host := d.subject
+			await _draw(host, d.canvas)
+			for type in ADDONS.get(host, []):
+				d.on_addon.call(type)
+				await _wait(0.5)
+				var a := creator.current as DrawScreen
+				await _draw(type, a.canvas)
+				if not shot_addon:
+					shot_addon = true
+					await _shot("draw_addon_" + type)
+				await a.press_done()
+				await _wait(0.5)
+			await _wait(0.3)
+			await _shot("draw_" + host)
 			await d.press_done()
 		elif s is AssembleScreen:
 			var a := s as AssembleScreen
@@ -91,8 +127,31 @@ func _make_pet(creator: Creator) -> void:
 		elif s is HomePickerScreen:
 			await _shot("home_picker")
 			var hp := s as HomePickerScreen
-			hp.on_done.call(game.profile.add_home("meadow"))
+			hp.on_done.call(game.profile.homes()[0])
 		await _wait(0.2)
+
+
+## The shop's Adopt tab: meet Pip and take it home.
+func _adopt() -> void:
+	game.go_shop(func(): game.go_home())
+	await _wait(1.2)
+	var shop := game.screen as ShopScreen
+	await _shot("shop_adopt")
+	shop._pick_group("adopt_d")
+	await _wait(0.8)
+	await _shot("shop_adopt_dinos")
+	shop._pick_group("adopt_a")
+	await _wait(0.6)
+	shop.meet("pip")
+	await _wait(1.0)
+	await _shot("meet")
+	game.adopt("pip")
+	await _wait(0.8)
+	var hp := game.screen as HomePickerScreen
+	await _shot("adopt_home")
+	hp.on_done.call(game.profile.homes()[0])
+	await _wait(2.0)
+	await _shot("adopted_at_home")
 
 
 ## Inside the item picker: draw a snack and give it words.
@@ -301,10 +360,20 @@ func _draw(subject: String, c: DrawCanvas) -> void:
 				Vector2(196, 444)]), UI.PALETTE[0], 11.0, 7)
 			await _fill(c, Vector2(256, 380), UI.PALETTE[10])
 		"leg":
-			_line(c, PackedVector2Array([Vector2(222, 50), Vector2(222, 320), Vector2(206, 350),
-				Vector2(208, 372), Vector2(322, 372), Vector2(318, 342), Vector2(290, 322),
-				Vector2(290, 50)]), UI.PALETTE[0], 11.0, 8)
+			_line(c, PackedVector2Array([Vector2(224, 50), Vector2(222, 300), Vector2(290, 300),
+				Vector2(288, 50)]), UI.PALETTE[0], 11.0, 8)
 			await _fill(c, Vector2(256, 200), UI.PALETTE[3])
+		"foot":
+			_line(c, PackedVector2Array([Vector2(160, 120), Vector2(160, 250), Vector2(380, 256),
+				Vector2(392, 214), Vector2(238, 196), Vector2(226, 120), Vector2(160, 120)]), UI.PALETTE[0], 14.0, 18)
+			await _fill(c, Vector2(220, 210), UI.PALETTE[11])
+		"arm":
+			_line(c, PackedVector2Array([Vector2(238, 50), Vector2(236, 250), Vector2(280, 250),
+				Vector2(276, 50)]), UI.PALETTE[0], 10.0, 19)
+			await _fill(c, Vector2(256, 150), UI.PALETTE[3])
+		"hand":
+			_line(c, _ellipse(Vector2(256, 190), Vector2(80, 90)), UI.PALETTE[0], 14.0, 20)
+			await _fill(c, Vector2(256, 190), UI.PALETTE[13])
 		"tail":
 			var wave := PackedVector2Array()
 			for i in 18:

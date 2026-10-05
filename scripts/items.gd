@@ -39,6 +39,34 @@ const KIT := {
 	"kit_drum": {"category": "furniture", "name": "Drum", "words": ["musical"], "height": 80},
 	"kit_fruit_tree": {"category": "furniture", "name": "Apple Tree", "words": ["tasty", "shady"], "height": 300},
 	"kit_toybox": {"category": "furniture", "name": "Toy Box", "words": ["hidey"], "height": 90},
+	# The houses that come with ready-built homes, and their decorations - free in the drawer too.
+	"house_cottage": {"category": "furniture", "name": "Cottage", "words": ["cozy", "hidey"], "height": 320, "house": true},
+	"house_mushroom": {"category": "furniture", "name": "Mushroom House", "words": ["cozy", "hidey"], "height": 330, "house": true},
+	"house_beach_hut": {"category": "furniture", "name": "Beach Hut", "words": ["cozy", "hidey", "shady"], "height": 320, "house": true},
+	"house_shell": {"category": "furniture", "name": "Shell House", "words": ["cozy", "hidey"], "height": 300, "house": true},
+	"house_igloo": {"category": "furniture", "name": "Igloo", "words": ["cozy", "hidey", "warm"], "height": 260, "house": true},
+	"house_adobe": {"category": "furniture", "name": "Adobe House", "words": ["cozy", "hidey", "shady"], "height": 300, "house": true},
+	"house_jungle_hut": {"category": "furniture", "name": "Jungle Hut", "words": ["cozy", "hidey", "climbable"], "height": 340, "house": true},
+	"house_burrow": {"category": "furniture", "name": "Burrow", "words": ["cozy", "hidey", "warm"], "height": 260, "house": true},
+	"house_stone_hut": {"category": "furniture", "name": "Stone Hut", "words": ["cozy", "hidey", "shady"], "height": 300, "house": true},
+	"house_stilt": {"category": "furniture", "name": "Stilt House", "words": ["cozy", "hidey", "climbable"], "height": 360, "house": true},
+	"house_cloud_castle": {"category": "furniture", "name": "Cloud Castle", "words": ["cozy", "hidey", "bouncy"], "height": 380, "house": true},
+	"house_moon_base": {"category": "furniture", "name": "Moon Base", "words": ["cozy", "hidey", "warm"], "height": 300, "house": true},
+	"house_castle_keep": {"category": "furniture", "name": "Castle Keep", "words": ["cozy", "hidey", "fancy"], "height": 380, "house": true},
+	"house_gingerbread": {"category": "furniture", "name": "Gingerbread House", "words": ["cozy", "hidey", "tasty"], "height": 320, "house": true},
+	"deco_mailbox": {"category": "furniture", "name": "Mailbox", "words": [], "height": 120},
+	"deco_mushroom_stool": {"category": "furniture", "name": "Toadstool", "words": ["cozy"], "height": 80},
+	"deco_log_bench": {"category": "furniture", "name": "Log Bench", "words": ["cozy", "climbable"], "height": 80},
+	"deco_sandcastle": {"category": "furniture", "name": "Sandcastle", "words": ["hidey"], "height": 110},
+	"deco_seashell_chair": {"category": "furniture", "name": "Shell Chair", "words": ["cozy", "fancy"], "height": 110},
+	"deco_snow_pile": {"category": "furniture", "name": "Snow Pile", "words": ["bouncy"], "height": 80},
+	"deco_crystal_lamp": {"category": "furniture", "name": "Crystal Lamp", "words": ["warm", "fancy"], "height": 130},
+	"deco_lantern": {"category": "furniture", "name": "Lantern", "words": ["warm"], "height": 150},
+	"deco_lily_pad": {"category": "furniture", "name": "Lily Pad", "words": ["splashy"], "height": 50},
+	"deco_cloud_bench": {"category": "furniture", "name": "Cloud Bench", "words": ["cozy", "bouncy"], "height": 90},
+	"deco_moon_flag": {"category": "furniture", "name": "Moon Flag", "words": [], "height": 170},
+	"deco_candy_lamp": {"category": "furniture", "name": "Candy Lamp", "words": ["warm", "tasty"], "height": 170},
+	"deco_hay_bale": {"category": "furniture", "name": "Hay Bale", "words": ["cozy", "climbable"], "height": 90},
 	"kit_ball": {"category": "toy", "name": "Ball", "words": ["bouncy", "rolly"]},
 	"kit_rope": {"category": "toy", "name": "Rope", "words": ["stretchy", "chewy"]},
 	"kit_frisbee": {"category": "toy", "name": "Flying Disc", "words": ["floaty"]},
@@ -126,6 +154,11 @@ static func art_group(id: String) -> String:
 	for prefix in ["hat_", "glasses_", "neck_", "back_", "icon_", "marker_", "trick_"]:
 		if id.begins_with(prefix):
 			return "wear"
+	for prefix in ["tool_", "edit_", "part_", "size_", "ui_"]:
+		if id.begins_with(prefix):
+			return "ui"
+	if id.begins_with("house_") or id.begins_with("deco_"):
+		return "homes"
 	return "things"
 
 
@@ -177,7 +210,8 @@ static func art_texture(id: String) -> Texture2D:
 static func art_pivot(id: String, img: Image) -> Vector2:
 	var group := art_group(id)
 	if not _pivots.has(group):
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://art/%s/pivots.json" % group))
+		var path := "res://art/%s/pivots.json" % group
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
 		_pivots[group] = parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 	var p = _pivots[group].get(id)
 	if p is Array and p.size() >= 2:

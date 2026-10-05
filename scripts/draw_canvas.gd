@@ -95,6 +95,8 @@ var _sheet: Control
 var _ghost: TextureRect
 var _ink: TextureRect
 var _dot_layer: DotLayer
+var _previews_behind: PreviewLayer
+var _previews_front: PreviewLayer
 var _stroke: Line2D
 var _ghost_image: Image
 var _ghost_rect := Rect2()
@@ -143,11 +145,21 @@ func _ready() -> void:
 	_ghost.visible = false
 	_sheet.add_child(_ghost)
 
+	_previews_behind = PreviewLayer.new()
+	_previews_behind.size = Vector2(SHEET, SHEET)
+	_previews_behind.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(_previews_behind)
+
 	_ink = TextureRect.new()
 	_ink.texture = _viewport.get_texture()
 	_ink.size = Vector2(SHEET, SHEET)
 	_ink.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(_ink)
+
+	_previews_front = PreviewLayer.new()
+	_previews_front.size = Vector2(SHEET, SHEET)
+	_previews_front.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(_previews_front)
 
 	_dot_layer = DotLayer.new()
 	_dot_layer.canvas = self
@@ -189,6 +201,18 @@ func set_ghost(image: Image, rect: Rect2) -> void:
 	_ghost.position = rect.position
 	_ghost.size = rect.size
 	_ghost.visible = true
+
+
+## Shows already-drawn add-ons in place on this drawing - the horns on the head being drawn.
+## Each is {texture, pos (sheet px of its joint), pivot, scale, flip, behind}. Not part of the
+## drawing; they just show what it will look like.
+func set_previews(list: Array) -> void:
+	_previews_behind.items = []
+	_previews_front.items = []
+	for p in list:
+		(_previews_behind if p.get("behind", false) else _previews_front).items.append(p)
+	_previews_behind.queue_redraw()
+	_previews_front.queue_redraw()
 
 
 func set_dot(at: Vector2, visible_dot := true) -> void:
@@ -487,6 +511,19 @@ static func _walls(img: Image, gap: int) -> PackedByteArray:
 	var walls := ink.convert_to_image()
 	walls.convert(Image.FORMAT_L8)
 	return walls.get_data()
+
+
+## Add-ons shown in place on the sheet (set_previews).
+class PreviewLayer extends Control:
+	var items := []
+
+	func _draw() -> void:
+		for p in items:
+			var tex: Texture2D = p["texture"]
+			var k: float = p["scale"]
+			draw_set_transform(p["pos"], 0.0, Vector2(-k if p.get("flip", false) else k, k))
+			draw_texture(tex, -Vector2(p["pivot"]), Color(1, 1, 1, 0.92))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## The red "attach here" dot, drawn over the sheet. Not part of the drawing.

@@ -16,7 +16,7 @@ extends SceneTree
 ##   "top"    - the middle of the ink's top  (things that hang: scarves, capes)
 ##   Vector2  - a point on the sheet         (creature parts: the red dot they grow from)
 
-const GROUPS := ["things", "wear", "rivals"]
+const GROUPS := ["things", "wear", "ui", "homes", "rivals", "adopt_a", "adopt_b", "adopt_c", "adopt_d"]
 const SHEET := 512
 
 var _painter: Painter
@@ -52,6 +52,8 @@ func _run() -> void:
 
 func _bake_group(group: String, only: Array) -> void:
 	var path := "res://scripts/art_%s.gd" % group
+	if not FileAccess.file_exists(path):
+		return
 	var art: GDScript = load(path)
 	if art == null:
 		push_error("Could not load %s - fix its parse errors and bake again." % path)
@@ -93,32 +95,20 @@ func _bake_group(group: String, only: Array) -> void:
 	f.store_string(JSON.stringify(pivots, "\t", true))
 	f.close()
 	await _contact_sheet(group, baked)
-	if group == "rivals":
-		await _assembled_rivals(art, dir, pivots)
+	if art.get_script_constant_map().has("ROSTER"):
+		await _assembled(group, art, pivots)
 
 
-## Puts every rival together the way the game will - PetBuilder.set_body, then add_parts for
-## each type in PartTypes.ORDER - and draws them side by side in their rest pose into
-## .shots/art_rivals_assembled.png. Proportions are judged here, not on the contact sheet.
-func _assembled_rivals(art: GDScript, dir: String, pivots: Dictionary) -> void:
+## Puts every creature in a roster together the way the game will (Roster.assemble - the same
+## PetBuilder.add_parts a kid's pet goes through) and draws them side by side in their rest pose
+## into .shots/art_<group>_assembled.png. Proportions are judged here, not on the contact sheet.
+func _assembled(group: String, art: GDScript, pivots: Dictionary) -> void:
 	var roster: Dictionary = art.ROSTER
 	var pets := []
-	for rival in roster:
-		var body := Image.load_from_file(ProjectSettings.globalize_path("%s/%s_body.png" % [dir, rival]))
-		if body == null:
-			continue
-		var pet := PetBuilder.new_pet()
-		PetBuilder.set_body(pet, body)
-		var parts: Dictionary = roster[rival]["parts"]
-		for type in PartTypes.ORDER:
-			if not parts.has(type):
-				continue
-			var id: String = "%s_%s" % [rival, type]
-			var img := Image.load_from_file(ProjectSettings.globalize_path("%s/%s.png" % [dir, id]))
-			if img == null or not pivots.has(id):
-				continue
-			PetBuilder.add_parts(pet, type, int(parts[type]), img, Vector2(pivots[id][0], pivots[id][1]))
-		pets.append([roster[rival]["name"], pet])
+	for id in roster:
+		var pet := Roster.assemble(group, id, roster[id], pivots, true)
+		if not pet.is_empty():
+			pets.append([roster[id]["name"], pet])
 	if pets.is_empty():
 		return
 	var vp := SubViewport.new()
@@ -156,8 +146,8 @@ func _assembled_rivals(art: GDScript, dir: String, pivots: Dictionary) -> void:
 		vp.add_child(label)
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
-	vp.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://.shots/art_rivals_assembled.png"))
-	print("assembled rivals: .shots/art_rivals_assembled.png")
+	vp.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://.shots/art_%s_assembled.png" % group))
+	print("assembled: .shots/art_%s_assembled.png" % group)
 	vp.queue_free()
 
 

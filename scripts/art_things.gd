@@ -334,7 +334,7 @@ static func _tuft(c: CanvasItem, base: Vector2, seed: int, size := 1.0) -> void:
 		var dx := (i - 2) * 7.0 * size
 		var top := base + Vector2(dx * 1.9 + Crayon.noise(seed, i) * 5.0,
 			-(22.0 + 12.0 * absf(Crayon.noise(seed + 1, i))) * size * (1.0 - absf(i - 2) * 0.18))
-		_pline(c, _pv([base + Vector2(dx, 0), base + Vector2(dx, 0).lerp(top, 0.5) + Vector2(2, 0), top]),
+		_pline(c, _pv([base + Vector2(dx, 0), (base + Vector2(dx, 0)).lerp(top, 0.5) + Vector2(2, 0), top]),
 			green.darkened(0.2), 4.0, seed + 10 + i)
 
 

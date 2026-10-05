@@ -34,6 +34,7 @@ furniture or hat they like for free; the shop sells what drawing cannot give the
 
 | tab | items | why it is worth stars |
 |---|---|---|
+| **Adopt** | **40 pets** in four groups - Meadow & Forest, Fliers, Water & Oddballs, Dinos & Monsters (35 tiny ... 110 giant) | creatures the kid did not draw; tap one to MEET it first: it bounces up to say hello, with its size, personality, favourite place, favourite food and toy, and stats |
 | Shiny Toys | Shiny Ball, Golden Bone, Glitter Disc, Rainbow Rope, Crystal Squeaker, Star Plush, Puzzle Cube, Rocket Ball (25-40) | they **shine and sparkle**, and train their stat **twice as fast** |
 | Clothes | 10 hats, 4 glasses, bow tie, scarf, bandana, cape, backpack, fairy wings (10-50; the crown and wings shine) | dressing up, and Style Show points for matching the theme |
 | Markers & Treats | Gold, Rainbow and Glitter Markers (20-25, one drawing each); Star Snack (15, one use) | a marker draws ONE thing that shines forever; a Star Snack makes every stat train faster for ten minutes |
@@ -42,6 +43,15 @@ furniture or hat they like for free; the shop sells what drawing cannot give the
 | Room to Grow | a new home plot (60, 120, 200, 300), an extra room in a home (30, 50, 80, 120) | more pets - see below |
 
 **Prizes are never for sale.** The Gold Medal is won by coming first in a Gold Cup or above.
+
+## Adopting
+
+The forty adoptable pets (`Adoptables`, drawn in `scripts/art_adopt_*.gd`) are drawn as if by
+other kids, part by part, and built by the same pipeline as a kid's own pet. Each has a size,
+favourite place, two personality words, a favourite food and toy, and starting stats from all
+of those. Adopting one needs a free room (or a free plot to build a home on) and its price in
+stars, paid once it has moved in. It becomes a family pet like any other - its own folder,
+trust starting at zero, free to train, dress and enter. One of each.
 
 ## Shiny things
 

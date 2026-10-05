@@ -241,9 +241,10 @@ func _fill_drawer() -> void:
 		_drawer.add_child(l)
 		return
 	if tab == "furniture" and _selected != null:
-		for entry in [["Bigger", func(): _resize_selected(1.15)], ["Smaller", func(): _resize_selected(1.0 / 1.15)],
-				["Flip", _flip_selected], ["Put away", _remove_selected], ["Done", func(): _select_furniture(null)]]:
-			_drawer.add_child(UI.button(entry[0], entry[1], Vector2(110, 96), 22))
+		for entry in [["edit_bigger", "Bigger", _resize_selected.bind(1.15)],
+				["edit_smaller", "Smaller", _resize_selected.bind(1.0 / 1.15)], ["edit_flip", "Flip", _flip_selected],
+				["edit_remove", "Put away", _remove_selected], ["tool_done", "Done", _select_furniture.bind(null)]]:
+			_drawer.add_child(UI.icon_button(entry[0], entry[1], entry[2], 52, Vector2(104, 96)))
 		return
 	var back_here := func(_item: Dictionary): game.go_place(home["id"], focus_id)
 	var draw_new := func(): game.make_item(tab, back_here)

@@ -27,6 +27,14 @@ the parts; sizes and places; pet, feed, fetch; gentle needs; save and load; `--d
 - **Art**: ~170 drawings in coloured pencil and marker baked by `tools/bake_art.gd`; shine and
   sparkle for special things.
 
+## M1.5 - Drawing in stages, adopting, ready-built homes (built)
+
+- Heads, arms and legs asked up front; add-ons (eyes, horns, hands, feet, claws...) drawn while
+  drawing their host, previewed in place; new part types hand, foot, claw.
+- Picture buttons throughout (`art_ui.gd`).
+- Forty adoptable pets in the shop, with a meet panel.
+- Fourteen ready-built homes for empty plots, named by the kid.
+
 ## M2 - On a real phone
 
 - Android export: JDK 17, the Android SDK, the standard (non-.NET) Godot 4.5.1 and its export

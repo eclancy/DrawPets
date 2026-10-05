@@ -207,8 +207,8 @@ func _podium(scores: Array, place: int) -> void:
 	buttons.offset_right = -24
 	buttons.offset_bottom = -24
 	buttons.add_theme_constant_override("separation", 12)
-	buttons.add_child(UI.button("Try again", func(): game.go_competition(event, tier, pet["id"]), Vector2(200, 80), 26))
-	buttons.add_child(UI.big_button("Calendar", func(): game.go_calendar()))
+	buttons.add_child(UI.icon_button("tool_undo", "Try again", func(): game.go_competition(event, tier, pet["id"]), 44, Vector2(130, 96)))
+	buttons.add_child(UI.big_icon_button("icon_calendar", "Calendar", func(): game.go_calendar()))
 	stage.add_child(buttons)
 
 

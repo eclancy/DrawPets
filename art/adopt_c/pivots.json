@@ -1,0 +1,250 @@
+{
+	"axel_body": [
+		212.0,
+		102.5
+	],
+	"axel_eye": [
+		68.0,
+		72.0
+	],
+	"axel_fin": [
+		172.0,
+		63.0
+	],
+	"axel_hair": [
+		160.0,
+		171.0
+	],
+	"axel_head": [
+		48.0,
+		213.0
+	],
+	"axel_leg": [
+		30.0,
+		19.0
+	],
+	"axel_mouth": [
+		98.0,
+		40.0
+	],
+	"axel_tail": [
+		376.0,
+		83.0
+	],
+	"bubbles_body": [
+		198.0,
+		133.0
+	],
+	"bubbles_eye": [
+		73.0,
+		113.0
+	],
+	"bubbles_mouth": [
+		79.0,
+		58.0
+	],
+	"bubbles_tentacle": [
+		43.0,
+		16.0
+	],
+	"coral_body": [
+		148.5,
+		150.0
+	],
+	"coral_eye": [
+		80.0,
+		115.0
+	],
+	"coral_fin": [
+		82.0,
+		106.0
+	],
+	"coral_head": [
+		45.0,
+		234.0
+	],
+	"coral_mouth": [
+		82.0,
+		78.0
+	],
+	"coral_spike": [
+		49.0,
+		96.0
+	],
+	"coral_tail": [
+		222.0,
+		44.0
+	],
+	"finnegan_arm": [
+		36.0,
+		19.0
+	],
+	"finnegan_body": [
+		212.5,
+		115.5
+	],
+	"finnegan_eye": [
+		71.0,
+		78.0
+	],
+	"finnegan_fin": [
+		75.0,
+		110.0
+	],
+	"finnegan_head": [
+		42.0,
+		213.0
+	],
+	"finnegan_mouth": [
+		85.0,
+		51.0
+	],
+	"finnegan_nose": [
+		71.0,
+		49.0
+	],
+	"finnegan_tail": [
+		230.0,
+		108.0
+	],
+	"gloop_body": [
+		228.5,
+		141.5
+	],
+	"gloop_eye": [
+		96.0,
+		106.0
+	],
+	"gloop_mouth": [
+		99.0,
+		53.0
+	],
+	"gloop_other": [
+		66.0,
+		57.0
+	],
+	"nessie_body": [
+		190.5,
+		183.5
+	],
+	"nessie_eye": [
+		73.0,
+		79.0
+	],
+	"nessie_fin": [
+		89.0,
+		96.0
+	],
+	"nessie_head": [
+		42.0,
+		196.0
+	],
+	"nessie_horn": [
+		25.0,
+		101.0
+	],
+	"nessie_mouth": [
+		88.0,
+		51.0
+	],
+	"nessie_spike": [
+		37.0,
+		112.0
+	],
+	"nessie_tail": [
+		250.0,
+		50.0
+	],
+	"puddles_arm": [
+		32.0,
+		29.0
+	],
+	"puddles_body": [
+		203.5,
+		124.0
+	],
+	"puddles_eye": [
+		84.0,
+		86.0
+	],
+	"puddles_foot": [
+		30.0,
+		38.0
+	],
+	"puddles_hand": [
+		88.0,
+		18.0
+	],
+	"puddles_leg": [
+		91.0,
+		48.0
+	],
+	"puddles_mouth": [
+		112.0,
+		45.0
+	],
+	"shelly_antenna": [
+		24.0,
+		206.0
+	],
+	"shelly_arm": [
+		92.0,
+		21.0
+	],
+	"shelly_body": [
+		207.0,
+		115.5
+	],
+	"shelly_claw_on_arm": [
+		71.0,
+		36.0
+	],
+	"shelly_eye": [
+		72.0,
+		80.0
+	],
+	"shelly_leg": [
+		22.0,
+		21.0
+	],
+	"shelly_mouth": [
+		87.0,
+		50.0
+	],
+	"sir_snail_antenna": [
+		22.0,
+		190.0
+	],
+	"sir_snail_body": [
+		233.0,
+		141.5
+	],
+	"sir_snail_eye": [
+		72.0,
+		79.0
+	],
+	"sir_snail_mouth": [
+		78.0,
+		50.0
+	],
+	"sir_snail_other": [
+		225.0,
+		162.0
+	],
+	"squidge_body": [
+		199.5,
+		157.0
+	],
+	"squidge_eye": [
+		83.0,
+		84.0
+	],
+	"squidge_mouth": [
+		88.0,
+		52.0
+	],
+	"squidge_tentacle": [
+		44.0,
+		18.0
+	]
+}

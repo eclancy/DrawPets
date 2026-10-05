@@ -13,8 +13,8 @@ config_version=5
 config/name="DrawPets"
 config/version="0.0.1"
 run/main_scene="res://scenes/Main.tscn"
-config/features=PackedStringArray("4.5", "GL Compatibility")
 config/quit_on_go_back=false
+config/features=PackedStringArray("4.5", "GL Compatibility")
 
 [display]
 
@@ -24,10 +24,9 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=4
 
-[input_devices]
+[dotnet]
 
-pointing/emulate_mouse_from_touch=true
-pointing/emulate_touch_from_mouse=false
+project/assembly_name="DrawPets"
 
 [physics]
 

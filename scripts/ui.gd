@@ -183,6 +183,22 @@ static func hearts(level: int, px := 26.0) -> HBoxContainer:
 	return row
 
 
+## A big call-to-action button with a picture beside its words.
+static func big_icon_button(icon_id: String, text: String, on_press: Callable) -> Button:
+	var b := big_button("", on_press)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10)
+	full_rect(row)
+	row.add_child(icon(icon_id, 52, "none"))
+	var l := label(text, 32)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(l)
+	b.add_child(row)
+	return b
+
+
 ## A button with a drawn icon above its label.
 static func icon_button(id: String, text: String, on_press: Callable, px := 52.0,
 		min_size := Vector2(104, 96)) -> Button:
@@ -208,7 +224,7 @@ static func icon_button(id: String, text: String, on_press: Callable, px := 52.0
 ## A button showing a little painting of a place, with a caption, and a padlock if it is
 ## still to be bought.
 static func place_button(id: String, caption: String, min_size := Vector2(150, 92),
-		locked := false) -> Button:
+		locked := false, items := []) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = min_size
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -226,10 +242,25 @@ static func place_button(id: String, caption: String, min_size := Vector2(150, 9
 	painter.place_id = id
 	painter.animate = false
 	thumb.add_child(painter)
+	# A home's house and things, standing where they stand in the place.
+	for entry in items:
+		var item := Items.get_item(entry.get("item", ""))
+		if item.is_empty():
+			continue
+		var s := Sprite2D.new()
+		s.texture = item["_tex"]
+		s.centered = false
+		s.offset = -Items.pivot_of(item)
+		var k := float(item.get("height", 150)) * float(entry.get("scale", 1.0)) / maxf(item["_img"].get_height(), 1.0)
+		s.scale = Vector2(-k if entry.get("flip", false) else k, k)
+		s.position = PetBuilder.v2(entry["pos"])
+		painter.add_child(s)
+	# Fill the picture whatever its shape: wide ones by width, tall ones by height, the ground
+	# along the bottom either way.
 	thumb.resized.connect(func():
-		var k := thumb.size.x / 1280.0
+		var k := maxf(thumb.size.x / 1280.0, thumb.size.y / 760.0)
 		painter.scale = Vector2(k, k)
-		painter.position = Vector2(0, thumb.size.y - 640.0 * k))
+		painter.position = Vector2((thumb.size.x - 1280.0 * k) / 2.0, thumb.size.y - 640.0 * k))
 	if locked:
 		thumb.modulate = Color(0.85, 0.83, 0.9)
 		var lock := icon("icon_lock", 34)

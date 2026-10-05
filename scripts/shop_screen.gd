@@ -5,16 +5,19 @@ extends Control
 ## special places, and room for more pets. Room to grow also needs trust - a kid earns a bigger
 ## family by looking after the one they have.
 
-const TABS := [["toy", "Shiny Toys"], ["clothing", "Clothes"], ["supply", "Markers & Treats"],
-	["furniture", "Furniture"], ["places", "Places"], ["room", "Room to Grow"]]
+const TABS := [["adopt", "Adopt"], ["toy", "Shiny Toys"], ["clothing", "Clothes"],
+	["supply", "Markers & Treats"], ["furniture", "Furniture"], ["places", "Places"],
+	["room", "Room to Grow"]]
 
 var game: GameRoot
 var on_back := Callable()
-var tab := "toy"
+var tab := "adopt"
+var adopt_group: String = Adoptables.GROUPS[0]
 
 var _grid: HFlowContainer
 var _tab_buttons := {}
 var _note: Label
+var _meet: Control
 
 
 func _ready() -> void:
@@ -25,7 +28,7 @@ func _ready() -> void:
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
-	top.add_child(UI.button("Back", func(): on_back.call(), Vector2(120, 64), 24))
+	top.add_child(UI.icon_button("tool_back", "Back", func(): on_back.call(), 40, Vector2(100, 84)))
 	top.add_child(UI.icon("icon_shop", 60))
 	var heading := UI.title("The Shop", 44)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -65,6 +68,9 @@ func show_tab(which: String) -> void:
 	for c in _grid.get_children():
 		c.queue_free()
 	match which:
+		"adopt":
+			_note.text = "Meet pets that need a home! Tap one to say hello."
+			_adopt_cards()
 		"places":
 			_note.text = "Special places your pets can dream of - buy one and build a home there."
 			for id in Places.ORDER:
@@ -83,6 +89,167 @@ func show_tab(which: String) -> void:
 				if item["category"] == which or (which == "supply" and item["category"] == "food"):
 					if not item.get("prize", false):
 						_grid.add_child(_item_card(id))
+
+
+# --- Adopt -----------------------------------------------------------------------------------
+
+func _adopt_cards() -> void:
+	var tabs := HBoxContainer.new()
+	tabs.custom_minimum_size = Vector2(1200, 0)
+	tabs.add_theme_constant_override("separation", 8)
+	var group := ButtonGroup.new()
+	for g in Adoptables.GROUPS:
+		var b := UI.button(Adoptables.GROUP_NAMES[g], _pick_group.bind(g), Vector2(0, 50), 19)
+		b.toggle_mode = true
+		b.button_group = group
+		b.button_pressed = g == adopt_group
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tabs.add_child(b)
+	_grid.add_child(tabs)
+	for id in Adoptables.ids_in(adopt_group):
+		_grid.add_child(_adopt_card(id))
+
+
+func _pick_group(g: String) -> void:
+	adopt_group = g
+	show_tab("adopt")
+
+
+func _adopt_card(id: String) -> Button:
+	var pet := Adoptables.build(id)
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(228, 250)
+	b.pressed.connect(meet.bind(id))
+	var c := Creature.new()
+	c.wander = false
+	c.confine = false
+	c.depth_scale = false
+	c.position = Vector2(114, 168)
+	b.add_child(c)
+	c.setup(pet, 124.0)
+	var name := UI.label(pet["name"], 22)
+	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name.position = Vector2(0, 176)
+	name.size = Vector2(228, 30)
+	b.add_child(name)
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.position = Vector2(0, 206)
+	row.size = Vector2(228, 36)
+	if game.profile.adopted().has(id):
+		row.add_child(_tag("Lives with you!"))
+	else:
+		row.add_child(UI.icon("icon_star", 28, "none"))
+		var l := UI.label(str(Adoptables.price(id)), 22)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(l)
+	b.add_child(row)
+	return b
+
+
+## Meeting a pet: it bounces up to say hello, and you can see what it is like before adopting.
+func meet(id: String) -> void:
+	if _meet != null:
+		_meet.queue_free()
+	var pet := Adoptables.build(id)
+	_meet = Control.new()
+	add_child(UI.full_rect(_meet))
+	var dim := ColorRect.new()
+	dim.color = Color(0.23, 0.21, 0.4, 0.35)
+	_meet.add_child(UI.full_rect(dim))
+	var panel := PanelContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.custom_minimum_size = Vector2(1060, 600)
+	_meet.add_child(panel)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 24)
+	panel.add_child(row)
+
+	var stage := Control.new()
+	stage.custom_minimum_size = Vector2(420, 560)
+	stage.clip_contents = true
+	row.add_child(stage)
+	var bg := UI.place_button(pet["place"], "", Vector2(420, 560))
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.size = Vector2(420, 560)
+	stage.add_child(bg)
+	var c := Creature.new()
+	c.wander = false
+	c.confine = false
+	c.depth_scale = false
+	c.position = Vector2(210, 470)
+	stage.add_child(c)
+	c.setup(pet, 260.0)
+	c.perform("greet", 2.0)
+
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	row.add_child(col)
+	var top := HBoxContainer.new()
+	var title := UI.title(pet["name"], 46)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(title)
+	top.add_child(UI.button("X", func(): _close_meet(), Vector2(56, 56), 24))
+	col.add_child(top)
+	var size_row := HBoxContainer.new()
+	size_row.add_child(UI.icon("size_" + pet["size"], 54))
+	var words: Array = Creature.SIZE_LABELS[pet["size"]]
+	size_row.add_child(UI.label("%s - about as big as a %s" % [words[0], words[1]], 20))
+	col.add_child(size_row)
+	var traits := []
+	for w in pet["personality"]:
+		traits.append("%s (%s)" % [w, Words.hint("pet", w)])
+	col.add_child(UI.label("Personality: " + ", ".join(traits), 20, true))
+	col.add_child(UI.label("Loves %s." % Places.display_name(pet["place"]), 20))
+	var likes := HBoxContainer.new()
+	likes.add_child(UI.label("Favourites:", 20))
+	for key in ["food", "toy"]:
+		likes.add_child(UI.item_picture(Items.get_item(pet[key]["item"]), 56))
+	col.add_child(likes)
+	for stat in Stats.LIST:
+		var srow := HBoxContainer.new()
+		srow.add_child(UI.icon(Stats.INFO[stat]["icon"], 30))
+		var sl := UI.label(Stats.label(stat), 17)
+		sl.custom_minimum_size = Vector2(90, 0)
+		srow.add_child(sl)
+		var bar := ProgressBar.new()
+		bar.max_value = Stats.MAX
+		bar.value = Stats.value(pet, stat)
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(0, 14)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.add_theme_stylebox_override("fill", UI._box(Color("#8fb4ef"), UI.INK, 0, 8, 0))
+		srow.add_child(bar)
+		col.add_child(srow)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(spacer)
+	var price := Adoptables.price(id)
+	if game.profile.adopted().has(id):
+		col.add_child(_tag("%s already lives with you!" % pet["name"]))
+	else:
+		var gate := ""
+		if not game.profile.can_add_pet():
+			gate = "Every home is full - get more room first"
+		var adopt := UI.big_icon_button("ui_adopt", "Adopt for %d stars" % price, func(): game.adopt(id))
+		if gate != "" or game.profile.stars() < price:
+			adopt.disabled = true
+			var why := UI.label(gate if gate != "" else "You need %d more stars" % (price - game.profile.stars()), 18)
+			why.add_theme_color_override("font_color", UI.ACCENT)
+			col.add_child(why)
+		col.add_child(adopt)
+
+
+func _close_meet() -> void:
+	if _meet != null:
+		_meet.queue_free()
+		_meet = null
 
 
 func _card_base() -> VBoxContainer:

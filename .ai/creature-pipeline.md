@@ -3,19 +3,32 @@
 How a kid's drawings become a creature that moves. Read before touching `DrawCanvas`,
 `PartTypes`, `PetBuilder`, `Creature` or `CreaturePart`.
 
-## The flow
+## The flow - in stages (decided)
 
-1. **Pick parts** (`PartPickerScreen`) - a count for each type. Body is always one; **eyes
-   and a mouth are required** (at least one of each) - eyes blink and mouths open, and a pet
-   that can do neither has no face to react with.
-2. **Draw the body** - big, facing right, no dot.
-3. **Draw one of each part type** (`DrawScreen` + `DrawCanvas`), each on its own 512 px sheet.
-4. **Put it together** (`AssembleScreen`) - drag, turn, resize, flip, layer, copy, remove.
-5. Name, size, favourite place; two personality words; favourite food and toy (picked from
-   what the family has, or drawn and described with words); where it will live.
+Only a few things are asked up front; everything else is added while drawing the part it goes
+on, so a kid is never asked about horns before there is a head to put them on.
 
-Each part type is drawn **once**; the kid gets as many copies as they picked. Four legs is one
-leg drawing used four times, the far two darker.
+1. **How many heads, arms and legs?** (`PartPickerScreen`, a picture for each). These are the
+   MAIN parts. Defaults: one head, no arms, four legs. Zero is fine everywhere.
+2. **Draw the body**, facing right. Its add-on buttons: wings, tail, fins, spikes, tentacles,
+   other - plus every face part when there is no head.
+3. **Draw a head**, then each arm, then each leg (`Creator._next_host`). Each is a HOST with
+   its own add-ons (`PartTypes.ADDONS`):
+   - head: eyes, mouth, ears, horns, antennae, hair, nose, spikes
+   - arm: hand, claws
+   - leg: foot, claws
+   Tapping an add-on opens its sheet with the host faint on it (the host drawn so far); Done
+   (or Back) returns to the host, where the add-on now shows in place on the drawing
+   (`DrawCanvas.set_previews`) and its button shows the kid's drawing, how many, and a cross to
+   take it off. The host's sheet is kept, not redrawn, while an add-on is drawn.
+4. **Eyes and a mouth are required** on the face host (the head, or the body with no head);
+   Done says so and wiggles their buttons until they are there.
+5. **Put it together** (`AssembleScreen`) - drag, turn, resize, flip, layer, copy, remove.
+   Dropping an add-on on a head's, arm's or leg's ink re-hangs it there.
+6. Name, size, favourite place; two personality words; favourite food and toy; where it lives.
+
+Each type is drawn **once** per host: the kid gets as many copies as they asked for, and every
+copy of a host gets every add-on - four legs drawn once, each with the one foot drawn once.
 
 ## The red dot
 
@@ -41,6 +54,19 @@ drawn on a zoomed sheet (2.5-3x) so a thumb can manage them; they come out at tr
 The bucket treats the ghost as a wall. A leg drawn as an open outline - the top left open where
 it meets the body, which is how everyone draws a leg - fills cleanly and the colour stops at the
 body.
+
+## Hosts and add-ons
+
+`PetBuilder.add_parts(pet, type, count, image, pivot, shine, host)` puts `count` copies on EVERY
+part of type `host` (`parts_of`), mapping each anchor through that host's own transform - so a
+hand lands on the end of each arm wherever the arm is. A far-side host's add-ons are far-side too
+(shaded with it). The default host is the type's `host` (face parts fall back to the body when
+there is no head). `layout_on_host` is the same layout without a pet, which is how the drawing
+sheet previews add-ons on a host still being drawn.
+
+New add-on types: **hand** (rides its arm on a stiff spring), **foot** and **claw** (ride their
+leg rigidly). Roster creatures (rivals, adoptables) use the same pipeline (`Roster.assemble`);
+a roster part key `claw_on_arm` puts claws on arms instead of legs.
 
 ## Auto-layout (`PetBuilder.add_parts`)
 

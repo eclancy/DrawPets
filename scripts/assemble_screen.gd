@@ -53,13 +53,13 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	var actions := [
-		["Turn left", _edit.bind("turn_left")], ["Turn right", _edit.bind("turn_right")],
-		["Smaller", _edit.bind("smaller")], ["Bigger", _edit.bind("bigger")],
-		["Flip", _edit.bind("flip")], ["Front / back", _edit.bind("layer")],
-		["Copy", _edit.bind("copy")], ["Remove", _edit.bind("remove")],
+		["edit_turn_left", "Turn", "turn_left"], ["edit_turn_right", "Turn", "turn_right"],
+		["edit_smaller", "Smaller", "smaller"], ["edit_bigger", "Bigger", "bigger"],
+		["edit_flip", "Flip", "flip"], ["edit_layer", "Front / back", "layer"],
+		["edit_copy", "Copy", "copy"], ["edit_remove", "Remove", "remove"],
 	]
 	for entry in actions:
-		var b := UI.button(entry[0], entry[1], Vector2(0, 66), 22)
+		var b := UI.icon_button(entry[0], entry[1], _edit.bind(entry[2]), 44, Vector2(0, 84))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_tools.append(b)
 		grid.add_child(b)
@@ -68,7 +68,7 @@ func _ready() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(spacer)
-	side.add_child(UI.big_button("It's alive!", press_done))
+	side.add_child(UI.big_icon_button("tool_done", "It's alive!", press_done))
 
 	_rebuild()
 	_refresh_tools()

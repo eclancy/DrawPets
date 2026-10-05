@@ -12,7 +12,6 @@ const SIZES := {"biscuit": "medium", "zippy": "small", "puffles": "small", "capt
 	"duchess": "medium", "rocky": "big", "noodle": "medium", "mango": "small"}
 
 static var _built := {}
-static var _pivots := {}
 
 
 static func ids() -> Array:
@@ -31,39 +30,17 @@ static func build(id: String) -> Dictionary:
 
 
 static func _assemble(id: String) -> Dictionary:
-	var roster: Dictionary = ArtRivals.ROSTER[id]
-	var pet := PetBuilder.new_pet()
+	var pet := Roster.assemble("rivals", id, ArtRivals.ROSTER[id])
+	if pet.is_empty():
+		pet = PetBuilder.new_pet()
+		var img := Image.create(120, 120, false, Image.FORMAT_RGBA8)
+		img.fill(Color("#c9bfe6"))
+		PetBuilder.set_body(pet, img)
+		pet["name"] = ArtRivals.ROSTER[id]["name"]
 	pet["id"] = "rival_" + id
-	pet["name"] = roster["name"]
 	pet["size"] = SIZES.get(id, "medium")
 	pet["needs"] = {"food": 1.0, "fun": 1.0, "clean": 1.0, "energy": 1.0}
-	PetBuilder.set_body(pet, _image(id + "_body"))
-	var parts: Dictionary = roster["parts"]
-	for type in PartTypes.ORDER:
-		if parts.has(type):
-			var art := "%s_%s" % [id, type]
-			PetBuilder.add_parts(pet, type, int(parts[type]), _image(art), _pivot(art))
 	return pet
-
-
-static func _image(art: String) -> Image:
-	var path := "res://art/rivals/%s.png" % art
-	if ResourceLoader.exists(path):
-		var tex = load(path)
-		if tex is Texture2D:
-			return tex.get_image()
-	var img := Image.create(120, 120, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	img.fill_rect(Rect2i(10, 10, 100, 100), Color("#c9bfe6"))
-	return img
-
-
-static func _pivot(art: String) -> Vector2:
-	if _pivots.is_empty():
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://art/rivals/pivots.json"))
-		_pivots = parsed if typeof(parsed) == TYPE_DICTIONARY else {"_": 0}
-	var p = _pivots.get(art)
-	return Vector2(float(p[0]), float(p[1])) if p is Array else Vector2(60, 60)
 
 
 ## `count` rivals for a cup, the same ones all day: [{id, name, pet}] with stats set.

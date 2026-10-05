@@ -62,10 +62,12 @@ decision; do not restate it here.
   It goes on to feed, fetch, tug, decorate, shop, dress up, and play all six competitions.
 - `--screen=place|create|shop|calendar` boots straight into a screen; `--stars=N` adds stars;
   `--shot=N` screenshots frame N; F12 grabs a frame.
-- **`"$GODOT_BIN" --path . -s tools/bake_art.gd -- --group=things|wear|rivals [--only=a,b]`** -
+- **`"$GODOT_BIN" --path . -s tools/bake_art.gd -- --group=<group> [--only=a,b]`** - groups:
+  things, wear, ui, homes, rivals, adopt_a, adopt_b, adopt_c, adopt_d (every
+  `scripts/art_<group>.gd`) -
   bakes the game's drawings from `scripts/art_<group>.gd` into `art/<group>/*.png` and
   `pivots.json`, with a contact sheet in `.shots/art_<group>.png` (and the assembled rivals in
-  `.shots/art_rivals_assembled.png`). Needs a window. Then run `--import` so Godot picks the
+  `.shots/art_<group>_assembled.png` for any group with a ROSTER of creatures). Needs a window. Then run `--import` so Godot picks the
   PNGs up. Never hand-edit a baked PNG; change the drawing code.
 - `$GODOT_BIN` is set in `.claude/settings.json` (the .NET build, which runs GDScript fine).
   If it is unset or missing, stop and say so rather than guessing a path.

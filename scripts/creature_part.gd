@@ -16,7 +16,7 @@ extends Node2D
 const SPRINGS := {
 	"antenna": [55.0, 4.0], "hair": [45.0, 5.0], "ear": [120.0, 7.0],
 	"horn": [420.0, 14.0], "spike": [480.0, 16.0], "other": [160.0, 9.0],
-	"clothing": [260.0, 12.0],
+	"clothing": [260.0, 12.0], "hand": [300.0, 12.0],
 }
 
 ## How far a mouth is squashed when shut. Kids draw it wide open; shut is that drawing
@@ -93,6 +93,8 @@ func animate(c: Creature, delta: float) -> void:
 			rot = sin(t * (4.0 + 6.0 * c.swim) + pair * 0.7) * (0.1 + 0.15 * c.swim)
 		"tentacle":
 			rot = sin(t * 2.4 + pair * 1.3 + side) * 0.22 + sin(gait) * 0.3 * c.stride
+		"foot", "claw":
+			rot = 0.0  # rides its leg rigidly
 		_:
 			rot = _spring(c, delta)
 			if type == "ear":

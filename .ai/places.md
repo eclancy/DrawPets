@@ -32,11 +32,17 @@ kind of thing in a place = new prop. Never per-place drawing code.
 A **home** is a place a family has built on one of its plots: `{id, place, rooms, pets, items}`
 in `Profile`. Pets live in homes, several to a home, and visiting a home shows all of them.
 
-- A family starts with **2 plots** and **2 rooms** a home. More of both from the shop, gated on
-  trust (`shop.md`).
-- A new pet chooses where to live (`HomePickerScreen`): a home with a free room, or a new home on
-  a free plot in any unlocked place. Each choice says how the pet feels about it (loves it /
-  likes it / it's ok) from the place words.
+- A family starts with **2 empty plots**, each home with **2 rooms**. More of both from the
+  shop, gated on trust (`shop.md`).
+- **Building a home** (`BuildHomeScreen`, from an empty plot on the home screen, or while a new
+  pet chooses where to live): pick one of fourteen **ready-built homes** (`Homes.PREMADE`) - one
+  for each place, each a house plus a few things already set out (a Meadow Cottage with a
+  mailbox and flowers, an Igloo with a snowman and a campfire, a Moon Base with a flag) - then
+  **name it**. Homes in special places are locked until the place is bought.
+- An empty plot never starts a new pet; it only builds a home.
+- A new or adopted pet chooses where to live (`HomePickerScreen`): a home with a free room, or
+  build one on a free plot. Each home says how the pet feels about it (loves it / likes it /
+  it's ok) from the place words.
 - Special places must be bought before a home can be built there - but any place can be a
   favourite.
 

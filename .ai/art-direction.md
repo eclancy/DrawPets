@@ -37,6 +37,13 @@ marker outlines - creatures own black.
 The art lives in `scripts/art_things.gd`, `art_wear.gd` and `art_rivals.gd` as drawing code, and
 is baked to `art/` by `tools/bake_art.gd`. Change the drawing code and re-bake; never edit a PNG.
 
+## Buttons are pictures
+
+Wherever a button can be a picture, it is (`scripts/art_ui.gd`): the eraser button is an
+eraser, brush sizes are dots of that size, assembly edits are arrows and squares, body parts
+have their own little drawings, sizes are animals from a mouse to a dinosaur. Words go under a
+picture when a kid might not guess it, never instead of one.
+
 ## Crayon, not computer
 
 Everything drawn in code goes through `Crayon`: fills that hatch past their edges, lumpy blobs,

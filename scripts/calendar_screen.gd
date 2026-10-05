@@ -35,7 +35,7 @@ func _build() -> void:
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
-	top.add_child(UI.button("Back", func(): game.go_home(), Vector2(120, 64), 24))
+	top.add_child(UI.icon_button("tool_back", "Back", func(): game.go_home(), 40, Vector2(100, 84)))
 	top.add_child(UI.icon("icon_calendar", 60))
 	var heading := UI.title("%s %d" % [Events.MONTHS[month - 1], year], 42)
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL

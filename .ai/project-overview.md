@@ -54,6 +54,10 @@ The family plays on one shared Android phone or tablet first, iOS later.
 | microphone | record the creature's own voice, and call it by loudness - **all optional**, off unless turned on, with a button for everything the mic does |
 | sharing | **online through ecec.dev**, moderated: visit friends' homes with a pet, learn, make friends, bring gifts home - see `sharing.md` |
 | face | eyes and a mouth are required; the mouth is drawn open and the game shuts it |
+| drawing order | ask heads, arms and legs up front; add everything else while drawing the part it goes on |
+| buttons | pictures wherever possible |
+| adopting | 40 creatures the kid did not draw, to meet and adopt in the shop |
+| homes | plots start empty; build a ready-made home from a list and name it |
 | describing | kids describe toys, food, furniture, clothes, pets and places with preset words, and the words drive behaviour |
 | progression | gold stars from milestones; a shop of shiny toys, clothes, markers, furniture, special places and room to grow (`shop.md`) |
 | stats | speed, strength, agility, stamina, smarts, charm - trained by play, slipping gently if neglected (`pet-life.md`) |
