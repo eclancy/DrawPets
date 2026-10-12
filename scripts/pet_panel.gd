@@ -14,6 +14,8 @@ var on_voice := Callable()
 var on_move := Callable()
 var on_let_go := Callable()
 var on_journal := Callable()
+## Advanced shows the six stats; Beginner shows how today's care is going instead.
+var advanced := true
 
 var _pet: Dictionary
 var _name: Label
@@ -24,6 +26,7 @@ var _stats := {}
 var _levels := {}
 var _words: Label
 var _take_off: Button
+var _today: Label
 
 
 func _ready() -> void:
@@ -88,7 +91,11 @@ func _ready() -> void:
 		row.add_child(bar)
 		_stats[stat] = bar
 		_levels[stat] = lvl
+		row.visible = advanced
 		right.add_child(row)
+	_today = UI.label("", 22, true)
+	_today.visible = not advanced
+	right.add_child(_today)
 	_words = UI.label("", 18, true)
 	_words.custom_minimum_size = Vector2(210, 0)
 	_words.add_theme_color_override("font_color", UI.INK_SOFT)
@@ -135,6 +142,7 @@ func refresh() -> void:
 		var v := Stats.value(_pet, stat)
 		_stats[stat].value = v
 		_levels[stat].text = "Lv%d" % Stats.level(v)
+	_today.text = "\n".join(Care.today_lines(_pet))
 	var bits := []
 	for w in _pet.get("personality", []):
 		bits.append(w)

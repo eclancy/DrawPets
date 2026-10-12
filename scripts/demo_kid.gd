@@ -14,6 +14,7 @@ var _n := 0
 
 func run() -> void:
 	game.profile.add_stars(400)
+	game.profile.set_mode("advanced")  # everything, first; the Beginner game has its own turn
 	if not game.dev.has("hour"):
 		Clock.forced_hour = 12.0  # midday, whatever the real clock says - the night has its own turn
 	await _build_first_home()

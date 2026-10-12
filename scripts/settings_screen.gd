@@ -11,6 +11,13 @@ var game: GameRoot
 var on_back := Callable()
 
 var _mic: Button
+## Switching Beginner/Advanced is held for a moment, so a stray tap never changes the game.
+const HOLD := 1.5
+var _holding := false
+var _held := 0.0
+var _mode_bar: ProgressBar
+var _mode_label: Label
+var _mode_button: Button
 
 
 func _ready() -> void:
@@ -56,6 +63,57 @@ func _ready() -> void:
 	mic_row.add_child(_mic)
 	col.add_child(mic_row)
 	_refresh_mic()
+
+	# Beginner or Advanced (ModeScreen) - for a grown-up, so it is held, not tapped.
+	var mode_row := HBoxContainer.new()
+	mode_row.add_theme_constant_override("separation", 16)
+	mode_row.add_child(UI.icon("icon_trophy", 60, "none"))
+	_mode_label = UI.label("", 22, true)
+	_mode_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_row.add_child(_mode_label)
+	var hold_col := VBoxContainer.new()
+	_mode_button = UI.button("", func(): pass, Vector2(300, 64), 22)
+	_mode_button.button_down.connect(func(): _holding = true)
+	_mode_button.button_up.connect(func(): _holding = false)
+	hold_col.add_child(_mode_button)
+	_mode_bar = ProgressBar.new()
+	_mode_bar.max_value = HOLD
+	_mode_bar.show_percentage = false
+	_mode_bar.custom_minimum_size = Vector2(0, 12)
+	hold_col.add_child(_mode_bar)
+	mode_row.add_child(hold_col)
+	col.add_child(mode_row)
+	_refresh_mode()
+
+
+func _refresh_mode() -> void:
+	var adv := game.profile.advanced()
+	_mode_label.text = ("Advanced mode - looking after pets, plus stats, training and competitions." if adv
+		else "Beginner mode - looking after pets. No stats, no scores, no contests.")
+	_mode_button.text = "Hold: switch to %s" % ("Beginner" if adv else "Advanced")
+
+
+func _process(delta: float) -> void:
+	if _mode_bar == null:
+		return
+	if _holding:
+		_held += delta
+		if int(_held * 4.0) != int((_held - delta) * 4.0):
+			Sounds.play("ui_tap", 1.0 + _held * 0.3)
+	else:
+		_held = maxf(0.0, _held - delta * 3.0)
+	_mode_bar.value = _held
+	if _held >= HOLD:
+		_held = 0.0
+		_holding = false
+		switch_mode()
+
+
+func switch_mode() -> void:
+	game.profile.set_mode("beginner" if game.profile.advanced() else "advanced")
+	Sounds.play("star")
+	game.toast("Now playing in %s mode." % game.profile.mode().capitalize(), "icon_trophy")
+	_refresh_mode()
 
 
 func _set_volume(v: float, key: String) -> void:

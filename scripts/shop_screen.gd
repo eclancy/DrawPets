@@ -80,14 +80,19 @@ func show_tab(which: String) -> void:
 			_note.text = "More room for more pets. Your pets need to trust you first!"
 			_room_cards()
 		_:
-			_note.text = {"toy": "Shiny toys sparkle - and train their stat TWICE as fast!",
-				"clothing": "Dress your pets up. Clothes win points at the Style Show.",
-				"supply": "A shiny marker draws one thing that shines forever. Treats boost training.",
+			var adv := game.profile.advanced()
+			_note.text = {"toy": "Shiny toys sparkle - and train their stat TWICE as fast!" if adv
+					else "Shiny toys sparkle and shine!",
+				"clothing": "Dress your pets up. Clothes win points at the Style Show." if adv
+					else "Dress your pets up - for the Costume Parade, or just for fun.",
+				"supply": "A shiny marker draws one thing that shines forever. Treats boost training." if adv
+					else "A shiny marker draws one thing that shines forever.",
 				"furniture": "Fancy things for a home - pets play with them by their words."}[which]
 			for id in Items.SHOP:
 				var item: Dictionary = Items.SHOP[id]
 				if item["category"] == which or (which == "supply" and item["category"] == "food"):
-					if not item.get("prize", false):
+					# A Star Snack is a training boost - there is no training in Beginner.
+					if not item.get("prize", false) and (adv or id != "star_snack"):
 						_grid.add_child(_item_card(id))
 
 
@@ -214,7 +219,7 @@ func meet(id: String) -> void:
 	for key in ["food", "toy"]:
 		likes.add_child(UI.item_picture(Items.get_item(pet[key]["item"]), 56))
 	col.add_child(likes)
-	for stat in Stats.LIST:
+	for stat in (Stats.LIST if game.profile.advanced() else []):
 		var srow := HBoxContainer.new()
 		srow.add_child(UI.icon(Stats.INFO[stat]["icon"], 30))
 		var sl := UI.label(Stats.label(stat), 17)

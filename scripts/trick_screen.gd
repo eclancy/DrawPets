@@ -266,7 +266,8 @@ func teach(t: String) -> void:
 		PetStore.change_need(pet, "fun", 0.03)
 		_show_hint("%s! Good %s!" % [name, pet["name"]])
 		return
-	var after := minf(1.0, before + Tricks.lesson(pet))
+	Care.played(pet)
+	var after := minf(1.0, before + Tricks.lesson(pet, game.profile.advanced()))
 	pet["tricks"][t]["learned"] = after
 	_train("smarts", 0.8)
 	PetStore.change_need(pet, "fun", 0.04)
@@ -292,7 +293,7 @@ func teach(t: String) -> void:
 
 func _train(stat: String, amount: float) -> void:
 	var levels := Stats.train(pet, stat, amount)
-	if levels > 0:
+	if levels > 0 and game.profile.advanced():
 		Sounds.play("level_up")
 		creature.say("star")
 		game.reward(3 * levels, "%s's %s is level %d!" % [pet["name"], Stats.label(stat),

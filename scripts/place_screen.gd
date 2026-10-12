@@ -278,7 +278,8 @@ func _build_hud() -> void:
 	right.add_child(UI.star_counter(game.profile, 40))
 	right.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(game.go_place.bind(home["id"])),
 		40, Vector2(84, 84)))
-	right.add_child(UI.icon_button("icon_calendar", "Events", func(): game.go_calendar(), 40, Vector2(84, 84)))
+	if game.profile.advanced():
+		right.add_child(UI.icon_button("icon_calendar", "Events", func(): game.go_calendar(), 40, Vector2(84, 84)))
 	root.add_child(right)
 
 	_hint = UI.title("", 22)
@@ -292,6 +293,7 @@ func _build_hud() -> void:
 	root.add_child(_hint)
 
 	_panel = PetPanel.new()
+	_panel.advanced = game.profile.advanced()
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_panel.offset_right = -12
@@ -1585,6 +1587,7 @@ func _ate() -> void:
 	_eater = null
 	if c == null:
 		return
+	Care.fed(c.pet)
 	var item: Dictionary = food.item if food != null and is_instance_valid(food) else {}
 	if food != null and is_instance_valid(food):
 		food.queue_free()
@@ -2025,7 +2028,7 @@ func _bath_done(c: Creature) -> void:
 	_bathed = true
 	Mud.clear(c.pet)
 	c.refresh_mud()
-	PetStore.change_need(c.pet, "clean", 1.0)
+	Care.bathed(c.pet)
 	c.interrupt()
 	Sounds.play("shake")
 	c.perform("shake", 1.3, _shaken.bind(c))
@@ -2150,7 +2153,7 @@ func _train(c: Creature, stat: String, amount: float) -> void:
 	if stat == "" or amount <= 0.0:
 		return
 	var levels := Stats.train(c.pet, stat, amount)
-	if levels > 0:
+	if levels > 0 and game.profile.advanced():
 		Sounds.play("level_up")
 		var lvl := Stats.level(Stats.value(c.pet, stat))
 		c.say("star")
@@ -2161,6 +2164,7 @@ func _train(c: Creature, stat: String, amount: float) -> void:
 
 
 func _love(c: Creature, n: int) -> void:
+	Care.played(c.pet)
 	var before := Stats.trust(c.pet)
 	c.pet["love"] = int(c.pet.get("love", 0)) + n
 	var after := Stats.trust(c.pet)

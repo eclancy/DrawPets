@@ -284,6 +284,7 @@ func go_back() -> void:
 
 
 func _save() -> void:
+	Care.played(pet)
 	PetStore.change_need(pet, "fun", 0.2)
 	PetStore.change_need(pet, "energy", -0.08)
 	PetStore.save_pet(pet)
@@ -295,7 +296,7 @@ func _exit_tree() -> void:
 
 func _train(stat: String, amount: float) -> void:
 	var levels := Stats.train(pet, stat, amount)
-	if levels > 0:
+	if levels > 0 and game.profile.advanced():
 		Sounds.play("level_up")
 		creature.say("star")
 		game.reward(3 * levels, "%s's %s is level %d!" % [pet["name"], Stats.label(stat),

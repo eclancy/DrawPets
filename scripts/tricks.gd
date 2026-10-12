@@ -50,7 +50,10 @@ static func card_texture(pet: Dictionary, trick: String) -> Texture2D:
 
 
 ## How much one good lesson teaches: a quarter, more for a clever pet - four lessons at most.
-static func lesson(pet: Dictionary) -> float:
+## In Beginner (no stats) every pet learns at the same steady pace: four lessons.
+static func lesson(pet: Dictionary, smarts_count := true) -> float:
+	if not smarts_count:
+		return 0.25
 	return 0.25 + Stats.value(pet, "smarts") / 240.0
 
 

@@ -28,10 +28,32 @@ need, stat, activity, reaction or reward.
 Four needs, 0-1: **food, fun, clean, energy**. They drift while the app is closed
 (`PetStore.DRIFT_PER_HOUR`) and **never drop below 0.25**. Energy refills while away.
 
+**The rhythm (`Care`):** feed it and play with it **every day** (food and fun run down over about
+a day); give it a **bath once a week** (clean runs down over a week, and a bath fills it right
+up). In Beginner the pet card shows this as a gentle today list instead of stats: "Fed today -
+yum!" / "Hungry? Time for food!", "Played today!" / "Wants to play!", "Bath day in 3 days." /
+"It's bath day!".
+
 - Low needs show as mood, not damage: slower tail, droopy ears, less bounce.
 - A tired pet (energy < 0.45) goes and naps on something **cozy** by itself.
 - After 6+ hours away a pet **missed you**: a greeting with hearts - a reward, never guilt.
 - **Never:** sickness, fleas, running away, dying, red warnings, guilt notifications.
+
+## Beginner and Advanced (built)
+
+Asked on first start (`ModeScreen`), switched by a grown-up in Settings (held 1.5 s so a tap
+never does it). The point is not to overwhelm kids who are not ready for a busier game, and to
+keep competing away from kids who find it hard.
+
+| | Beginner | Advanced |
+|---|---|---|
+| feeding, play, petting, bath day, mud, walks and presents, night, photos, journal, calling | yes | yes |
+| trick cards | yes - every pet learns at the same pace | yes - clever pets learn faster |
+| trust hearts, gold stars, the shop, adopting, drawing things | yes | yes |
+| the pet card | a "today" list (fed, played, bath day) | the six stats and levels |
+| stats | kept quietly, never shown: no level-up toasts, stars or journal lines | shown and trained |
+| the calendar | gentle fun days, no scores, no rivals | competitions with cups and rivals |
+| Star Snack (a training boost), "trains twice as fast" in the shop | hidden | yes |
 
 ## Stats (built)
 

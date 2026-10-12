@@ -24,7 +24,7 @@ const ROOM_PRICES := [30, 50, 80, 120]
 const ROOM_TRUST := [1, 2, 3, 3]
 
 ## Volumes 0..1, and the microphone - off until a kid (or a grown-up) turns it on.
-const DEFAULT_SETTINGS := {"music": 0.8, "sfx": 1.0, "voice": 1.0, "ambience": 0.8, "mic": false}
+const DEFAULT_SETTINGS := {"music": 0.8, "sfx": 1.0, "voice": 1.0, "ambience": 0.8, "mic": false, "mode": ""}
 
 var data := {}
 
@@ -75,6 +75,22 @@ func spend(n: int) -> bool:
 	save()
 	stars_changed.emit(stars())
 	return true
+
+
+## "beginner" (looking after pets), "advanced" (adds stats, training and competitions), or "" until
+## the family picks on first start (ModeScreen). Stats are kept quietly in Beginner, so moving up
+## later loses nothing.
+func mode() -> String:
+	return str(data["settings"].get("mode", ""))
+
+
+func advanced() -> bool:
+	return mode() == "advanced"
+
+
+func set_mode(m: String) -> void:
+	data["settings"]["mode"] = m
+	save()
 
 
 ## Today's counters, reset when the date changes.

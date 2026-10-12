@@ -16,7 +16,9 @@ const FLOOR := 0.25
 
 ## How much each need changes per real hour the app is closed. Energy is negative because a
 ## pet rests while you are away.
-const DRIFT_PER_HOUR := {"food": 0.05, "fun": 0.04, "clean": 0.015, "energy": -0.15}
+## Food and fun run down over about a day - feed and play every day. Clean runs down over a
+## week: one bath day a week fills it (Care).
+const DRIFT_PER_HOUR := {"food": 0.05, "fun": 0.04, "clean": 0.0045, "energy": -0.15}
 
 
 static func new_id() -> String:

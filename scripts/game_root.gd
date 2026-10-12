@@ -66,6 +66,8 @@ func _ready() -> void:
 				kid.game = self
 				add_child(kid)
 				kid.run()
+			elif profile.mode() == "":
+				go_mode()
 			else:
 				go_home()
 
@@ -75,6 +77,14 @@ func _ready() -> void:
 func go_home() -> void:
 	var s := HomeScreen.new()
 	s.game = self
+	show_screen(s)
+
+
+## Beginner or Advanced? Asked on first start.
+func go_mode() -> void:
+	var s := ModeScreen.new()
+	s.game = self
+	s.on_done = go_home
 	show_screen(s)
 
 

@@ -67,6 +67,7 @@ The family plays on one shared Android phone or tablet first, iOS later.
 | competitions | a local weekly calendar, one event per stat, four cups (`competitions.md`) |
 | art | coloured pencil or marker; shine and sparkle only for special things (`art-direction.md`) |
 | AI | none, anywhere |
+| modes | **Beginner** (looking after pets - no stats, no scores, no contests) or **Advanced** (adds stats, training and competitions), asked on first start; a grown-up switches in Settings with a hold. For kids not ready for a busier game, or who find competing hard (`pet-life.md`) |
 
 ## Scope
 
