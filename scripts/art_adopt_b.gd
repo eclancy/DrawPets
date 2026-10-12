@@ -13,32 +13,110 @@ extends RefCounted
 ## the same zoom - PartTypes.TYPES[type]["dot"] and ["zoom"] (scripts/part_types.gd). The dot is
 ## the asset's pivot. Ids are "<creature>_<part key>"; a key like "claw_on_arm" is a claw drawn
 ## for an arm (drawn exactly like any other claw). The body has no dot (pivot "center").
+##
+## Every creature's face is its own: no shared eye or mouth drawing, and no shared neck. Eyes
+## are drawn centred on their dot (they blink by squashing to 8% about it); mouths are drawn
+## open, centred top-to-bottom on theirs (shown squashed to 14%); a head's neck - long, S-bent,
+## short or none - is part of the head drawing from its dot. The ROSTER "layout" puts each face
+## where that creature's own drawing has it.
+##
+## Faces follow the game's face convention (scripts/part_types.gd, above TYPES): Hoot, Blaze,
+## Petal, Comet, Gizmo and Twinkle are turned three-quarters to the right, the way they walk -
+## both eyes in the right-hand part of the head, the far one near the outline; the nose under
+## them nearer the far eye (Blaze's and Petal's on a snout or muzzle poking out to the right);
+## the mouth under the nose; the near ear, horn or antenna at the back-left, the far one behind
+## the top right. Skye, Zephyr, Pelly and Ptera are drawn in true profile - a long snout or beak
+## pointing right - and stay that way.
 
 const INK := Color("#1f1d24")
 
+## Hoot's eyes sit close together in its facial disc; the body draws the disc round them.
+const HOOT_EYE_U := 0.75
+const HOOT_EYE_V := 0.31
+const HOOT_EYE_SPREAD := 0.115
+## Its beak goes under the eyes, nearer the far (right) one - the face is turned to the right.
+const HOOT_BEAK_U := 0.77
+
+## Gizmo's nose, drawn by its body, and its mouth under it: between the eyes, nearer the far one.
+const GIZMO_NOSE_U := 0.785
+
+
 ## Who they are and what they are made of. Names and parts are fixed (game code uses them); how
-## each part looks is up to its drawing.
+## each part looks is up to its drawing. "layout" moves parts off the spot every creature would
+## otherwise share (PetBuilder.layout_on_host): anchors are fractions of the host's cropped ink
+## box, matched to where each drawing puts its skull, snout or face.
 const ROSTER := {
 	"skye": {"name": "Skye", "look": "puffy pale-blue cloud whale with tiny wings and a tail fluke, no head",
-		"parts": {"eye": 1, "mouth": 1, "wing": 2, "tail": 1}},
+		"parts": {"eye": 1, "mouth": 1, "wing": 2, "tail": 1},
+		# a whale's face: the long mouth low along the front, the little eye low and back over
+		# the end of it
+		"layout": {"eye": {"anchor": [0.555, 0.575]}, "mouth": {"anchor": [0.76, 0.71]}}},
 	"hoot": {"name": "Hoot", "look": "round brown owl, huge eyes, ear tufts, wings, two legs with claws, no separate head",
-		"parts": {"eye": 2, "mouth": 1, "ear": 2, "wing": 2, "leg": 2, "claw": 3}},
+		"parts": {"eye": 2, "mouth": 1, "ear": 2, "wing": 2, "leg": 2, "claw": 3},
+		# turned three-quarters to the right: eyes touching in the facial disc the body draws
+		# round them, up in the right of the body with the far one near the outline; the beak
+		# under them, nearer the far eye; an ear tuft at the back-left of the top and one peeking
+		# up behind the top right
+		"layout": {"eye": {"anchor": [HOOT_EYE_U, HOOT_EYE_V], "spread": HOOT_EYE_SPREAD},
+			"mouth": {"anchor": [HOOT_BEAK_U, 0.46]},
+			"ear": {"anchor": [HOOT_EYE_U - 0.17, 0.5], "far": [0.34, 0.0]}}},
 	"zephyr": {"name": "Zephyr", "look": "teal dragonfly-lizard, four see-through wings, long tail",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "wing": 4, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "wing": 4, "leg": 4, "tail": 1},
+		# no neck: the head pokes straight out of the front of the body, low; the bug eyes
+		# bulge up off the top of the skull, nearly touching
+		"layout": {"head": {"anchor": [0.95, 0.56], "edge": [1, 0]},
+			"eye": {"anchor": [0.39, 0.5], "edge": [0, -1], "spread": 0.08},
+			"mouth": {"anchor": [0.74, 0.76]}}},
 	"blaze": {"name": "Blaze", "look": "baby red-orange dragon, horns, wings, back spikes, little clawed arms",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "horn": 2, "wing": 2, "spike": 3, "tail": 1, "leg": 2, "arm": 2, "claw_on_arm": 3}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "horn": 2, "wing": 2, "spike": 3, "tail": 1, "leg": 2, "arm": 2, "claw_on_arm": 3},
+		# the head is up at the top of its S-curve neck, turned three-quarters to the right: the
+		# eyes either side of BLAZE_FACE, the grin along the snout (BLAZE_MOUTH), the near horn
+		# at the back-left of the skull and the far one behind its top right
+		"layout": {"eye": {"anchor": [0.532, 0.18], "spread": 0.104}, "mouth": {"anchor": [0.74, 0.36]},
+			"horn": {"anchor": [0.18, 0.5], "far": [0.544, 0.0]}}},
 	"petal": {"name": "Petal", "look": "kitten with butterfly wings",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "wing": 2, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "wing": 2, "leg": 4, "tail": 1},
+		# a round head straight up on a short neck at the front, turned three-quarters to the
+		# right: the eyes either side of PETAL_FACE, the mouth under the nose on the muzzle
+		# (PETAL_MOUTH), the near ear at the back-left of the head and the far one behind its top
+		# right
+		"layout": {"head": {"anchor": [0.84, 0.5]}, "eye": {"anchor": [0.578, 0.232], "spread": 0.104},
+			"mouth": {"anchor": [0.737, 0.439]}, "ear": {"anchor": [0.235, 0.5], "far": [0.534, 0.0]}}},
 	"comet": {"name": "Comet", "look": "a yellow star-shaped critter with antennae and tiny wings, no head",
-		"parts": {"eye": 2, "mouth": 1, "antenna": 2, "wing": 2}},
+		"parts": {"eye": 2, "mouth": 1, "antenna": 2, "wing": 2},
+		# the face turned three-quarters to the right, in the front half of the star; an antenna
+		# up out of each shoulder of the top point - the near one left of the eyes, the far one
+		# right of them - and the little wings further back, clear of the near antenna
+		"layout": {"eye": {"anchor": [0.68, 0.44], "spread": 0.09}, "mouth": {"anchor": [0.72, 0.62]},
+			"antenna": {"anchor": [0.47, 0.5], "far": [0.34, 0.0]}, "wing": {"anchor": [0.36, 0.5]}}},
 	"pelly": {"name": "Pelly", "look": "white pelican, giant pouchy beak as its mouth, webbed feet",
-		"parts": {"head": 1, "eye": 1, "mouth": 1, "wing": 2, "leg": 2, "foot": 1}},
+		"parts": {"head": 1, "eye": 1, "mouth": 1, "wing": 2, "leg": 2, "foot": 1},
+		# the head sits on top of its folded neck; the beak grows off the front of it
+		"layout": {"head": {"anchor": [0.76, 0.5]}, "eye": {"anchor": [0.783, 0.296]},
+			"mouth": {"anchor": [1.11, 0.382]}}},
 	"gizmo": {"name": "Gizmo", "look": "little purple bat, enormous ears, leathery wings, no separate head",
-		"parts": {"eye": 2, "mouth": 1, "ear": 2, "wing": 2, "leg": 2}},
+		"parts": {"eye": 2, "mouth": 1, "ear": 2, "wing": 2, "leg": 2},
+		# turned three-quarters to the right: eyes close together up in the right of the body,
+		# the nose the body draws under them nearer the far eye (GIZMO_NOSE_U), the little mouth
+		# under it, the near ear at the back-left of the top and the far one behind the top right
+		"layout": {"eye": {"anchor": [0.75, 0.31], "spread": 0.075},
+			"mouth": {"anchor": [GIZMO_NOSE_U, 0.53]}, "ear": {"anchor": [0.58, 0.5], "far": [0.34, 0.0]}}},
 	"twinkle": {"name": "Twinkle", "look": "candy-pink fairy moth, fluffy hair tuft, four pastel wings",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "antenna": 2, "hair": 1, "wing": 4, "leg": 2}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "antenna": 2, "hair": 1, "wing": 4, "leg": 2},
+		# no neck - the head sits in its fluffy collar on the front of the body, turned
+		# three-quarters to the right: the eyes either side of TWINKLE_FACE, the mouth under them
+		# (TWINKLE_MOUTH), the near antenna just past the hair at the back-left and the far one
+		# behind the top right
+		"layout": {"head": {"anchor": [0.86, 0.5]}, "eye": {"anchor": [0.737, 0.333], "spread": 0.1},
+			"mouth": {"anchor": [0.789, 0.556]}, "antenna": {"anchor": [0.507, 0.5], "far": [0.385, 0.0]}}},
 	"ptera": {"name": "Ptera", "look": "pterodactyl, head crest, long beak, big leathery wings, clawed feet",
-		"parts": {"head": 1, "eye": 1, "mouth": 1, "horn": 1, "wing": 2, "leg": 2, "claw": 3, "tail": 1}},
+		"parts": {"head": 1, "eye": 1, "mouth": 1, "horn": 1, "wing": 2, "leg": 2, "claw": 3, "tail": 1},
+		# drawn in profile: the long neck reaches forward off the front of the body; one eye, the
+		# beak along the snout and the crest sweeping back off the back of the skull go on the
+		# head at the end of it (a zero "far" keeps the lone crest on its anchor at the back of
+		# the skull, not moved forward between where a pair would go)
+		"layout": {"head": {"anchor": [0.92, 0.42], "edge": [1, 0]}, "eye": {"anchor": [0.762, 0.251]},
+			"mouth": {"anchor": [1.044, 0.34]}, "horn": {"anchor": [0.575, 0.5], "far": [0.0, 0.0]}}},
 }
 
 
@@ -369,30 +447,44 @@ static func _cup(at: Vector2, w: float, h: float) -> PackedVector2Array:
 		at + Vector2(w, -h * 0.4), 8)
 
 
-## One eye round the dot: white, an optional coloured iris, a black pupil with a shine.
-static func _eye(c: CanvasItem, seed: int, r: Vector2, iris: Color, iris_r: float,
-		pupil: Vector2, look := Vector2(8, 4)) -> PackedVector2Array:
-	var white := Crayon.blob(O, r, seed, 24, 0.035)
-	c.draw_colored_polygon(white, PAPER)
-	if iris_r > 0.0:
-		var ir := Crayon.blob(O + look, Vector2(iris_r, iris_r * 1.04), seed + 2, 18, 0.04)
-		_clip_fill(c, ir, white, iris, seed + 3, 14.0)
-		Crayon.marker_line(c, ir, INK, 6.0, seed + 4)
-	var pc := O + look * 1.2
-	c.draw_colored_polygon(Crayon.blob(pc, pupil, seed + 5, 16, 0.04), INK)
-	c.draw_circle(pc + Vector2(-pupil.x * 0.4, -pupil.y * 0.42), minf(pupil.x, pupil.y) * 0.34,
-		Color.WHITE)
-	Crayon.marker_line(c, white, INK, W_EYE, seed + 6)
-	return white
+## Points along part of an ellipse, from angle `a0` to `a1` (radians; y points down).
+static func _arc(center: Vector2, r: Vector2, a0: float, a1: float, n := 10) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in n + 1:
+		var a := lerpf(a0, a1, i / float(n))
+		out.append(center + Vector2(cos(a) * r.x, sin(a) * r.y))
+	return out
 
 
-## Three lashes flicking up off the top of an eye.
-static func _lashes(c: CanvasItem, r: Vector2, seed: int) -> void:
-	for i in 3:
-		var a := -PI * 0.5 + (i - 0.6) * 0.42
-		var root := O + Vector2(cos(a) * r.x, sin(a) * r.y)
-		var tip := root + Vector2(cos(a), sin(a)) * 38.0 + Vector2(10, -6)
-		_ink(c, _bez(root, root.lerp(tip, 0.5) + Vector2(-4, -4), tip, tip, 4), 9.0, seed + i)
+## A four-pointed twinkle, the way a kid draws a sparkle.
+static func _sparkle(at: Vector2, s: float, seed: int) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in 8:
+		var a := -PI * 0.5 + TAU * i / 8.0
+		var r := s if i % 2 == 0 else s * 0.3
+		out.append(at + Vector2(cos(a), sin(a)) * r * (1.0 + Crayon.noise(seed, i) * 0.05))
+	return out
+
+
+## A ring of flame tongues round `at`: `n` points between `r_in` and `r_out`, every one licking a
+## little clockwise.
+static func _flames(at: Vector2, r_out: float, r_in: float, n: int, seed: int) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in n * 2:
+		var a := TAU * i / (n * 2.0) + (0.12 if i % 2 == 0 else 0.0)
+		var r := (r_out if i % 2 == 0 else r_in) * (1.0 + Crayon.noise(seed, i) * 0.08)
+		out.append(at + Vector2(cos(a), sin(a)) * r)
+	return out
+
+
+## One lash: a tapering black flick out from `root` along `dir`, bending by `bend` at its tip.
+static func _lash(c: CanvasItem, root: Vector2, dir: Vector2, length: float, bend: Vector2,
+		seed: int, w := 7.0) -> void:
+	var tip := root + dir * length + bend
+	var path := _bez(root - dir * 6.0, root + dir * length * 0.45, tip - dir * length * 0.2 + bend * 0.2, tip, 8)
+	var lash := _tube(path, w, 1.6)
+	c.draw_colored_polygon(lash, INK)
+	Crayon.marker_line(c, lash, INK, 3.0, seed)
 
 
 ## A mouth drawn wide open round the dot: flat-ish top, round bottom, centred top-to-bottom.
@@ -405,32 +497,6 @@ static func _mouth_shape(half: Vector2, flat: float, seed: int, n := 30) -> Pack
 		var k := 1.0 + Crayon.noise(seed, i) * 0.03
 		pts.append(O + Vector2(cos(a) * half.x * k, sin(a) * ry * k - shift))
 	return pts
-
-
-## The usual open mouth: dark pink inside, a tongue, maybe teeth or fangs.
-static func _open_mouth(c: CanvasItem, seed: int, half: Vector2, flat := 0.3, teeth := 0,
-		fangs := false, tongue := true) -> PackedVector2Array:
-	var m := _mouth_shape(half, flat, seed)
-	_fill(c, m, MOUTH_IN, seed + 1, 18.0)
-	var b := Crayon.bounds(m)
-	if tongue:
-		var tg := Crayon.blob(Vector2(O.x + half.x * 0.12, b.end.y - half.y * 0.32),
-			Vector2(half.x * 0.52, half.y * 0.5), seed + 2, 16, 0.05)
-		_clip_fill(c, tg, m, TONGUE, seed + 3, 16.0)
-	for k in teeth:
-		var x := O.x + (k - (teeth - 1) * 0.5) * half.x * 0.42
-		var tooth := Crayon.rounded_rect(Rect2(x - half.x * 0.17, b.position.y - 10.0,
-			half.x * 0.34, half.y * 0.55), 8.0)
-		_clip_fill(c, tooth, m, PAPER, seed + 10 + k, 12.0, 6.0)
-	if fangs:
-		for s in [-1.0, 1.0]:
-			var x: float = O.x + s * half.x * 0.42
-			var y := b.position.y + half.y * flat * 0.6
-			var fang := PackedVector2Array([Vector2(x - 15, y - 20), Vector2(x + 15, y - 20),
-				Vector2(x + 2, y + half.y * 0.4)])
-			_clip_fill(c, fang, m, PAPER, seed + 20 + int(s), 12.0, 6.0)
-	Crayon.marker_line(c, m, INK, W_MOUTH, seed + 5)
-	return m
 
 
 ## A wing edge with feather bumps: `lead` runs root -> tip, `back` tip -> root, and each point
@@ -484,7 +550,6 @@ static func _bat_wing(c: CanvasItem, root_r: Vector2, root_l: Vector2, wrist: Ve
 const SK_BLUE := Color("#b5d9ff")
 const SK_DEEP := Color("#82b4ec")
 const SK_BELLY := Color("#eef6ff")
-const SK_CHEEK := Color("#ffaecb")
 const SK_WING := Color("#fbfcff")
 
 static func _skye_body(c: CanvasItem) -> void:
@@ -512,19 +577,36 @@ static func _skye_body(c: CanvasItem) -> void:
 			var a := PI * 1.05 + t * PI * 1.3
 			curl.append(at + Vector2(4, 14) + Vector2(cos(a), sin(a)) * r * lerpf(0.5, 0.26, t))
 		_clip_line(c, curl, body, SK_DEEP, 5.0, 1020 + i)
-	var box := _box(body, W_BODY)
-	var cheek := box.position + box.size * Vector2(0.69, 0.52)
-	_clip_fill(c, Crayon.blob(cheek, Vector2(24, 15), 1030, 10, 0.08), body, SK_CHEEK, 1031, 10.0)
 	Crayon.marker_line(c, body, INK, W_BODY, 1032)
 
 
+## A whale's eye: small, a shiny dark bead in a pale rim with sky caught in the bottom of it, and
+## one lash curling up and back. It sits low and back on the body (ROSTER layout).
 static func _skye_eye(c: CanvasItem) -> void:
-	_eye(c, 1041, Vector2(68, 72), Color("#6cb4f0"), 46.0, Vector2(26, 28), Vector2(8, 4))
-	_lashes(c, Vector2(68, 72), 1045)
+	var r := Vector2(64, 56)
+	var rim := Crayon.blob(O, r, 1041, 20, 0.035)
+	_fill(c, rim, Color("#e8f4ff"), 1042, 14.0)
+	var bc := O + Vector2(7, 4)
+	var bead := Crayon.blob(bc, Vector2(45, 41), 1043, 18, 0.04)
+	c.draw_colored_polygon(bead, INK)
+	_clip_line(c, _arc(bc, Vector2(32, 28), PI * 0.3, PI * 0.8, 8), bead, SK_DEEP, 9.0, 1044)
+	_clip_line(c, _arc(bc, Vector2(29, 25), PI * 1.08, PI * 1.5, 8), bead, Color.WHITE, 11.0, 1045)
+	c.draw_circle(bc + Vector2(18, -12), 6.0, Color.WHITE)
+	Crayon.marker_line(c, rim, INK, W_EYE, 1046)
+	var a := deg_to_rad(-138.0)
+	_lash(c, O + Vector2(cos(a) * r.x, sin(a) * r.y), Vector2(cos(a), sin(a)).rotated(0.35), 44.0, Vector2(-22, 2), 1047, 12.0)
 
 
+## A whale's long low smile, drawn open: it runs back along the front of the body and its back
+## corner turns up in a dimple.
 static func _skye_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1051, Vector2(98, 62), 0.28)
+	var top := _bez(Vector2(424, 262), Vector2(330, 286), Vector2(190, 280), Vector2(104, 232), 16)
+	var bottom := _bez(Vector2(104, 232), Vector2(150, 330), Vector2(320, 356), Vector2(424, 262), 16)
+	var m := _join([top, bottom])
+	_fill(c, m, MOUTH_IN, 1051, 18.0)
+	_clip_fill(c, Crayon.blob(Vector2(272, 326), Vector2(84, 22), 1052, 16, 0.05), m, TONGUE, 1053, 14.0)
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1054)
+	_ink(c, _bez(Vector2(106, 234), Vector2(88, 222), Vector2(84, 202), Vector2(98, 192), 5), 11.0, 1055)
 
 
 static func _skye_wing(c: CanvasItem) -> void:
@@ -575,20 +657,42 @@ static func _hoot_body(c: CanvasItem) -> void:
 	for i in back.size():
 		var at: Vector2 = back[i]
 		_clip_line(c, _cup(at, 16.0, 12.0), body, H_DARK, 5.0, 1112 + i)
-	# the pale face disk round where the eyes go, like owl goggles
+	# the pale facial disc the eyes sit in (at the ROSTER's eye anchor and spread), with a
+	# feathery ruff round it and a dark line down the middle between the eyes
 	var box := _box(body, W_BODY)
-	var e1 := box.position + box.size * Vector2(0.66, 0.3)
-	var e2 := box.position + box.size * Vector2(0.9, 0.3)
-	var face := _merge_all([Crayon.blob(e1, Vector2(56, 56), 1120, 16, 0.05),
-		Crayon.blob(e2, Vector2(52, 56), 1121, 16, 0.05),
-		Crayon.blob((e1 + e2) * 0.5 + Vector2(0, 34), Vector2(58, 42), 1122, 14, 0.05)])
+	var e1 := box.position + box.size * Vector2(HOOT_EYE_U - HOOT_EYE_SPREAD, HOOT_EYE_V)
+	var e2 := box.position + box.size * Vector2(HOOT_EYE_U + HOOT_EYE_SPREAD, HOOT_EYE_V)
+	var face := _merge_all([_squircle(e1, Vector2(60, 62), 2.0, 1120, 30, 0.03, 0.07),
+		_squircle(e2, Vector2(60, 62), 2.0, 1121, 30, 0.03, 0.07),
+		_squircle((e1 + e2) * 0.5 + Vector2(0, 50), Vector2(58, 42), 2.0, 1122, 24, 0.03, 0.07)])
 	_clip_fill(c, face, body, H_FACE, 1123, 14.0)
-	_clip_line(c, _loop(face), body, H_DARK, 6.0, 1124)
+	_clip_line(c, _loop(face), body, H_DARK, 7.0, 1124)
+	var mid := (e1 + e2) * 0.5
+	var beak_x := box.position.x + box.size.x * HOOT_BEAK_U
+	_clip_line(c, _bez(mid + Vector2(0, -60), mid + Vector2(-4, -30), mid + Vector2(4, -6), Vector2(beak_x, mid.y + 14.0), 6),
+		face, H_DARK, 6.0, 1126)
 	Crayon.marker_line(c, body, INK, W_BODY, 1125)
 
 
+## An owl's eye: no white at all - a huge, thick orange ring round a big black pupil, and a
+## feathery brown brow arching over the top.
 static func _hoot_eye(c: CanvasItem) -> void:
-	_eye(c, 1131, Vector2(90, 94), Color("#ffb32b"), 64.0, Vector2(36, 38), Vector2(6, 4))
+	var brow := PackedVector2Array()
+	var n := 10
+	for i in n + 1:
+		var a := deg_to_rad(lerpf(214.0, 326.0, i / float(n)))
+		var rr := 156.0 if i % 2 == 0 else 134.0
+		brow.append(O + Vector2(cos(a) * rr, sin(a) * rr * 0.92))
+	for i in range(n, -1, -1):
+		var a := deg_to_rad(lerpf(218.0, 322.0, i / float(n)))
+		brow.append(O + Vector2(cos(a) * 110.0, sin(a) * 112.0))
+	_part(c, brow, H_DARK, 1137, 10.0, 14.0)
+	var ring := Crayon.blob(O, Vector2(110, 112), 1131, 28, 0.025)
+	_fill(c, ring, Color("#ff9a1f"), 1132, 18.0)
+	_clip_fill(c, Crayon.blob(O + Vector2(3, 3), Vector2(80, 82), 1133, 22, 0.03), ring, Color("#ffcf3a"), 1134, 14.0)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(4, 4), Vector2(55, 57), 1135, 20, 0.03), INK)
+	c.draw_circle(O + Vector2(-14, -16), 16.0, Color.WHITE)
+	Crayon.marker_line(c, ring, INK, W_EYE + 2.0, 1136)
 
 
 static func _hoot_mouth(c: CanvasItem) -> void:
@@ -665,7 +769,9 @@ const ZE_TEAL := Color("#5fd0c4")
 const ZE_DARK := Color("#38a7a3")
 const ZE_BELLY := Color("#d9f7e4")
 const ZE_VEIN := Color("#62b8d4")
-const ZE_IRIS := Color("#9ede55")
+const ZE_EYE := Color("#b9e84a")
+const ZE_EYE_DARK := Color("#86c43a")
+const ZE_CELL := Color("#5e9a2a")
 
 static func _zephyr_body(c: CanvasItem) -> void:
 	var body := _egg(Vector2(256, 262), Vector2(206, 84), 0.3, 1301, 28, 0.03)
@@ -681,27 +787,57 @@ static func _zephyr_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1318)
 
 
+## No neck at all: a flat lizard head drawn straight over the dot and reaching forward, so it
+## pokes out low from the front of the body (ROSTER layout).
 static func _zephyr_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(286, 326), Vector2(96, 80), 1321, 20, 0.04)
-	var snout := Crayon.blob(Vector2(370, 356), Vector2(72, 48), 1322, 16, 0.04)
-	var neck := _tube(_seg(Vector2(206, 414), Vector2(250, 372), 6), 34.0, 34.0)
-	var head := _merge_all([skull, neck, snout])
+	var skull := Crayon.blob(Vector2(250, 394), Vector2(80, 56), 1321, 20, 0.04)
+	var snout := Crayon.blob(Vector2(334, 410), Vector2(80, 38), 1322, 16, 0.04)
+	var head := _merge(skull, snout)
 	_fill(c, head, ZE_TEAL, 1323)
-	var dots := [Vector2(226, 312), Vector2(250, 290), Vector2(228, 350)]
+	var dots := [Vector2(204, 384), Vector2(222, 412), Vector2(196, 418)]
 	for i in dots.size():
 		var at: Vector2 = dots[i]
 		_clip_fill(c, Crayon.blob(at, Vector2(11, 9), 1324 + i, 10, 0.15), head, ZE_DARK, 1328 + i, 8.0)
-	_clip_fill(c, Crayon.blob(Vector2(360, 398), Vector2(64, 18), 1332, 12, 0.08), head, ZE_BELLY, 1333, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(318, 444), Vector2(80, 14), 1332, 12, 0.08), head, ZE_BELLY, 1333, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1334)
-	c.draw_circle(Vector2(428, 338), 5.5, INK)
+	c.draw_circle(Vector2(398, 396), 5.5, INK)
 
 
+## A dragonfly's compound eye: a big glossy dome covered in little hexagon cells, no pupil at
+## all. Two of them sit on top of the head, bulging up over it (ROSTER layout).
 static func _zephyr_eye(c: CanvasItem) -> void:
-	_eye(c, 1341, Vector2(72, 76), ZE_IRIS, 50.0, Vector2(24, 26), Vector2(8, 2))
+	var dome := Crayon.blob(O, Vector2(86, 80), 1341, 28, 0.02)
+	_fill(c, dome, ZE_EYE, 1342, 18.0)
+	_clip_fill(c, Crayon.blob(O + Vector2(14, 56), Vector2(96, 46), 1343, 18, 0.04), dome, ZE_EYE_DARK, 1344, 14.0)
+	var s := 25.0
+	var h := s * sqrt(3.0)
+	var k := 0
+	for col in range(-5, 6):
+		for row in range(-4, 5):
+			var at := O + Vector2(col * s * 1.5, row * h + (h * 0.5 if absi(col) % 2 == 1 else 0.0))
+			if at.distance_to(O) > 104.0:
+				continue
+			var hex := PackedVector2Array()
+			for q in 7:
+				hex.append(at + Vector2(cos(PI / 3.0 * q), sin(PI / 3.0 * q)) * s)
+			_clip_line(c, hex, dome, ZE_CELL, 6.0, 13500 + k)
+			k += 1
+	_clip_fill(c, _rblob(O + Vector2(-28, -42), Vector2(34, 13), -0.45, 1345), dome, Color(1, 1, 1, 0.9), 1346, 10.0)
+	c.draw_circle(O + Vector2(10, -56), 6.0, Color(1, 1, 1, 0.9))
+	Crayon.marker_line(c, dome, INK, W_EYE, 1347)
 
 
+## A lizard's thin smile, drawn open: long and narrow with its back corner turned up, and a
+## little pink tongue flicking out of the front.
 static func _zephyr_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1351, Vector2(80, 60), 0.4)
+	var top := _bez(Vector2(372, 250), Vector2(300, 258), Vector2(196, 256), Vector2(140, 228), 14)
+	var bottom := _bez(Vector2(140, 228), Vector2(176, 280), Vector2(300, 292), Vector2(372, 250), 14)
+	var m := _join([top, bottom])
+	_fill(c, m, MOUTH_IN, 1351, 18.0)
+	var flick := _bez(Vector2(330, 264), Vector2(380, 264), Vector2(414, 252), Vector2(426, 224), 10)
+	_part(c, _tube(flick, 11.0, 14.0), TONGUE, 1352, 7.0, 12.0)
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1354)
+	_ink(c, _bez(Vector2(142, 230), Vector2(128, 222), Vector2(126, 208), Vector2(134, 200), 4), 10.0, 1355)
 
 
 static func _zephyr_wing(c: CanvasItem) -> void:
@@ -764,7 +900,6 @@ const BL_BELLY := Color("#ffd768")
 const BL_HORN := Color("#fff0c2")
 const BL_WING := Color("#ffbd59")
 const BL_SPIKE := Color("#ffcf3f")
-const BL_CHEEK := Color("#ff9fb0")
 
 static func _blaze_body(c: CanvasItem) -> void:
 	var body := _egg(Vector2(256, 262), Vector2(188, 126), 0.35, 1501, 28, 0.03)
@@ -784,26 +919,80 @@ static func _blaze_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1520)
 
 
+## Blaze's face is turned three-quarters to the right, the way it walks (head sheet pixels): the
+## middle between its eyes, set in the right-hand part of the head, and the grin along the snout
+## that pokes out to the right of the skull, under the nostrils at its front. The ROSTER layout
+## puts the eyes either side of BLAZE_FACE and the mouth on BLAZE_MOUTH.
+const BLAZE_FACE := Vector2(288, 146)
+const BLAZE_SNOUT := Vector2(342, 196)
+const BLAZE_MOUTH := Vector2(340, 216)
+
+## An S-curve neck: forward off the dot, back again, then up into a round head turned
+## three-quarters to the right, its snout poking out in front, with yellow belly scales running
+## up the front of the neck.
 static func _blaze_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(282, 316), Vector2(104, 94), 1521, 20, 0.04)
-	var snout := Crayon.blob(Vector2(368, 362), Vector2(74, 56), 1522, 16, 0.04)
-	var neck := _tube(_seg(Vector2(206, 414), Vector2(248, 370), 6), 36.0, 36.0)
-	var head := _merge_all([skull, neck, snout])
+	var low := _bez(Vector2(200, 420), Vector2(276, 398), Vector2(286, 336), Vector2(238, 306), 10)
+	var high := _bez(Vector2(238, 306), Vector2(190, 276), Vector2(176, 226), Vector2(226, 192), 10)
+	var path := _join([low, high])
+	var neck := _tube(path, 40.0, 32.0)
+	var skull := Crayon.blob(Vector2(262, 156), Vector2(84, 72), 1521, 20, 0.04)
+	var snout := Crayon.blob(BLAZE_SNOUT, Vector2(58, 36), 1522, 16, 0.04)
+	var head := _merge_all([neck, skull, snout])
 	_fill(c, head, BL_RED, 1523)
-	_clip_fill(c, Crayon.blob(Vector2(316, 372), Vector2(22, 14), 1524, 10, 0.08), head, BL_CHEEK, 1525, 10.0)
-	_clip_fill(c, Crayon.blob(Vector2(232, 300), Vector2(16, 12), 1526, 10, 0.12), head, BL_DARK, 1527, 8.0)
-	_clip_fill(c, Crayon.blob(Vector2(250, 262), Vector2(12, 10), 1528, 10, 0.12), head, BL_DARK, 1529, 8.0)
-	Crayon.marker_line(c, head, INK, W_BODY, 1530)
-	c.draw_colored_polygon(Crayon.blob(Vector2(420, 336), Vector2(8, 6), 1531, 10, 0.1), INK)
-	c.draw_colored_polygon(Crayon.blob(Vector2(398, 330), Vector2(7, 5), 1532, 10, 0.1), INK)
+	# belly scales up the front of the neck, stopping under the chin: a yellow strip with a line
+	# across every so often
+	var front := PackedVector2Array()
+	for i in path.size():
+		var d := (path[mini(i + 1, path.size() - 1)] - path[maxi(i - 1, 0)]).normalized()
+		front.append(path[i] - d.orthogonal() * 22.0)
+	var strip := _tube(front.slice(0, 16), 16.0, 13.0)
+	_clip_fill(c, strip, head, BL_BELLY, 1524, 12.0)
+	for k in 4:
+		var i := 2 + k * 4
+		var n := (front[i + 1] - front[i - 1]).normalized().orthogonal()
+		_clip_line(c, _seg(front[i] + n * 20.0, front[i] - n * 20.0, 2), strip, BL_DARK, 5.0, 1525 + k)
+	_clip_fill(c, Crayon.blob(Vector2(186, 270), Vector2(12, 10), 1528, 10, 0.12), head, BL_DARK, 1529, 8.0)
+	_clip_fill(c, Crayon.blob(Vector2(236, 106), Vector2(12, 10), 1530, 10, 0.12), head, BL_DARK, 1531, 8.0)
+	Crayon.marker_line(c, head, INK, W_BODY, 1532)
+	# two nostrils near the front of the snout - the far one smaller, right at its tip
+	var sn := BLAZE_SNOUT
+	c.draw_colored_polygon(_rblob(sn + Vector2(24, -16), Vector2(7, 5), 0.3, 1533, 10, 0.1), INK)
+	c.draw_colored_polygon(_rblob(sn + Vector2(43, -13), Vector2(5, 4), 0.2, 1534, 10, 0.1), INK)
 
 
+## A fiery dragon eye: a flame-coloured iris licking round a slit pupil, and a thick brow pulled
+## down low and level across the top of the eye - determined.
 static func _blaze_eye(c: CanvasItem) -> void:
-	_eye(c, 1541, Vector2(70, 74), Color("#ffc93a"), 48.0, Vector2(25, 30), Vector2(8, 4))
+	var white := Crayon.blob(O, Vector2(72, 68), 1541, 24, 0.035)
+	c.draw_colored_polygon(white, PAPER)
+	var ic := O + Vector2(8, 8)
+	_clip_fill(c, _flames(ic, 58.0, 45.0, 9, 1542), white, Color("#ff5a24"), 1543, 14.0)
+	_clip_fill(c, _flames(ic, 36.0, 26.0, 7, 1544), white, Color("#ffd23a"), 1545, 12.0)
+	var slit := _join([_bez(ic + Vector2(0, -48), ic + Vector2(15, -20), ic + Vector2(15, 20), ic + Vector2(0, 50), 8),
+		_bez(ic + Vector2(0, 50), ic + Vector2(-15, 20), ic + Vector2(-15, -20), ic + Vector2(0, -48), 8)])
+	c.draw_colored_polygon(slit, INK)
+	c.draw_circle(ic + Vector2(-18, 0), 7.5, Color.WHITE)
+	Crayon.marker_line(c, white, INK, W_EYE, 1547)
+	var brow := _tube(_bez(O + Vector2(-82, -46), O + Vector2(-34, -76), O + Vector2(34, -76), O + Vector2(82, -46), 10),
+		16.0, 16.0)
+	_part(c, brow, Color("#c94a2a"), 1549, 10.0, 12.0)
 
 
+## A wide toothy grin, corners turned up: little teeth all along the top and two big fangs.
 static func _blaze_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1551, Vector2(80, 64), 0.35, 0, true)
+	var top := _bez(Vector2(146, 228), Vector2(196, 254), Vector2(316, 254), Vector2(366, 228), 14)
+	var bottom := _bez(Vector2(366, 228), Vector2(344, 302), Vector2(168, 302), Vector2(146, 228), 14)
+	var m := _join([top, bottom])
+	_fill(c, m, MOUTH_IN, 1551, 18.0)
+	_clip_fill(c, Crayon.blob(Vector2(262, 290), Vector2(54, 18), 1552, 14, 0.05), m, TONGUE, 1553, 14.0)
+	for k in 7:
+		var at := top[1 + k * 2]
+		var fang := k == 1 or k == 5
+		var w := 15.0 if fang else 11.0
+		var tooth := PackedVector2Array([at + Vector2(-w, -8), at + Vector2(w, -8),
+			at + Vector2(1, 38.0 if fang else 16.0)])
+		_clip_fill(c, tooth, m, PAPER, 1554 + k, 10.0, 5.0)
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1562)
 
 
 static func _blaze_horn(c: CanvasItem) -> void:
@@ -884,7 +1073,6 @@ const PE_PINK := Color("#ffa6c2")
 const PE_WING := Color("#ffa8d4")
 const PE_WING2 := Color("#c3aef7")
 const PE_DOT := Color("#ffe27a")
-const PE_IRIS := Color("#7cc6f2")
 
 static func _petal_body(c: CanvasItem) -> void:
 	var body := Crayon.blob(Vector2(256, 266), Vector2(198, 104), 1701, 22, 0.04)
@@ -895,41 +1083,88 @@ static func _petal_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1710)
 
 
+## Petal's face is turned three-quarters to the right, the way it walks (head sheet pixels):
+## the middle between its eyes, set in the right-hand part of the round head; the nose under
+## them, nearer the far eye, on a little muzzle that pokes out past the right cheek; and the
+## mouth under the nose. The ROSTER layout puts the eyes either side of PETAL_FACE and the mouth
+## on PETAL_MOUTH.
+const PETAL_FACE := Vector2(294, 228)
+const PETAL_NOSE := Vector2(330, 262)
+const PETAL_MOUTH := Vector2(334, 292)
+
+## A round head on a short, thick neck going straight up from the dot, with a pink collar and a
+## little bell where the neck meets the head. Fur fluffs out of the back cheek; the front cheek
+## is the muzzle.
 static func _petal_head(c: CanvasItem) -> void:
-	var ctr := Vector2(284, 314)
+	var ctr := Vector2(262, 254)
 	var pts := PackedVector2Array()
 	var n := 36
 	for i in n:
 		var a := TAU * i / n
 		var deg := rad_to_deg(a)
 		var k := 1.0 + Crayon.noise(1711, i) * 0.03
-		if ((deg > 10.0 and deg < 50.0) or (deg > 130.0 and deg < 170.0)) and i % 2 == 0:
+		if deg > 125.0 and deg < 165.0 and i % 2 == 0:
 			k += 0.1
-		pts.append(ctr + Vector2(cos(a) * 108.0, sin(a) * 90.0) * k)
-	var head := _merge(pts, _tube(_seg(Vector2(208, 412), Vector2(244, 370), 6), 34.0, 34.0))
+		pts.append(ctr + Vector2(cos(a) * 100.0, sin(a) * 90.0) * k)
+	var neck_path := _seg(Vector2(206, 418), Vector2(222, 336), 6)
+	var nose := PETAL_NOSE
+	var muzzle := Crayon.blob(nose + Vector2(8, 22), Vector2(38, 26), 1716, 14, 0.04)
+	var head := _merge_all([pts, _tube(neck_path, 42.0, 42.0), muzzle])
 	_fill(c, head, PE_GREY, 1712)
-	var box := _box(head, W_BODY)
+	var f := PETAL_FACE
 	for i in 3:
-		_clip_fill(c, _stripe(ctr.x - 34.0 + i * 34.0, box.position.y - 4.0, 46.0 - absf(i - 1) * 12.0, 10.0),
+		_clip_fill(c, _stripe(f.x - 36.0 + i * 28.0, ctr.y - 96.0, 44.0 - absf(i - 1) * 12.0, 10.0),
 			head, PE_DARK, 1713 + i, 10.0)
-	var mouth := box.position + box.size * Vector2(0.82, 0.72)
-	_clip_fill(c, Crayon.blob(mouth + Vector2(-6, -10), Vector2(56, 42), 1717, 14, 0.06), head, PE_WHITE, 1718)
-	_clip_fill(c, Crayon.blob(mouth + Vector2(-76, -26), Vector2(20, 12), 1719, 10, 0.08), head, PE_PINK, 1720, 10.0)
+	var m := PETAL_MOUTH
+	# a white muzzle under the eyes, poking out at the front, and a pink blush on the near cheek
+	_clip_fill(c, Crayon.blob(nose + Vector2(6, 22), Vector2(40, 28), 1717, 14, 0.06), head, PE_WHITE, 1718)
+	_clip_fill(c, Crayon.blob(Vector2(f.x - 28.0, m.y - 22.0), Vector2(18, 11), 1719, 10, 0.08), head,
+		PE_PINK, 1720, 10.0)
+	var collar := _band(neck_path, 0.62, 48.0, 11.0)
+	_clip_fill(c, collar, head, Color("#ff7fb0"), 1735, 12.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1721)
-	var nose := PackedVector2Array([mouth + Vector2(-12, -46), mouth + Vector2(12, -46), mouth + Vector2(0, -33)])
-	_part(c, nose, PE_PINK, 1722, 5.0, 8.0)
+	_clip_line(c, _loop(collar), head, INK, 5.0, 1736)
+	var bell := Crayon.blob(Vector2(250, 384), Vector2(15, 14), 1737, 12, 0.06)
+	_part(c, bell, Color("#ffd84a"), 1738, 5.0, 8.0)
+	_ink(c, _seg(Vector2(250, 384), Vector2(250, 396), 1), 4.0, 1740)
+	# the nose, pointing down, with a line down to the mouth
+	var tri := PackedVector2Array([nose + Vector2(-11, -6), nose + Vector2(13, -7), nose + Vector2(2, 6)])
+	_part(c, tri, PE_PINK, 1722, 5.0, 8.0)
+	_ink(c, _seg(nose + Vector2(2, 6), Vector2(m.x - 2.0, m.y - 6.0), 2), 4.0, 1723)
+	# whiskers across the near cheek, and shorter ones poking out past the front of the muzzle
 	for i in 2:
-		var y := mouth.y - 30.0 + i * 14.0
-		_ink(c, _seg(Vector2(mouth.x - 48, y), Vector2(mouth.x - 98, y - 8 + i * 12), 3), 4.0, 1724 + i)
+		var y := m.y - 20.0 + i * 13.0
+		_ink(c, _seg(Vector2(m.x - 34.0, y), Vector2(m.x - 86.0, y - 8.0 + i * 13.0), 3), 4.0, 1724 + i)
+		_ink(c, _seg(Vector2(m.x + 36.0, y - 2.0), Vector2(m.x + 64.0, y - 8.0 + i * 11.0), 2), 4.0, 1726 + i)
 
 
+## Big sparkly eyes: a tall eye nearly all iris, deep blue fading to sky at the bottom, and
+## four-pointed sparkles for glints.
 static func _petal_eye(c: CanvasItem) -> void:
-	_eye(c, 1731, Vector2(68, 74), PE_IRIS, 50.0, Vector2(26, 32), Vector2(8, 4))
-	c.draw_circle(O + Vector2(26, 28), 7.0, Color.WHITE)
+	var white := Crayon.blob(O, Vector2(60, 76), 1731, 24, 0.03)
+	c.draw_colored_polygon(white, PAPER)
+	var ic := O + Vector2(6, 6)
+	var iris := Crayon.blob(ic, Vector2(48, 62), 1732, 20, 0.03)
+	_clip_fill(c, iris, white, Color("#4f72e0"), 1733, 14.0)
+	_clip_fill(c, Crayon.blob(ic + Vector2(0, 46), Vector2(46, 30), 1734, 14, 0.05),
+		Geometry2D.intersect_polygons(iris, white)[0], Color("#8fe0ff"), 1735, 12.0)
+	c.draw_colored_polygon(Crayon.blob(ic + Vector2(0, -4), Vector2(27, 36), 1736, 16, 0.04), INK)
+	c.draw_colored_polygon(_sparkle(ic + Vector2(-16, -24), 24.0, 1737), Color.WHITE)
+	c.draw_colored_polygon(_sparkle(ic + Vector2(20, 26), 13.0, 1738), Color.WHITE)
+	c.draw_circle(ic + Vector2(-22, 22), 4.0, Color.WHITE)
+	Crayon.marker_line(c, white, INK, W_EYE, 1739)
 
 
+## A tiny cat mouth, drawn open: its top lip is a "w" and one little fang pokes down.
 static func _petal_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1741, Vector2(70, 62), 0.4)
+	var lip := _join([_bez(Vector2(200, 240), Vector2(208, 260), Vector2(248, 260), Vector2(256, 242), 8),
+		_bez(Vector2(256, 242), Vector2(264, 260), Vector2(304, 260), Vector2(312, 240), 8)])
+	var m := _join([lip, _bez(Vector2(312, 240), Vector2(318, 296), Vector2(194, 296), Vector2(200, 240), 12)])
+	_fill(c, m, MOUTH_IN, 1741, 14.0)
+	_clip_fill(c, Crayon.blob(Vector2(256, 282), Vector2(32, 13), 1742, 12, 0.06), m, TONGUE, 1743, 12.0)
+	var fang := PackedVector2Array([Vector2(276, 246), Vector2(296, 246), Vector2(288, 280)])
+	_clip_fill(c, fang, m, PAPER, 1744, 10.0, 5.0)
+	Crayon.marker_line(c, m, INK, 11.0, 1745)
 
 
 static func _petal_ear(c: CanvasItem) -> void:
@@ -990,7 +1225,6 @@ static func _petal_tail(c: CanvasItem) -> void:
 
 const CO_YEL := Color("#ffe25e")
 const CO_ORANGE := Color("#ffad3b")
-const CO_CHEEK := Color("#ff9fb5")
 const CO_WING := Color("#e9ddff")
 
 ## A chubby star the way a kid draws one - not quite even. `angles` (degrees, clockwise from
@@ -1031,21 +1265,34 @@ static func _comet_body(c: CanvasItem) -> void:
 	for i in freckles.size():
 		var at: Vector2 = freckles[i]
 		_clip_fill(c, Crayon.star(at, 13.0, 1807 + i), body, CO_ORANGE, 1811 + i, 8.0)
-	var box := _box(body, W_BODY)
-	var cheek := box.position + box.size * Vector2(0.71, 0.5)
-	_clip_fill(c, Crayon.blob(cheek, Vector2(22, 14), 1815, 10, 0.08), body, CO_CHEEK, 1816, 10.0)
 	_clip_line(c, _bez(Vector2(150, 160), Vector2(170, 140), Vector2(196, 128), Vector2(214, 124), 6), body,
 		Color(1, 1, 1, 0.85), 7.0, 1817)
 	Crayon.marker_line(c, body, INK, W_BODY, 1818)
 
 
+## A round white eye whose pupil is a chubby black star, with one glint on it. Comet's face sits
+## in the front half of its star, turned a little to the right (ROSTER layout).
 static func _comet_eye(c: CanvasItem) -> void:
-	_eye(c, 1821, Vector2(66, 72), Color(), 0.0, Vector2(40, 46), Vector2(6, 6))
-	_part(c, Crayon.star(O + Vector2(22, 28), 13.0, 1823), Color.WHITE, 1824, 3.0, 8.0)
+	var white := Crayon.blob(O, Vector2(76, 80), 1821, 24, 0.035)
+	c.draw_colored_polygon(white, PAPER)
+	var pc := O + Vector2(4, 6)
+	var star := PackedVector2Array()
+	for i in 40:
+		var a := -PI * 0.5 + TAU * i / 40.0
+		var k := pow((1.0 + cos(a * 5.0 + PI * 2.5)) * 0.5, 1.4)
+		star.append(pc + Vector2(cos(a), sin(a)) * lerpf(27.0, 60.0, k) * (1.0 + Crayon.noise(1822, i) * 0.02))
+	c.draw_colored_polygon(star, INK)
+	c.draw_circle(pc + Vector2(-10, -10), 9.0, Color.WHITE)
+	Crayon.marker_line(c, white, INK, W_EYE, 1823)
 
 
+## A big round "O" of wonder, drawn open: dark inside, a throat, a little tongue at the bottom.
 static func _comet_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1831, Vector2(62, 54), 0.35)
+	var m := Crayon.blob(O, Vector2(60, 70), 1831, 24, 0.03)
+	_fill(c, m, MOUTH_IN, 1832, 16.0)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(0, -10), Vector2(32, 34), 1833, 16, 0.05), Color("#9a2846"))
+	_clip_fill(c, Crayon.blob(O + Vector2(2, 54), Vector2(42, 26), 1834, 14, 0.05), m, TONGUE, 1835, 12.0)
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1836)
 
 
 static func _comet_antenna(c: CanvasItem) -> void:
@@ -1097,22 +1344,48 @@ static func _pelly_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1921)
 
 
+## A pelican resting: a thick neck folded in a tight S - back off the dot, then forward under
+## the head - so the big head sits low, tucked over its chest, with a scruffy crest at the back.
 static func _pelly_head(c: CanvasItem) -> void:
-	var ball := Crayon.blob(Vector2(296, 328), Vector2(86, 90), 1931, 20, 0.04)
-	var neck := _tube(_seg(Vector2(204, 414), Vector2(246, 376), 6), 34.0, 34.0)
-	var head := _merge(ball, neck)
+	var low := _bez(Vector2(206, 424), Vector2(150, 408), Vector2(128, 356), Vector2(160, 322), 10)
+	var high := _bez(Vector2(160, 322), Vector2(190, 292), Vector2(232, 296), Vector2(246, 262), 10)
+	var neck := _tube(_join([low, high]), 46.0, 42.0)
+	var ball := Crayon.blob(Vector2(264, 234), Vector2(88, 74), 1931, 20, 0.04)
+	var shapes := [neck, ball]
+	var wisps := [[Vector2(212, 176), Vector2(150, 150)], [Vector2(222, 168), Vector2(166, 124)],
+		[Vector2(236, 164), Vector2(196, 118)]]
+	for w in wisps:
+		var root: Vector2 = w[0]
+		var tip: Vector2 = w[1]
+		shapes.append(_tube(_bez(root, root.lerp(tip, 0.4) + Vector2(0, -10), tip + Vector2(12, 6), tip, 8), 13.0, 5.0))
+	var head := _merge_all(shapes)
 	_fill(c, head, PL_WHITE, 1934)
-	_clip_line(c, _bez(Vector2(226, 262), Vector2(240, 248), Vector2(262, 242), Vector2(280, 244), 6), head,
-		PL_GREY, 5.0, 1932)
-	_clip_fill(c, Crayon.blob(Vector2(240, 392), Vector2(40, 30), 1935, 12, 0.08), head, PL_PEACH, 1936, 12.0)
-	_clip_line(c, _cup(Vector2(226, 400), 12.0, 8.0), head, PL_GREY, 5.0, 1937)
-	_clip_line(c, _cup(Vector2(258, 384), 12.0, 8.0), head, PL_GREY, 5.0, 1938)
-	Crayon.marker_line(c, head, INK, W_BODY, 1939)
+	_clip_fill(c, Crayon.blob(Vector2(178, 146), Vector2(44, 30), 1932, 12, 0.08), head, Color("#fff0b0"), 1933, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(246, 330), Vector2(50, 40), 1935, 12, 0.08), head, PL_PEACH, 1936, 12.0)
+	var marks := [Vector2(140, 372), Vector2(166, 404), Vector2(146, 336)]
+	for i in marks.size():
+		var at: Vector2 = marks[i]
+		_clip_line(c, _cup(at, 12.0, 8.0), head, PL_GREY, 5.0, 1937 + i)
+	Crayon.marker_line(c, head, INK, W_BODY, 1941)
 
 
+## A side eye: a small dark pupil in a pale yellow ring, slid to the front, with bare pink skin
+## round it the way a real pelican has, and a heavy sleepy lid.
 static func _pelly_eye(c: CanvasItem) -> void:
-	_eye(c, 1941, Vector2(64, 68), Color("#bfe6ff"), 42.0, Vector2(22, 24), Vector2(8, 4))
-	_lashes(c, Vector2(64, 68), 1945)
+	var skin := Crayon.blob(O + Vector2(-6, 4), Vector2(86, 70), 1942, 20, 0.05)
+	_fill(c, skin, Color("#ffc2b0"), 1943, 16.0)
+	var ring := Crayon.blob(O, Vector2(52, 50), 1944, 20, 0.035)
+	_fill(c, ring, Color("#fff2a8"), 1945, 14.0)
+	var pc := O + Vector2(18, 8)
+	c.draw_circle(pc, 15.0, INK)
+	c.draw_circle(pc + Vector2(-5, -6), 4.5, Color.WHITE)
+	var lid := PackedVector2Array([O + Vector2(-80, -80), O + Vector2(80, -80), O + Vector2(80, -12),
+		O + Vector2(0, -6), O + Vector2(-80, -14)])
+	_clip_fill(c, lid, ring, Color("#ffb19b"), 1946, 12.0)
+	Crayon.marker_line(c, ring, INK, W_EYE, 1947)
+	var lid_edge := _bez(O + Vector2(-50, -14), O + Vector2(-20, -4), O + Vector2(22, -4), O + Vector2(52, -12), 8)
+	_ink(c, lid_edge, W_EYE, 1948)
+	_ink(c, _bez(O + Vector2(-44, -30), O + Vector2(-14, -20), O + Vector2(16, -20), O + Vector2(44, -28), 8), 6.0, 1949)
 
 
 static func _pelly_mouth(c: CanvasItem) -> void:
@@ -1201,19 +1474,37 @@ static func _gizmo_body(c: CanvasItem) -> void:
 		var dir := Vector2(cos(a), sin(a))
 		var at := ctr + Vector2(dir.x * 120.0, dir.y * 112.0)
 		Crayon.line(c, at, at + dir * 20.0, GZ_DARK, 6.0, 2006 + i, 1.0)
+	# a little squashed bat nose between the eyes, nearer the far one, over the mouth (ROSTER)
 	var box := _box(body, W_BODY)
-	var cheek := box.position + box.size * Vector2(0.7, 0.5)
-	_clip_fill(c, Crayon.blob(cheek, Vector2(20, 13), 2015, 10, 0.08), body, GZ_PINK, 2016, 10.0)
+	var nose := box.position + box.size * Vector2(GIZMO_NOSE_U, 0.43)
+	var snout := Crayon.blob(nose, Vector2(22, 14), 2015, 12, 0.06)
+	_part(c, snout, GZ_PINK, 2016, 5.0, 10.0)
+	c.draw_circle(nose + Vector2(-7, 1), 3.5, INK)
+	c.draw_circle(nose + Vector2(8, 1), 3.5, INK)
 	Crayon.marker_line(c, body, INK, W_BODY, 2017)
 
 
+## A bat's eye: big, round and all black - no white at all - with one tiny glint and a dim
+## purple shine along the bottom.
 static func _gizmo_eye(c: CanvasItem) -> void:
-	_eye(c, 2021, Vector2(70, 76), Color(), 0.0, Vector2(38, 44), Vector2(8, 6))
-	c.draw_circle(O + Vector2(30, 30), 8.0, Color.WHITE)
+	var ball := Crayon.blob(O, Vector2(60, 64), 2021, 24, 0.03)
+	c.draw_colored_polygon(ball, INK)
+	_clip_line(c, _arc(O, Vector2(42, 46), PI * 0.2, PI * 0.75, 8), ball, Color("#5d4a92"), 8.0, 2022)
+	c.draw_circle(O + Vector2(-20, -24), 9.0, Color.WHITE)
+	Crayon.marker_line(c, ball, INK, W_EYE, 2023)
 
 
+## A little open mouth with two tiny fangs at the top, and no tongue showing.
 static func _gizmo_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 2031, Vector2(72, 60), 0.35, 0, true)
+	var m := _mouth_shape(Vector2(44, 34), 0.3, 2031)
+	_fill(c, m, MOUTH_IN, 2032, 14.0)
+	var b := Crayon.bounds(m)
+	for s in [-1.0, 1.0]:
+		var x: float = O.x + s * 20.0
+		var fang := PackedVector2Array([Vector2(x - 11, b.position.y - 6), Vector2(x + 11, b.position.y - 6),
+			Vector2(x, b.position.y + 28)])
+		_clip_fill(c, fang, m, PAPER, 2033 + int(s), 10.0, 5.0)
+	Crayon.marker_line(c, m, INK, W_MOUTH, 2036)
 
 
 static func _gizmo_ear(c: CanvasItem) -> void:
@@ -1276,25 +1567,65 @@ static func _twinkle_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 2118)
 
 
+## Twinkle's face is turned three-quarters to the right, the way it flies (head sheet pixels):
+## the middle between its eyes, set in the right-hand part of the round head, and the mouth under
+## them, nearer the far eye. A blush goes on the near cheek, and a little one peeks round the far
+## side. The ROSTER layout puts the eyes either side of TWINKLE_FACE and the mouth on
+## TWINKLE_MOUTH.
+const TWINKLE_FACE := Vector2(306, 298)
+const TWINKLE_MOUTH := Vector2(320, 350)
+
+## No neck: the round head sits straight on the dot, and a fluffy collar puffs out all round
+## where it meets the body.
 static func _twinkle_head(c: CanvasItem) -> void:
-	var skull := _squircle(Vector2(284, 318), Vector2(104, 94), 2.1, 2121, 40, 0.02, 0.03)
-	var head := _merge(skull, _tube(_seg(Vector2(208, 412), Vector2(244, 370), 6), 34.0, 34.0))
-	_fill(c, head, TW_PINK, 2122)
-	var box := _box(head, W_BODY)
-	var cheek := box.position + box.size * Vector2(0.62, 0.66)
-	_clip_fill(c, Crayon.blob(cheek, Vector2(22, 14), 2123, 10, 0.08), head, Color("#ff7fb5"), 2124, 10.0)
-	_clip_fill(c, Crayon.blob(Vector2(232, 418), Vector2(50, 30), 2125, 12, 0.1), head, TW_FLUFF, 2126, 12.0)
-	Crayon.marker_line(c, head, INK, W_BODY, 2127)
+	var skull := _squircle(Vector2(262, 318), Vector2(100, 90), 2.1, 2121, 40, 0.02, 0.03)
+	_fill(c, skull, TW_PINK, 2122)
+	var f := TWINKLE_FACE
+	_clip_fill(c, Crayon.blob(Vector2(f.x - 40.0, 340), Vector2(20, 13), 2123, 10, 0.08), skull,
+		Color("#ff7fb5"), 2124, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(f.x + 50.0, 336), Vector2(13, 11), 2125, 10, 0.08), skull,
+		Color("#ff7fb5"), 2126, 10.0)
+	Crayon.marker_line(c, skull, INK, W_BODY, 2127)
+	var puffs := []
+	for i in 7:
+		var t := i / 6.0
+		var at := Vector2(lerpf(150.0, 336.0, t), 404.0 + sin(t * PI) * 22.0 - t * 14.0)
+		puffs.append(Crayon.blob(at, Vector2(34, 30), 2128 + i, 12, 0.08))
+	var ruff := _merge_all(puffs)
+	_fill(c, ruff, TW_FLUFF, 2136)
+	for i in 3:
+		var at := Vector2(194 + i * 58, 414 + (8 if i == 1 else 0))
+		_clip_line(c, _arc(at, Vector2(12, 10), PI * 0.9, PI * 2.3, 8), ruff, Color("#f5b3d6"), 5.0, 2137 + i)
+	Crayon.marker_line(c, ruff, INK, W_BODY, 2140)
 
 
+## Big glossy dark eyes - deep plum, nearly black, with a shine across the top - and three long
+## lashes sweeping up and out.
 static func _twinkle_eye(c: CanvasItem) -> void:
-	_eye(c, 2131, Vector2(70, 76), Color("#8d5fd6"), 52.0, Vector2(30, 34), Vector2(6, 6))
-	c.draw_circle(O + Vector2(26, 30), 7.0, Color.WHITE)
-	_lashes(c, Vector2(70, 76), 2135)
+	var r := Vector2(58, 70)
+	var eye := Crayon.blob(O, r, 2131, 24, 0.03)
+	c.draw_colored_polygon(eye, Color("#3b2156"))
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(4, 4), Vector2(34, 42), 2132, 16, 0.04), INK)
+	_clip_fill(c, Crayon.blob(O + Vector2(0, 60), Vector2(50, 26), 2133, 14, 0.05), eye, Color("#9a6fd8"), 2134, 12.0)
+	c.draw_colored_polygon(_rblob(O + Vector2(-18, -28), Vector2(20, 11), -0.6, 2135), Color.WHITE)
+	c.draw_circle(O + Vector2(20, 22), 6.0, Color.WHITE)
+	Crayon.marker_line(c, eye, INK, W_EYE, 2136)
+	for i in 3:
+		var a := deg_to_rad(-84.0 + i * 28.0)
+		var out := Vector2(cos(a), sin(a))
+		_lash(c, O + Vector2(cos(a) * r.x, sin(a) * r.y), out, 66.0 - i * 8.0, out.orthogonal() * -18.0 + Vector2(0, -8),
+			2137 + i, 10.0)
 
 
+## A tiny smile, drawn open, with a curl at its back corner.
 static func _twinkle_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 2141, Vector2(64, 56), 0.4)
+	var top := _bez(Vector2(204, 238), Vector2(230, 252), Vector2(282, 252), Vector2(306, 238), 10)
+	var bottom := _bez(Vector2(306, 238), Vector2(296, 292), Vector2(214, 292), Vector2(204, 238), 10)
+	var m := _join([top, bottom])
+	_fill(c, m, MOUTH_IN, 2142, 14.0)
+	_clip_fill(c, Crayon.blob(O + Vector2(4, 24), Vector2(26, 12), 2143, 12, 0.06), m, TONGUE, 2144, 10.0)
+	Crayon.marker_line(c, m, INK, 11.0, 2145)
+	_ink(c, _bez(Vector2(206, 240), Vector2(184, 230), Vector2(178, 206), Vector2(196, 198), 8), 10.0, 2146)
 
 
 static func _twinkle_antenna(c: CanvasItem) -> void:
@@ -1387,21 +1718,39 @@ static func _ptera_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 2317)
 
 
+## A long thin neck reaching diagonally FORWARD off the dot - out in front, not up - to a small
+## head stretched out at the end of it.
 static func _ptera_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(284, 342), Vector2(84, 66), 2321, 20, 0.04)
-	var neck := _tube(_seg(Vector2(204, 414), Vector2(244, 380), 6), 30.0, 30.0)
-	var head := _merge(skull, neck)
+	var path := _bez(Vector2(200, 416), Vector2(262, 392), Vector2(316, 358), Vector2(366, 330), 14)
+	var neck := _tube(path, 30.0, 22.0)
+	var skull := Crayon.blob(Vector2(394, 312), Vector2(80, 56), 2321, 20, 0.04)
+	var head := _merge(neck, skull)
 	_fill(c, head, PT_GREEN, 2322)
-	var dots := [Vector2(238, 340), Vector2(258, 310), Vector2(222, 380)]
+	_clip_fill(c, _tube(_bez(Vector2(196, 446), Vector2(266, 424), Vector2(330, 384), Vector2(392, 362), 14), 14.0, 12.0),
+		head, PT_BELLY, 2323, 12.0)
+	var dots := [Vector2(250, 384), Vector2(296, 360), Vector2(380, 296), Vector2(214, 404)]
 	for i in dots.size():
 		var at: Vector2 = dots[i]
-		_clip_fill(c, Crayon.blob(at, Vector2(10, 8), 2323 + i, 10, 0.15), head, PT_DARK, 2327 + i, 8.0)
-	_clip_fill(c, Crayon.blob(Vector2(300, 384), Vector2(22, 13), 2331, 10, 0.08), head, Color("#ffab9a"), 2332, 10.0)
+		_clip_fill(c, Crayon.blob(at, Vector2(10, 8), 2324 + i, 10, 0.15), head, PT_DARK, 2328 + i, 8.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 2333)
 
 
+## A narrowed, sly eye: an almond squeezed thin from top and bottom, the pupil slid right to the
+## front, and one brow cocked up at the back.
 static func _ptera_eye(c: CanvasItem) -> void:
-	_eye(c, 2341, Vector2(66, 70), Color("#ffb04a"), 44.0, Vector2(22, 26), Vector2(8, 2))
+	var top := _bez(Vector2(186, 262), Vector2(214, 226), Vector2(290, 220), Vector2(330, 246), 10)
+	var bottom := _bez(Vector2(330, 246), Vector2(298, 280), Vector2(222, 286), Vector2(186, 262), 10)
+	var white := _join([top, bottom])
+	c.draw_colored_polygon(white, PAPER)
+	var ic := Vector2(292, 252)
+	_clip_fill(c, Crayon.blob(ic, Vector2(30, 30), 2341, 14, 0.04), white, Color("#ffb04a"), 2342, 12.0)
+	c.draw_colored_polygon(Crayon.blob(ic + Vector2(4, 0), Vector2(14, 15), 2343, 12, 0.05), INK)
+	c.draw_circle(ic + Vector2(-4, -6), 4.5, Color.WHITE)
+	Crayon.marker_line(c, white, INK, W_EYE, 2344)
+	_ink(c, _bez(Vector2(180, 258), Vector2(214, 222), Vector2(292, 216), Vector2(338, 240), 10), W_EYE + 4.0, 2345)
+	var brow := _join([_bez(Vector2(170, 214), Vector2(196, 160), Vector2(240, 152), Vector2(270, 176), 8),
+		_bez(Vector2(270, 176), Vector2(296, 190), Vector2(318, 196), Vector2(338, 196), 6)])
+	_part(c, _tube(brow, 13.0, 9.0), PT_DARK.darkened(0.2), 2346, 7.0, 10.0)
 
 
 static func _ptera_mouth(c: CanvasItem) -> void:

@@ -17,28 +17,63 @@ extends RefCounted
 const INK := Color("#1f1d24")
 
 ## Who they are and what they are made of. Names and parts are fixed (game code uses them); how
-## each part looks is up to its drawing.
+## each part looks is up to its drawing. "layout" moves parts off the spot every creature would
+## otherwise share (PetBuilder.layout_on_host): anchors are fractions of the host drawing's ink
+## box, so a face's anchors follow the shape of that creature's own head drawing.
 const ROSTER := {
+	# Faces are three-quarter, turned to the right like the body (PartTypes): both eyes in the
+	# right-hand part of the head, the nose between them nearer the far eye - on the front of a
+	# muzzle poking out to the right - the mouth under it, and ears, horns and antennae either
+	# side of the eyes, the near one at the back-left, the far one top right behind the head.
+	# Bramble, Moss and Tank are drawn in true profile: one eye, a snout pointing right, the nose
+	# on its tip and the mouth along it.
 	"pip": {"name": "Pip", "look": "tiny cream mouse-bunny, enormous round ears, pink nose",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "nose": 1, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "nose": 1, "leg": 4, "tail": 1},
+		"layout": {"head": {"anchor": [0.92, 0.56], "edge": [1, 0]}, "eye": {"anchor": [0.59, 0.38], "spread": 0.113},
+			"nose": {"anchor": [0.887, 0.65]}, "mouth": {"anchor": [0.835, 0.83]},
+			"ear": {"anchor": [0.2, 0.5], "far": [0.44, 0.0]}}},
 	"bramble": {"name": "Bramble", "look": "brown hedgehog with a back full of spikes",
-		"parts": {"head": 1, "eye": 1, "mouth": 1, "nose": 1, "leg": 4, "spike": 5}},
+		"parts": {"head": 1, "eye": 1, "mouth": 1, "nose": 1, "leg": 4, "spike": 5},
+		"layout": {"head": {"anchor": [0.93, 0.7], "edge": [1, 0]}, "eye": {"anchor": [0.4, 0.36]},
+			"mouth": {"anchor": [0.65, 0.8]}, "nose": {"anchor": [0.5, 0.74], "edge": [1, 0]}}},
 	"moss": {"name": "Moss", "look": "green turtle with a mossy shell on its back (the shell is its other part)",
-		"parts": {"head": 1, "eye": 1, "mouth": 1, "leg": 4, "other": 1, "tail": 1}},
+		"parts": {"head": 1, "eye": 1, "mouth": 1, "leg": 4, "other": 1, "tail": 1},
+		"layout": {"eye": {"anchor": [0.7, 0.31]}, "mouth": {"anchor": [0.74, 0.64]}}},
 	"clover": {"name": "Clover", "look": "little spotted fawn with flowery antlers",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "horn": 2, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "horn": 2, "leg": 4, "tail": 1},
+		"layout": {"eye": {"anchor": [0.557, 0.152], "spread": 0.12}, "mouth": {"anchor": [0.823, 0.334]},
+			"ear": {"anchor": [0.08, 0.3], "far": [0.66, 0.0]}, "horn": {"anchor": [0.3, 0.3], "far": [0.28, 0.0]}}},
 	"tank": {"name": "Tank", "look": "chunky blue-grey rhino-armadillo with one big horn and stompy feet",
-		"parts": {"head": 1, "eye": 1, "mouth": 1, "horn": 1, "leg": 4, "foot": 1, "tail": 1}},
+		"parts": {"head": 1, "eye": 1, "mouth": 1, "horn": 1, "leg": 4, "foot": 1, "tail": 1},
+		"layout": {"head": {"anchor": [0.93, 0.5], "edge": [1, 0]}, "eye": {"anchor": [0.44, 0.46]},
+			"mouth": {"anchor": [0.75, 0.84]}, "horn": {"anchor": [0.76, 0.5], "far": [0.0, 0.0]}}},
 	"waffles": {"name": "Waffles", "look": "fluffy cream sheepdog, a mane of hair flopping over its eyes",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "hair": 1, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "hair": 1, "leg": 4, "tail": 1},
+		"layout": {"eye": {"anchor": [0.66, 0.31], "spread": 0.097}, "mouth": {"anchor": [0.84, 0.72]},
+			# floppy ears hang down the sides of the head, not on top
+			"ear": {"anchor": [0.135, 0.37], "edge": [0, 0], "far": [0.77, -0.07]}, "hair": {"anchor": [0.45, 0.5]}}},
 	"sprocket": {"name": "Sprocket", "look": "orange fox with a giant white-tipped tail",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "nose": 1, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "nose": 1, "leg": 4, "tail": 1},
+		"layout": {"head": {"anchor": [0.94, 0.36], "edge": [1, 0]}, "eye": {"anchor": [0.543, 0.327], "spread": 0.1},
+			"nose": {"anchor": [0.915, 0.558]}, "mouth": {"anchor": [0.826, 0.663]},
+			"ear": {"anchor": [0.3, 0.5], "far": [0.36, 0.0]}}},
 	"pudding": {"name": "Pudding", "look": "round pink pig, snout nose, curly tail",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "nose": 1, "leg": 4, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "nose": 1, "leg": 4, "tail": 1},
+		"layout": {"head": {"anchor": [0.9, 0.6], "edge": [1, 0]}, "eye": {"anchor": [0.603, 0.34], "spread": 0.124},
+			# the snout between the eyes, nearer the far one and a little lower, the grin under it,
+			# an ear on each side of the eyes; the curly tail springs from the top of the rump
+			"nose": {"anchor": [0.78, 0.556]}, "mouth": {"anchor": [0.765, 0.78]},
+			"ear": {"anchor": [0.2, 0.5], "far": [0.58, 0.0]},
+			"tail": {"anchor": [0.14, 0.22], "edge": [-1, 0]}}},
 	"boulder": {"name": "Boulder", "look": "huge gentle shaggy yak, curved horns, big hooves",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "horn": 2, "hair": 1, "leg": 4, "foot": 1, "tail": 1}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "horn": 2, "hair": 1, "leg": 4, "foot": 1, "tail": 1},
+		"layout": {"head": {"anchor": [0.92, 0.62], "edge": [1, 0]}, "eye": {"anchor": [0.58, 0.39], "spread": 0.118},
+			"mouth": {"anchor": [0.8, 0.898]}, "horn": {"anchor": [0.15, 0.5], "far": [0.54, 0.0]},
+			"hair": {"anchor": [0.42, 0.5]}}},
 	"dottie": {"name": "Dottie", "look": "red ladybug-puppy with spots, two antennae and six little legs",
-		"parts": {"head": 1, "eye": 2, "mouth": 1, "antenna": 2, "leg": 6}},
+		"parts": {"head": 1, "eye": 2, "mouth": 1, "antenna": 2, "leg": 6},
+		"layout": {"head": {"anchor": [0.9, 0.85], "edge": [1, 0]}, "eye": {"anchor": [0.596, 0.426], "spread": 0.104},
+			"mouth": {"anchor": [0.86, 0.837]}, "antenna": {"anchor": [0.31, 0.5], "far": [0.414, 0.0]}}},
 }
 
 
@@ -381,76 +416,16 @@ static func _flower(c: CanvasItem, at: Vector2, r: float, petal: Color, middle: 
 	_part(c, mid, middle, seed + 3, width * 0.6, 8.0)
 
 
-## One eye round the dot: white, an optional coloured iris, a black pupil with a shine.
-static func _eye(c: CanvasItem, seed: int, r: Vector2, iris: Color, iris_r: float,
-		pupil: Vector2, look := Vector2(8, 4)) -> PackedVector2Array:
-	var white := Crayon.blob(O, r, seed, 24, 0.035)
-	c.draw_colored_polygon(white, PAPER)
-	if iris_r > 0.0:
-		var ir := Crayon.blob(O + look, Vector2(iris_r, iris_r * 1.04), seed + 2, 18, 0.04)
-		_fill(c, ir, iris, seed + 3, 14.0)
-		Crayon.marker_line(c, ir, INK, 6.0, seed + 4)
-	var pc := O + look * 1.2
-	c.draw_colored_polygon(Crayon.blob(pc, pupil, seed + 5, 16, 0.04), INK)
-	c.draw_circle(pc + Vector2(-pupil.x * 0.4, -pupil.y * 0.42), minf(pupil.x, pupil.y) * 0.34,
-		Color.WHITE)
-	Crayon.marker_line(c, white, INK, W_EYE, seed + 6)
-	return white
+## Every eye and mouth here is drawn by its own creature's function - there is deliberately no
+## shared eye or mouth helper, so no two of them come out the same.
 
 
-## Eyelashes flicking up off the top of an eye of radius `r`.
-static func _lashes(c: CanvasItem, seed: int, r: Vector2, n := 3) -> void:
-	for i in n:
-		var a := -PI * 0.5 + (i - 0.4) * 0.42
-		var root := O + Vector2(cos(a) * r.x, sin(a) * r.y)
-		var tip := root + Vector2(cos(a), sin(a)) * 36.0 + Vector2(10, -6)
-		_ink(c, _bez(root, root.lerp(tip, 0.5) + Vector2(-4, -4), tip, tip, 4), 9.0, seed + i)
-
-
-## A mouth drawn wide open round the dot: flat-ish top, round bottom, centred top-to-bottom.
-static func _mouth_shape(half: Vector2, flat: float, seed: int, n := 30) -> PackedVector2Array:
-	var shift := (half.y - half.y * flat) * 0.5
-	var pts := PackedVector2Array()
-	for i in n:
-		var a := TAU * i / n
-		var ry := half.y if sin(a) > 0.0 else half.y * flat
-		var k := 1.0 + Crayon.noise(seed, i) * 0.03
-		pts.append(O + Vector2(cos(a) * half.x * k, sin(a) * ry * k - shift))
-	return pts
-
-
-## The usual open mouth: dark pink inside, a tongue, maybe teeth along the top.
-static func _open_mouth(c: CanvasItem, seed: int, half: Vector2, flat := 0.3, teeth := 0,
-		fangs := false, tongue := true) -> PackedVector2Array:
-	var m := _mouth_shape(half, flat, seed)
-	_fill(c, m, MOUTH_IN, seed + 1, 18.0)
-	var b := Crayon.bounds(m)
-	if tongue:
-		var tg := Crayon.blob(Vector2(O.x + half.x * 0.12, b.end.y - half.y * 0.32),
-			Vector2(half.x * 0.52, half.y * 0.5), seed + 2, 16, 0.05)
-		_clip_fill(c, tg, m, TONGUE, seed + 3, 16.0)
-	for k in teeth:
-		var x := O.x + (k - (teeth - 1) * 0.5) * half.x * 0.42
-		var tooth := Crayon.rounded_rect(Rect2(x - half.x * 0.17, b.position.y - 10.0,
-			half.x * 0.34, half.y * 0.55), 8.0)
-		_clip_fill(c, tooth, m, PAPER, seed + 10 + k, 12.0, 6.0)
-	if fangs:
-		for s in [-1.0, 1.0]:
-			var x: float = O.x + s * half.x * 0.42
-			var y := b.position.y + half.y * flat * 0.6
-			var fang := PackedVector2Array([Vector2(x - 16, y - 20), Vector2(x + 16, y - 20),
-				Vector2(x + 2, y + half.y * 0.42)])
-			_clip_fill(c, fang, m, PAPER, seed + 20 + int(s), 12.0, 6.0)
-	Crayon.marker_line(c, m, INK, W_MOUTH, seed + 5)
-	return m
-
-
-## A round black nose with a shine, sticking out to the right of the nose dot (180, 256).
+## A round black nose with a shine, centred on the nose dot.
 static func _button_nose(c: CanvasItem, seed: int, r: Vector2) -> void:
-	var nose := Crayon.blob(Vector2(178 + r.x, 256), r, seed, 14, 0.04)
+	var nose := Crayon.blob(O, r, seed, 14, 0.04)
 	c.draw_colored_polygon(nose, INK)
 	Crayon.marker_line(c, nose, INK, W_NOSE, seed + 1)
-	c.draw_circle(Vector2(178 + r.x * 0.7, 256 - r.y * 0.4), r.y * 0.24, Color(1, 1, 1, 0.85))
+	c.draw_circle(O + Vector2(-r.x * 0.3, -r.y * 0.4), r.y * 0.24, Color(1, 1, 1, 0.85))
 
 
 ## Hair drawn lock by lock, back to front: each a tapering curl along [base, c1, c2, tip] with
@@ -480,6 +455,46 @@ static func _fur(c: CanvasItem, spots: Array, inside: PackedVector2Array, color:
 		_ink_in(c, s, area, width, seed + i * 3, color)
 
 
+## A grin drawn wide open round the dot: the top lip sags by `dip` in the middle (so the corners
+## turn up into a smile), the bottom is a round bowl. Centred top-to-bottom on the dot.
+static func _grin(half: Vector2, dip: float, seed: int, n := 14) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in n + 1:
+		var t := i / float(n)
+		pts.append(O + Vector2(lerpf(-half.x, half.x, t), -half.y + dip * (1.0 - pow(2.0 * t - 1.0, 2.0))))
+	for i in range(1, n):
+		var a := PI * i / n
+		var k := 1.0 + Crayon.noise(seed, i) * 0.03
+		pts.append(O + Vector2(half.x * cos(a) * k, -half.y + 2.0 * half.y * sin(a) * k))
+	return pts
+
+
+## Two strokes joined into one closed mouth outline: `top` left to right, `bottom` right to left.
+static func _lips(top: PackedVector2Array, bottom: PackedVector2Array) -> PackedVector2Array:
+	var out := top.duplicate()
+	out.append_array(bottom.slice(1, bottom.size() - 1))
+	return out
+
+
+## The inside of an open mouth: dark pink, with a tongue in it if `tongue_r` is not zero.
+static func _mouth_in(c: CanvasItem, m: PackedVector2Array, seed: int, tongue_at := Vector2.ZERO,
+		tongue_r := Vector2.ZERO) -> void:
+	_fill(c, m, MOUTH_IN, seed, 18.0)
+	if tongue_r.x > 0.0:
+		_clip_fill(c, Crayon.blob(tongue_at, tongue_r, seed + 1, 16, 0.05), m, TONGUE, seed + 2, 14.0)
+
+
+## An almond: from a to b, its top bowed up by `up` px and its bottom down by `down`.
+static func _lens(a: Vector2, b: Vector2, up: float, down: float, n := 12) -> PackedVector2Array:
+	var d := b - a
+	var nrm := d.orthogonal().normalized()
+	if nrm.y > 0.0:
+		nrm = -nrm
+	var top := _bez(a, a + d * 0.25 + nrm * up, a + d * 0.75 + nrm * up, b, n)
+	var bottom := _bez(b, b - d * 0.25 - nrm * down, b - d * 0.75 - nrm * down, a, n)
+	return _lips(top, bottom)
+
+
 # --- Pip: tiny cream mouse-bunny, enormous round ears, pink nose -----------------------------
 
 const PI_CREAM := Color("#f5dcb8")
@@ -497,24 +512,41 @@ static func _pip_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1009)
 
 
+## No neck: a round mouse head sitting right on the dot (it goes on the front of the body, a bit
+## low), turned three-quarters to the right: a chubby near cheek at the back, and a short pale
+## muzzle poking out to the right where the nose goes.
 static func _pip_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(282, 306), Vector2(104, 96), 1011, 22, 0.04)
-	var muzzle := Crayon.blob(Vector2(360, 344), Vector2(50, 40), 1012, 14, 0.05)
-	var neck := _tube(_seg(Vector2(206, 412), Vector2(246, 362), 6), 32.0, 32.0)
-	var head := _merge_all([skull, neck, muzzle])
+	var skull := Crayon.blob(Vector2(276, 352), Vector2(96, 86), 1011, 22, 0.04)
+	var cheek := Crayon.blob(Vector2(228, 400), Vector2(50, 40), 1019, 14, 0.05)
+	var muzzle := Crayon.blob(Vector2(348, 394), Vector2(52, 40), 1012, 14, 0.05)
+	var head := _merge_all([skull, cheek, muzzle])
 	_fill(c, head, PI_CREAM, 1013)
-	_clip_fill(c, Crayon.blob(Vector2(368, 352), Vector2(46, 34), 1014, 12, 0.06), head, PI_LIGHT, 1015)
-	_clip_fill(c, Crayon.blob(Vector2(306, 354), Vector2(24, 15), 1016, 10, 0.08), head, PI_PINK, 1017, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(356, 402), Vector2(46, 34), 1014, 12, 0.06), head, PI_LIGHT, 1015)
+	_clip_fill(c, Crayon.blob(Vector2(276, 404), Vector2(24, 15), 1016, 10, 0.08), head, PI_PINK, 1017, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1018)
 
 
+## Tiny shiny black beads, one big glint each.
 static func _pip_eye(c: CanvasItem) -> void:
-	_eye(c, 1021, Vector2(60, 66), Color(), 0.0, Vector2(42, 48), Vector2(6, 6))
-	c.draw_circle(O + Vector2(24, 30), 8.0, Color.WHITE)
+	var bead := Crayon.blob(O, Vector2(32, 38), 1021, 18, 0.03)
+	c.draw_colored_polygon(bead, INK)
+	Crayon.marker_line(c, bead, INK, 10.0, 1022)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(-9, -14), Vector2(12, 13), 1023, 10, 0.05), Color.WHITE)
 
 
+## A bunny "w": the top lip is two little arcs meeting under the nose, two buck teeth hanging
+## from the middle.
 static func _pip_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1031, Vector2(68, 60), 0.35, 2)
+	var top := _bez(O + Vector2(-74, -30), O + Vector2(-64, 12), O + Vector2(-16, 14), O + Vector2(0, -22), 8)
+	var top2 := _bez(O + Vector2(0, -22), O + Vector2(16, 14), O + Vector2(64, 12), O + Vector2(74, -30), 8)
+	top.append_array(top2.slice(1))
+	var m := _lips(top, _bez(O + Vector2(74, -30), O + Vector2(70, 58), O + Vector2(-70, 58), O + Vector2(-74, -30), 12))
+	_mouth_in(c, m, 1031, O + Vector2(4, 30), Vector2(40, 16))
+	Crayon.marker_line(c, m, INK, 11.0, 1034)
+	_ink(c, _seg(O + Vector2(0, -22), O + Vector2(0, -50), 2), 10.0, 1040)
+	for k in 2:
+		var tooth := Crayon.rounded_rect(Rect2(O.x - 27.0 + k * 27.0, O.y - 20.0, 26.0, 36.0), 6.0)
+		_part(c, tooth, PAPER, 1035 + k * 2, 6.0, 8.0)
 
 
 static func _pip_ear(c: CanvasItem) -> void:
@@ -525,15 +557,17 @@ static func _pip_ear(c: CanvasItem) -> void:
 	Crayon.marker_line(c, ear, INK, W_EAR, 1045)
 
 
+## A little pink nose right on the dot, three whiskers fanning out each side.
 static func _pip_nose(c: CanvasItem) -> void:
-	var angles := [-0.55, -0.2, 0.2, 0.55]
-	for i in angles.size():
-		var a: float = angles[i]
-		var from := Vector2(244, 256)
-		_ink(c, _seg(from, from + Vector2(cos(a), sin(a)) * 112.0, 4), 6.0, 1051 + i)
-	var nose := Crayon.blob(Vector2(222, 256), Vector2(44, 38), 1055, 14, 0.05)
+	var angles := [-0.32, 0.0, 0.32]
+	for side in [-1.0, 1.0]:
+		for i in angles.size():
+			var a: float = angles[i]
+			var from := O + Vector2(side * 30.0, 8.0)
+			_ink(c, _seg(from, from + Vector2(side * cos(a), sin(a)) * 108.0, 4), 6.0, 1090 + i + int(side + 1.0) * 2)
+	var nose := Crayon.blob(O, Vector2(38, 32), 1055, 14, 0.05)
 	_part(c, nose, PI_ROSE, 1056, W_NOSE, 14.0)
-	c.draw_circle(Vector2(210, 242), 9.0, Color(1, 1, 1, 0.85))
+	c.draw_circle(O + Vector2(-12, -13), 8.5, Color(1, 1, 1, 0.85))
 
 
 static func _pip_leg(c: CanvasItem) -> void:
@@ -587,30 +621,39 @@ static func _bramble_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1109)
 
 
+## No neck: the head pokes straight out of the front of the body, low, its long pointed snout
+## reaching forward.
 static func _bramble_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(268, 318), Vector2(92, 86), 1121, 20, 0.04)
-	var snout := _tube(_seg(Vector2(322, 336), Vector2(424, 342), 6), 46.0, 20.0)
-	var neck := _tube(_seg(Vector2(206, 412), Vector2(240, 366), 6), 34.0, 34.0)
-	var head := _merge_all([skull, neck, snout])
+	var skull := Crayon.blob(Vector2(266, 364), Vector2(88, 80), 1121, 20, 0.04)
+	var snout := _tube(_bez(Vector2(318, 378), Vector2(370, 388), Vector2(420, 396), Vector2(470, 404), 8), 44.0, 12.0)
+	var head := _merge(skull, snout)
 	_fill(c, head, BR_FACE, 1122)
 	# a prickly cap over the back of the head
-	var cap := PackedVector2Array([Vector2(120, 180), Vector2(300, 180)])
+	var cap := PackedVector2Array([Vector2(120, 240), Vector2(296, 240)])
 	for i in 11:
 		var t := i / 10.0
-		var p := Vector2(306, 214).lerp(Vector2(196, 432), t)
+		var p := Vector2(300, 282).lerp(Vector2(214, 452), t)
 		cap.append(p + Vector2(14.0 if i % 2 == 1 else -8.0, 0))
 	cap.append(Vector2(120, 470))
 	_clip_fill(c, cap, head, BR_QUILL, 1123)
-	_clip_fill(c, Crayon.blob(Vector2(330, 374), Vector2(22, 14), 1124, 10, 0.08), head, BR_PINK, 1125, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1126)
 
 
+## One small black bead of an eye, with a little curious brow over it.
 static func _bramble_eye(c: CanvasItem) -> void:
-	_eye(c, 1131, Vector2(64, 68), Color(), 0.0, Vector2(38, 42), Vector2(8, 4))
+	var bead := Crayon.blob(O + Vector2(0, 10), Vector2(30, 31), 1131, 16, 0.03)
+	c.draw_colored_polygon(bead, INK)
+	Crayon.marker_line(c, bead, INK, 10.0, 1132)
+	c.draw_circle(O + Vector2(-8, 0), 8.0, Color.WHITE)
+	_ink(c, _bez(O + Vector2(-34, -40), O + Vector2(-16, -58), O + Vector2(14, -60), O + Vector2(34, -46), 6),
+		13.0, 1133)
 
 
+## A small smile, tucked under the snout.
 static func _bramble_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1141, Vector2(66, 56), 0.4)
+	var m := _grin(Vector2(44, 30), 10.0, 1141)
+	_mouth_in(c, m, 1142, O + Vector2(4, 18), Vector2(22, 12))
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1145)
 
 
 static func _bramble_nose(c: CanvasItem) -> void:
@@ -715,16 +758,46 @@ static func _moss_head(c: CanvasItem) -> void:
 	_fill(c, head, MO_GREEN, 1273)
 	_clip_fill(c, Crayon.blob(Vector2(300, 274), Vector2(16, 12), 1274, 10, 0.15), head, MO_DARK, 1275, 10.0)
 	_clip_fill(c, Crayon.blob(Vector2(338, 262), Vector2(12, 9), 1276, 10, 0.15), head, MO_DARK, 1277, 10.0)
-	_clip_fill(c, Crayon.blob(Vector2(328, 372), Vector2(20, 12), 1278, 10, 0.08), head, Color("#f7a8b0"), 1279, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1280)
+	# wrinkles round the long neck
+	var path := _bez(Vector2(204, 414), Vector2(228, 388), Vector2(256, 364), Vector2(292, 350), 8)
+	for k in 3:
+		var i := 2 + k
+		var p := path[i]
+		var d := (path[i + 1] - path[i - 1]).normalized()
+		var n := d.orthogonal()
+		_ink_in(c, _bez(p + n * 40.0, p + n * 14.0 + d * 9.0, p - n * 14.0 + d * 9.0, p - n * 40.0, 6), head,
+			5.5, 1290 + k * 2)
 
 
+## A sleepy reptile eye: a heavy green lid slid half way down over it.
 static func _moss_eye(c: CanvasItem) -> void:
-	_eye(c, 1281, Vector2(60, 64), Color("#a8703e"), 38.0, Vector2(20, 22), Vector2(8, 4))
+	var white := Crayon.blob(O, Vector2(60, 54), 1281, 24, 0.035)
+	c.draw_colored_polygon(white, PAPER)
+	var pc := O + Vector2(10, 16)
+	c.draw_colored_polygon(Crayon.blob(pc, Vector2(24, 26), 1282, 14, 0.04), INK)
+	c.draw_circle(pc + Vector2(-9, 6), 6.5, Color.WHITE)
+	var edge := _bez(O + Vector2(-70, -6), O + Vector2(-24, 6), O + Vector2(24, 8), O + Vector2(70, 0), 10)
+	var lid := PackedVector2Array([O + Vector2(100, -100), O + Vector2(-100, -100)])
+	lid.append_array(edge)
+	_clip_fill(c, lid, white, MO_DARK, 1283, 14.0)
+	_ink_in(c, _bez(O + Vector2(-42, -32), O + Vector2(-14, -40), O + Vector2(16, -40), O + Vector2(42, -30), 6),
+		white, 5.0, 1284)
+	_ink_in(c, edge, white, 11.0, 1285)
+	Crayon.marker_line(c, white, INK, W_EYE, 1286)
 
 
+## A wide beaky turtle smile: a pale horny edge along the top lip that hooks down at the front.
 static func _moss_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1291, Vector2(78, 56), 0.3)
+	var top := _bez(O + Vector2(-96, -26), O + Vector2(-40, -4), O + Vector2(40, -4), O + Vector2(96, -24), 12)
+	var m := _lips(top, _bez(O + Vector2(96, -24), O + Vector2(70, 42), O + Vector2(-60, 46), O + Vector2(-96, -26), 14))
+	_mouth_in(c, m, 1291, O + Vector2(-4, 24), Vector2(46, 14))
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1294)
+	var beak := _bez(O + Vector2(-90, -28), O + Vector2(-40, -8), O + Vector2(40, -8), O + Vector2(96, -28), 12)
+	beak.append(O + Vector2(110, -20))
+	beak.append(O + Vector2(114, -6))
+	beak.append(O + Vector2(108, 8))
+	_part(c, _tube(beak, 9.0, 6.0), MO_BELLY, 1295, 8.0, 10.0)
 
 
 static func _moss_leg(c: CanvasItem) -> void:
@@ -771,39 +844,61 @@ static func _clover_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1430)
 
 
+## A tall slender neck standing straight up from the dot, the little head held high on top,
+## turned three-quarters to the right: its cream muzzle pokes out to the right, the nose on its
+## front.
 static func _clover_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(278, 308), Vector2(92, 84), 1431, 20, 0.04)
-	var muzzle := Crayon.blob(Vector2(356, 346), Vector2(58, 40), 1432, 14, 0.05)
-	var neck := _tube(_seg(Vector2(208, 412), Vector2(246, 362), 6), 28.0, 30.0)
+	var neck_path := _bez(Vector2(200, 420), Vector2(203, 340), Vector2(210, 262), Vector2(226, 196), 10)
+	var neck := _tube(neck_path, 25.0, 21.0)
+	var skull := Crayon.blob(Vector2(240, 146), Vector2(72, 62), 1431, 20, 0.04)
+	var muzzle := Crayon.blob(Vector2(298, 184), Vector2(46, 34), 1432, 14, 0.05)
 	var head := _merge_all([skull, neck, muzzle])
 	_fill(c, head, CL_TAN, 1433)
-	_clip_fill(c, Crayon.blob(Vector2(368, 354), Vector2(50, 34), 1434, 12, 0.06), head, CL_CREAM, 1435)
-	_clip_fill(c, Crayon.blob(Vector2(304, 360), Vector2(20, 13), 1436, 10, 0.08), head, CL_PINK, 1437, 10.0)
+	# a cream throat down the front of the neck
+	var throat := _bez(Vector2(222, 430), Vector2(224, 340), Vector2(232, 262), Vector2(254, 200), 10)
+	_clip_fill(c, _tube(throat, 9.0, 12.0), head, CL_CREAM, 1439, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(306, 192), Vector2(42, 30), 1434, 12, 0.06), head, CL_CREAM, 1435)
+	_clip_fill(c, Crayon.blob(Vector2(240, 184), Vector2(17, 11), 1436, 10, 0.08), head, CL_PINK, 1437, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1438)
-	var nose := Crayon.blob(Vector2(402, 334), Vector2(15, 12), 1439, 10, 0.05)
+	var nose := Crayon.blob(Vector2(332, 178), Vector2(15, 12), 1440, 10, 0.05)
 	c.draw_colored_polygon(nose, INK)
-	c.draw_circle(Vector2(398, 330), 3.5, Color(1, 1, 1, 0.8))
+	c.draw_circle(Vector2(327, 174), 3.5, Color(1, 1, 1, 0.8))
 
 
+## Big shiny tall ovals - a fawn's dark eyes - with two glints and long lashes sweeping back.
 static func _clover_eye(c: CanvasItem) -> void:
-	_eye(c, 1441, Vector2(64, 70), Color("#8a5a34"), 44.0, Vector2(24, 28), Vector2(8, 4))
-	_lashes(c, 1445, Vector2(64, 70))
+	var white := Crayon.blob(O, Vector2(44, 64), 1441, 24, 0.03)
+	c.draw_colored_polygon(white, PAPER)
+	_clip_fill(c, Crayon.blob(O + Vector2(5, 4), Vector2(37, 57), 1442, 18, 0.03), white, Color("#6e4127"), 1443, 12.0)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(7, 8), Vector2(22, 36), 1444, 14, 0.04), INK)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(-8, -24), Vector2(13, 16), 1445, 10, 0.05), Color.WHITE)
+	c.draw_circle(O + Vector2(16, 30), 6.0, Color.WHITE)
+	Crayon.marker_line(c, white, INK, W_EYE, 1446)
+	for i in 3:
+		var a := -PI * 0.5 - 0.3 - i * 0.36
+		var root := O + Vector2(cos(a) * 44.0, sin(a) * 64.0)
+		var dir := Vector2(cos(a) * 1.4, sin(a)).normalized()
+		var tip := root + dir * 34.0 + Vector2(-16, -8)
+		_ink(c, _bez(root, root + dir * 16.0, tip + Vector2(8, 4), tip, 5), 9.0, 1447 + i)
 
 
+## A tiny dainty smile.
 static func _clover_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1451, Vector2(70, 58), 0.4)
+	var m := _grin(Vector2(34, 26), 12.0, 1451)
+	_mouth_in(c, m, 1452, O + Vector2(3, 14), Vector2(18, 10))
+	Crayon.marker_line(c, m, INK, W_MOUTH * 0.85, 1455)
 
 
 static func _clover_ear(c: CanvasItem) -> void:
-	var ear := _point(Vector2(222, 474), Vector2(294, 470), Vector2(160, 284), 0.16)
+	var ear := _point(Vector2(222, 474), Vector2(294, 470), Vector2(196, 290), 0.2)
 	_fill(c, ear, CL_TAN, 1461)
-	var inner := _point(Vector2(240, 452), Vector2(276, 450), Vector2(184, 320), 0.12)
+	var inner := _point(Vector2(240, 452), Vector2(276, 450), Vector2(212, 324), 0.14)
 	_clip_fill(c, inner, ear, CL_PINK, 1462, 12.0)
 	Crayon.marker_line(c, ear, INK, W_EAR, 1463)
 
 
 static func _clover_horn(c: CanvasItem) -> void:
-	var stem := _tube(_bez(Vector2(256, 474), Vector2(250, 400), Vector2(270, 310), Vector2(262, 232), 10), 18.0, 13.0)
+	var stem := _tube(_bez(Vector2(256, 456), Vector2(250, 400), Vector2(270, 310), Vector2(262, 232), 10), 18.0, 13.0)
 	var b1 := _tube(_bez(Vector2(260, 392), Vector2(296, 376), Vector2(338, 340), Vector2(362, 300), 6), 13.0, 11.0)
 	var b2 := _tube(_bez(Vector2(264, 334), Vector2(234, 318), Vector2(194, 300), Vector2(170, 276), 6), 12.0, 10.0)
 	var antler := _merge_all([stem, b1, b2])
@@ -859,28 +954,44 @@ static func _tank_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1520)
 
 
+## No neck: a big heavy head hung low off the front of the body, the snout down near the ground.
+## Its horn goes on the snout, rhino-style (ROSTER layout).
 static func _tank_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(254, 316), Vector2(80, 80), 1521, 20, 0.04)
-	var snout := Crayon.blob(Vector2(342, 350), Vector2(76, 54), 1522, 18, 0.04)
-	var neck := _tube(_seg(Vector2(206, 414), Vector2(236, 370), 6), 38.0, 38.0)
-	var ear := _point(Vector2(204, 272), Vector2(240, 246), Vector2(186, 214), 0.15)
-	var head := _merge_all([skull, snout, neck, ear])
+	var skull := Crayon.blob(Vector2(274, 398), Vector2(84, 78), 1521, 20, 0.04)
+	var snout := Crayon.blob(Vector2(362, 428), Vector2(80, 54), 1522, 18, 0.04)
+	var ear := _point(Vector2(214, 352), Vector2(250, 330), Vector2(192, 290), 0.15)
+	var head := _merge_all([skull, snout, ear])
 	_fill(c, head, TK_BLUE, 1523)
-	_clip_fill(c, _point(Vector2(212, 262), Vector2(230, 252), Vector2(196, 228), 0.1), head, TK_PINK, 1524, 10.0)
+	_clip_fill(c, _point(Vector2(220, 344), Vector2(238, 334), Vector2(204, 306), 0.1), head, TK_PINK, 1524, 10.0)
 	# an armour plate over the top of the head
-	var plate := Crayon.blob(Vector2(250, 236), Vector2(70, 36), 1525, 12, 0.05)
+	var plate := Crayon.blob(Vector2(268, 330), Vector2(66, 30), 1525, 12, 0.05)
 	_clip_fill(c, plate, head, TK_BAND, 1526, 14.0)
-	_clip_fill(c, Crayon.blob(Vector2(316, 388), Vector2(20, 12), 1527, 10, 0.08), head, TK_PINK, 1528, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1529)
-	c.draw_colored_polygon(Crayon.blob(Vector2(398, 338), Vector2(9, 6), 1530, 8, 0.1), INK)
+	c.draw_colored_polygon(Crayon.blob(Vector2(428, 414), Vector2(9, 6), 1530, 8, 0.1), INK)
 
 
+## A small kind eye peering out from under a heavy armoured brow that slopes down towards the
+## nose - grumpy-looking, but the eye underneath is soft and shiny.
 static func _tank_eye(c: CanvasItem) -> void:
-	_eye(c, 1531, Vector2(62, 66), Color("#8a6a4a"), 40.0, Vector2(22, 24), Vector2(8, 4))
+	var white := Crayon.blob(O + Vector2(0, 12), Vector2(40, 36), 1531, 18, 0.04)
+	c.draw_colored_polygon(white, PAPER)
+	var pc := O + Vector2(6, 18)
+	c.draw_colored_polygon(Crayon.blob(pc, Vector2(20, 22), 1532, 12, 0.04), INK)
+	c.draw_circle(pc + Vector2(-7, -7), 6.5, Color.WHITE)
+	Crayon.marker_line(c, white, INK, 11.0, 1533)
+	var brow := _bez(O + Vector2(-72, -44), O + Vector2(-30, -64), O + Vector2(30, -54), O + Vector2(72, -20), 8)
+	brow.append_array(_bez(O + Vector2(68, 4), O + Vector2(30, -18), O + Vector2(-20, -24), O + Vector2(-68, -12), 8))
+	_part(c, brow, TK_BAND, 1534, 11.0, 12.0)
 
 
+## A wide flat mouth, one little underbite tooth poking up from the bottom lip.
 static func _tank_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1541, Vector2(90, 64), 0.3, 3)
+	var m := _squircle(O, Vector2(100, 40), 3.0, 1541, 40, 0.02)
+	_mouth_in(c, m, 1542, O + Vector2(-14, 30), Vector2(50, 16))
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1543)
+	var tooth := PackedVector2Array([O + Vector2(30, 40), O + Vector2(30, 4), O + Vector2(36, -4),
+		O + Vector2(52, -4), O + Vector2(58, 4), O + Vector2(58, 40)])
+	_part(c, tooth, PAPER, 1544, 7.0, 10.0)
 
 
 static func _tank_horn(c: CanvasItem) -> void:
@@ -953,66 +1064,73 @@ static func _waffles_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1640)
 
 
+## A short, thick, shaggy neck - a ruff of fur right at the dot, the head sitting down on it -
+## turned three-quarters to the right: a fringe of hair hanging over the eyes and a round muzzle
+## poking out to the right, the nose on its front.
 static func _waffles_head(c: CanvasItem) -> void:
-	var skull := _fluffy(Vector2(280, 306), Vector2(106, 98), 1641, 13, 0.07, 104, 0.012)
-	var muzzle := Crayon.blob(Vector2(362, 350), Vector2(54, 40), 1642, 14, 0.05)
-	var neck := _tube(_seg(Vector2(206, 412), Vector2(246, 362), 6), 34.0, 34.0)
-	var head := _merge_all([skull, neck, muzzle])
+	var skull := _fluffy(Vector2(280, 322), Vector2(104, 96), 1641, 13, 0.07, 104, 0.012)
+	var muzzle := Crayon.blob(Vector2(358, 366), Vector2(54, 40), 1642, 14, 0.05)
+	var ruff := _fluffy(Vector2(222, 394), Vector2(66, 50), 1647, 9, 0.12, 72, 0.015)
+	var head := _merge_all([skull, ruff, muzzle])
 	_fill(c, head, WF_WHITE, 1643)
-	_clip_fill(c, Crayon.blob(Vector2(318, 368), Vector2(22, 14), 1644, 10, 0.08), head, Color("#f7b4c0"), 1645, 10.0)
+	_fur(c, [Vector2(190, 372), Vector2(232, 390)], head, WF_STRAND, 1648, 28.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1646)
-	# the fringe: locks of hair hanging down over the forehead
 	var room := Geometry2D.offset_polygon(head, -8.0)
 	if not room.is_empty():
 		var area: PackedVector2Array = room[0]
 		var fringe := PackedVector2Array()
-		for i in 31:
-			var t := i / 30.0
-			var x := lerpf(200.0, 396.0, t)
-			var y := lerpf(258.0, 270.0, t) + 20.0 * pow(absf(sin(t * PI * 5.0)), 0.7)
-			fringe.append(Vector2(x, y))
-		_ink_in(c, fringe, area, 6.0, 1647)
+		for i in 37:
+			var t := i / 36.0
+			fringe.append(Vector2(lerpf(214.0, 384.0, t), lerpf(270.0, 286.0, t) + 22.0 * pow(absf(sin(t * PI * 3.0)), 0.7)))
+		_ink_in(c, fringe, area, 6.0, 1649)
 		for i in 5:
-			var x := 220.0 + i * 38.0
-			_ink_in(c, _bez(Vector2(x - 6, 220), Vector2(x + 4, 236), Vector2(x - 2, 250), Vector2(x + 6, 266), 5),
+			var x := 232.0 + i * 36.0
+			_ink_in(c, _bez(Vector2(x - 6, 226), Vector2(x + 4, 242), Vector2(x - 2, 258), Vector2(x + 6, 278), 5),
 				area, 4.0, 1650 + i, WF_STRAND)
-	var nose := Crayon.blob(Vector2(408, 338), Vector2(17, 13), 1660, 10, 0.05)
+		_ink_in(c, _bez(Vector2(318, 336), Vector2(306, 360), Vector2(310, 384), Vector2(326, 402), 6), area, 6.0, 1656)
+	var nose := Crayon.blob(Vector2(398, 352), Vector2(18, 14), 1660, 10, 0.05)
 	c.draw_colored_polygon(nose, INK)
-	c.draw_circle(Vector2(403, 333), 4.0, Color(1, 1, 1, 0.8))
+	c.draw_circle(Vector2(393, 347), 4.0, Color(1, 1, 1, 0.8))
 
 
+## Two little dark eyes peeking out from under the fringe - the hair flops right over their tops.
 static func _waffles_eye(c: CanvasItem) -> void:
-	var white := _eye(c, 1661, Vector2(62, 68), Color("#6b4a3a"), 40.0, Vector2(22, 26), Vector2(6, 10))
-	# its fringe flops down over the top of the eye
-	var grown := Geometry2D.offset_polygon(white, 9.0)
-	if grown.is_empty():
-		return
-	var cover: PackedVector2Array = grown[0]
+	var oval := Crayon.blob(O + Vector2(0, 24), Vector2(33, 30), 1661, 14, 0.04)
+	c.draw_colored_polygon(oval, INK)
+	Crayon.marker_line(c, oval, INK, 8.0, 1662)
+	c.draw_circle(O + Vector2(-10, 30), 10.0, Color.WHITE)
+	var cover := Crayon.blob(O + Vector2(0, -14), Vector2(64, 50), 1663, 16, 0.04)
 	var edge := PackedVector2Array()
-	for i in 25:
-		var t := i / 24.0
-		edge.append(O + Vector2(lerpf(92.0, -92.0, t), -34.0 + 28.0 * pow(absf(sin(t * PI * 3.0)), 0.7)))
-	var fringe := PackedVector2Array([O + Vector2(-92, -120), O + Vector2(92, -120)])
+	for i in 19:
+		var t := i / 18.0
+		edge.append(O + Vector2(lerpf(70.0, -70.0, t), -10.0 + 18.0 * pow(absf(sin(t * PI * 2.5)), 0.7)))
+	var fringe := PackedVector2Array([O + Vector2(-90, -120), O + Vector2(90, -120)])
 	fringe.append_array(edge)
 	_clip_fill(c, fringe, cover, WF_WHITE, 1666, 14.0)
-	_ink_in(c, edge, cover, 10.0, 1667)
+	_ink_in(c, edge, cover, 7.0, 1667)
 	for i in 3:
-		var x := -36.0 + i * 36.0
-		_ink_in(c, _seg(O + Vector2(x - 4, -70), O + Vector2(x + 6, -40), 3), cover, 5.0, 1670 + i, WF_STRAND)
+		var x := -30.0 + i * 30.0
+		_ink_in(c, _seg(O + Vector2(x - 4, -52), O + Vector2(x + 4, -22), 3), cover, 5.0, 1670 + i, WF_STRAND)
 
 
+## A big happy panting mouth, a long pink tongue flopping out over the bottom lip.
 static func _waffles_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1681, Vector2(80, 66), 0.4)
+	var m := _grin(Vector2(98, 58), 24.0, 1681)
+	_mouth_in(c, m, 1682)
+	Crayon.marker_line(c, m, INK, W_MOUTH, 1683)
+	var tongue := _tube(_bez(O + Vector2(16, 8), O + Vector2(20, 46), O + Vector2(24, 80), O + Vector2(22, 108), 8), 34.0, 36.0)
+	_part(c, tongue, TONGUE, 1684, 11.0, 14.0)
+	_ink(c, _seg(O + Vector2(20, 40), O + Vector2(22, 96), 3), 6.0, 1686)
 
 
-## A floppy ear: a little way up from the dot, then flopping over and hanging down the side.
+## A floppy ear: folded over at the dot and hanging straight down in a shaggy lobe - it goes on
+## the side of the head, not on top.
 static func _waffles_ear(c: CanvasItem) -> void:
-	var stalk := _tube(_seg(Vector2(256, 466), Vector2(250, 424), 4), 28.0, 30.0)
-	var fold := Crayon.blob(Vector2(230, 416), Vector2(48, 30), 1691, 14, 0.04)
-	var lobe := _fluffy(Vector2(198, 446), Vector2(46, 52), 1692, 7, 0.12, 70, 0.02)
-	var ear := _merge_all([stalk, fold, lobe])
+	var fold := Crayon.blob(Vector2(256, 340), Vector2(40, 42), 1691, 14, 0.04)
+	var lobe := _fluffy(Vector2(256, 430), Vector2(58, 72), 1692, 8, 0.1, 80, 0.02)
+	var ear := _merge(fold, lobe)
 	_fill(c, ear, WF_WHITE, 1693)
-	_fur(c, [Vector2(192, 420), Vector2(214, 446)], ear, WF_STRAND, 1694, 28.0)
+	_fur(c, [Vector2(240, 380), Vector2(262, 420), Vector2(244, 452)], ear, WF_STRAND, 1694, 28.0)
 	Crayon.marker_line(c, ear, INK, W_EAR, 1699)
 
 
@@ -1060,29 +1178,51 @@ static func _sprocket_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1815)
 
 
+## A short neck reaching forward and the head held up on it, turned three-quarters to the right:
+## a fluffy white cheek poking out at the back, and a pointed snout reaching out to the right,
+## white underneath.
 static func _sprocket_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(274, 312), Vector2(94, 86), 1821, 20, 0.04)
-	var snout := _tube(_seg(Vector2(326, 332), Vector2(420, 338), 6), 50.0, 17.0)
-	var neck := _tube(_seg(Vector2(206, 412), Vector2(242, 364), 6), 32.0, 32.0)
-	var head := _merge_all([skull, neck, snout])
+	var neck := _tube(_seg(Vector2(198, 414), Vector2(262, 362), 6), 34.0, 40.0)
+	var skull := Crayon.blob(Vector2(292, 326), Vector2(90, 76), 1821, 20, 0.04)
+	var cheek_tuft := _point(Vector2(220, 316), Vector2(262, 388), Vector2(170, 384), 0.1)
+	var snout := _tube(_seg(Vector2(346, 352), Vector2(428, 366), 6), 46.0, 16.0)
+	var head := _merge_all([skull, neck, cheek_tuft, snout])
 	_fill(c, head, SP_ORANGE, 1822)
-	# white cheeks and chin under a zig-zag
-	var cheek := PackedVector2Array([Vector2(160, 470), Vector2(160, 384)])
-	for i in 13:
-		var t := i / 12.0
-		var p := Vector2(196, 374).lerp(Vector2(446, 344), t)
-		cheek.append(p + Vector2(0, -12.0 if i % 2 == 1 else 6.0))
-	cheek.append(Vector2(470, 470))
+	# white cheeks and the underside of the snout, under a zig-zag
+	var cheek := PackedVector2Array([Vector2(140, 480), Vector2(140, 356)])
+	for i in 15:
+		var t := i / 14.0
+		var p := Vector2(160, 356).lerp(Vector2(462, 362), t)
+		cheek.append(p + Vector2(0, 18.0 * sin(t * PI) + (-10.0 if i % 2 == 1 else 6.0)))
+	cheek.append(Vector2(470, 480))
 	_clip_fill(c, cheek, head, SP_CREAM, 1823)
 	Crayon.marker_line(c, head, INK, W_BODY, 1824)
 
 
+## Amber almond eyes with thin upright slits, the top lid lowered and flicked back - sly.
 static func _sprocket_eye(c: CanvasItem) -> void:
-	_eye(c, 1831, Vector2(60, 64), Color("#f4b23a"), 40.0, Vector2(20, 26), Vector2(8, 4))
+	var a := O + Vector2(-70, -8)
+	var b := O + Vector2(68, -20)
+	var eye := _lens(a, b, 34.0, 70.0)
+	c.draw_colored_polygon(eye, PAPER)
+	_clip_fill(c, Crayon.blob(O + Vector2(6, 4), Vector2(40, 44), 1832, 16, 0.04), eye, Color("#f6a92e"), 1833, 12.0)
+	_clip_solid(c, _lens(O + Vector2(8, -46), O + Vector2(8, 50), 13.0, 13.0), eye, INK)
+	c.draw_circle(O + Vector2(-12, 0), 7.0, Color.WHITE)
+	Crayon.marker_line(c, eye, INK, 11.0, 1834)
+	var d := b - a
+	var up := Vector2(-d.y, d.x).normalized() * (1.0 if d.x < 0.0 else -1.0) * 34.0
+	var lid := _bez(a + Vector2(-22, -14), a + d * 0.25 + up, a + d * 0.75 + up, b, 12)
+	_ink(c, lid, W_EYE + 5.0, 1835)
 
 
+## A sly little grin, one corner turned up higher than the other, one tiny fang.
 static func _sprocket_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 1841, Vector2(74, 60), 0.4, 0, true)
+	var top := _bez(O + Vector2(-66, -30), O + Vector2(-30, -6), O + Vector2(30, -6), O + Vector2(66, -40), 12)
+	var m := _lips(top, _bez(O + Vector2(66, -40), O + Vector2(54, 30), O + Vector2(-44, 38), O + Vector2(-66, -30), 12))
+	_mouth_in(c, m, 1841, O + Vector2(-4, 20), Vector2(30, 11))
+	Crayon.marker_line(c, m, INK, 12.0, 1846)
+	var fang := PackedVector2Array([O + Vector2(18, -16), O + Vector2(42, -20), O + Vector2(32, 16)])
+	_part(c, fang, PAPER, 1844, 6.0, 8.0)
 
 
 static func _sprocket_ear(c: CanvasItem) -> void:
@@ -1149,42 +1289,58 @@ static func _pudding_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 2011)
 
 
+## No neck: a big round head squashed right onto the front of the body, low down, turned
+## three-quarters to the right - its face on the right-hand side, a chubby jowl under it and a
+## rosy near cheek.
 static func _pudding_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(284, 306), Vector2(100, 94), 2021, 22, 0.035)
-	var cheek := Crayon.blob(Vector2(330, 360), Vector2(66, 46), 2022, 16, 0.04)
-	var neck := _tube(_seg(Vector2(206, 412), Vector2(246, 362), 6), 34.0, 34.0)
-	var head := _merge_all([skull, cheek, neck])
+	var skull := Crayon.blob(Vector2(266, 352), Vector2(106, 98), 2021, 24, 0.03)
+	var jowl := Crayon.blob(Vector2(318, 414), Vector2(64, 40), 2022, 16, 0.04)
+	var head := _merge(skull, jowl)
 	_fill(c, head, PD_PINK, 2023)
-	_clip_fill(c, Crayon.blob(Vector2(298, 364), Vector2(24, 15), 2024, 10, 0.08), head, PD_DEEP, 2025, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(250, 404), Vector2(26, 16), 2024, 10, 0.08), head, PD_DEEP, 2025, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(366, 402), Vector2(14, 12), 2028, 10, 0.08), head, PD_DEEP, 2029, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 2026)
 
 
+## Small round eyes with three stubby little lashes - set high and wide apart on the head.
 static func _pudding_eye(c: CanvasItem) -> void:
-	_eye(c, 2031, Vector2(56, 60), Color(), 0.0, Vector2(30, 34), Vector2(6, 4))
+	var white := Crayon.blob(O, Vector2(36, 36), 2031, 18, 0.03)
+	c.draw_colored_polygon(white, PAPER)
+	var pc := O + Vector2(6, -1)
+	c.draw_colored_polygon(Crayon.blob(pc, Vector2(23, 24), 2032, 14, 0.04), INK)
+	c.draw_circle(pc + Vector2(-8, -9), 7.0, Color.WHITE)
+	Crayon.marker_line(c, white, INK, 12.0, 2033)
+	for i in 3:
+		var x := -20.0 + i * 20.0
+		var root := O + Vector2(x, -sqrt(36.0 * 36.0 - x * x) - 4.0)
+		_ink(c, _seg(root, root + Vector2(x * 0.35, -22), 2), 8.0, 2034 + i)
 
 
+## A wide happy open grin.
 static func _pudding_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 2041, Vector2(76, 60), 0.35)
+	var m := _grin(Vector2(72, 48), 20.0, 2041)
+	_mouth_in(c, m, 2042, O + Vector2(6, 28), Vector2(38, 16))
+	Crayon.marker_line(c, m, INK, W_MOUTH, 2045)
 
 
 static func _pudding_ear(c: CanvasItem) -> void:
-	# a pig's ear points up and tips forward
-	var ear := _point(Vector2(204, 474), Vector2(300, 474), Vector2(338, 296), 0.14)
+	# a pig's ear: a pointy triangle standing up off the top of the head, leaning out a little
+	var ear := _point(Vector2(206, 474), Vector2(306, 474), Vector2(226, 298), 0.14)
 	_fill(c, ear, PD_PINK, 2051)
-	_clip_fill(c, _point(Vector2(230, 462), Vector2(286, 462), Vector2(318, 338), 0.1), ear, PD_DEEP, 2052, 12.0)
+	_clip_fill(c, _point(Vector2(230, 462), Vector2(286, 462), Vector2(236, 338), 0.1), ear, PD_DEEP, 2052, 12.0)
 	Crayon.marker_line(c, ear, INK, W_EAR, 2053)
 
 
-## The snout: a short pink plug sticking out of the face, its flat front with two nostrils.
+## The snout, turned three-quarters to the right like the face: a short pink plug whose round
+## flat front is seen at an angle - an upright oval on its right - with both nostrils side by side.
 static func _pudding_nose(c: CanvasItem) -> void:
-	var stem := Crayon.rounded_rect(Rect2(174, 190, 100, 132), 30.0)
-	var front := Crayon.blob(Vector2(274, 256), Vector2(48, 74), 2061, 18, 0.03)
-	var snout := _merge(stem, front)
-	_part(c, snout, PD_PINK, 2062, W_NOSE)
+	var side := Crayon.rounded_rect(Rect2(O.x - 74, O.y - 56, 112, 112), 40.0)
+	var front := Crayon.blob(O + Vector2(36, 0), Vector2(44, 64), 2061, 22, 0.03)
+	_part(c, _merge(side, front), PD_PINK, 2062, W_NOSE)
 	_part(c, front, PD_DEEP, 2064, W_NOSE)
-	for y in [226.0, 286.0]:
-		c.draw_colored_polygon(Crayon.blob(Vector2(278, y), Vector2(11, 17), 2066, 10, 0.08), PD_HOLE)
-	c.draw_circle(Vector2(256, 206), 8.0, Color(1, 1, 1, 0.8))
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(20, 4), Vector2(11, 20), 2066, 10, 0.08), PD_HOLE)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(52, 2), Vector2(10, 18), 2067, 10, 0.08), PD_HOLE)
+	c.draw_circle(O + Vector2(-34, -30), 8.0, Color(1, 1, 1, 0.8))
 
 
 static func _pudding_leg(c: CanvasItem) -> void:
@@ -1251,36 +1407,47 @@ static func _boulder_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 2140)
 
 
+## No neck: the big head hangs low off the front of the body, in front of the shoulder hump,
+## turned three-quarters to the right - a pale face on the right-hand side and a broad muzzle
+## poking out to the right.
 static func _boulder_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(276, 312), Vector2(92, 86), 2141, 20, 0.04)
-	var muzzle := Crayon.blob(Vector2(352, 356), Vector2(62, 46), 2142, 16, 0.04)
-	var neck := _tube(_seg(Vector2(206, 414), Vector2(244, 366), 6), 38.0, 38.0)
-	var head := _merge_all([skull, neck, muzzle])
+	var skull := Crayon.blob(Vector2(260, 352), Vector2(90, 82), 2141, 20, 0.04)
+	var muzzle := Crayon.blob(Vector2(334, 414), Vector2(66, 48), 2142, 16, 0.04)
+	var head := _merge(skull, muzzle)
 	_fill(c, head, BO_BROWN, 2143)
-	_clip_fill(c, Crayon.blob(Vector2(342, 336), Vector2(84, 72), 2144, 14, 0.1), head, BO_FACE, 2145)
-	_clip_fill(c, Crayon.blob(Vector2(396, 346), Vector2(26, 22), 2146, 12, 0.08), head, BO_NOSE, 2147, 12.0)
+	_clip_fill(c, Crayon.blob(Vector2(318, 390), Vector2(76, 76), 2144, 14, 0.08), head, BO_FACE, 2145)
+	_clip_fill(c, Crayon.blob(Vector2(370, 418), Vector2(32, 26), 2146, 12, 0.08), head, BO_NOSE, 2147, 12.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 2148)
-	c.draw_colored_polygon(Crayon.blob(Vector2(404, 340), Vector2(6, 9), 2149, 8, 0.1), INK)
-	_fur(c, [Vector2(214, 300), Vector2(236, 360)], head, BO_DARK, 2150, 40.0)
+	c.draw_colored_polygon(Crayon.blob(Vector2(360, 414), Vector2(6, 9), 2149, 8, 0.1), INK)
+	c.draw_colored_polygon(Crayon.blob(Vector2(386, 412), Vector2(5, 8), 2151, 8, 0.1), INK)
+	_fur(c, [Vector2(196, 340), Vector2(210, 390)], head, BO_DARK, 2150, 40.0)
 
 
+## A goat-ish eye: a golden iris with a sideways bar of a pupil, under a droopy, gentle lid.
 static func _boulder_eye(c: CanvasItem) -> void:
-	var white := _eye(c, 2161, Vector2(60, 64), Color("#7a4f35"), 38.0, Vector2(20, 22), Vector2(6, 10))
-	# a soft sleepy lid - it's a gentle giant
-	var lid := PackedVector2Array([O + Vector2(-110, -110), O + Vector2(110, -110), O + Vector2(110, -16),
-		O + Vector2(-110, -26)])
+	var white := Crayon.blob(O, Vector2(60, 50), 2161, 24, 0.035)
+	c.draw_colored_polygon(white, PAPER)
+	_clip_fill(c, Crayon.blob(O + Vector2(4, 6), Vector2(48, 42), 2162, 18, 0.04), white, Color("#e0a948"), 2163, 12.0)
+	_clip_solid(c, Crayon.rounded_rect(Rect2(O.x - 30.0, O.y + 6.0, 66.0, 20.0), 10.0), white, INK)
+	c.draw_circle(O + Vector2(-16, -2), 6.5, Color.WHITE)
+	var edge := _bez(O + Vector2(-72, 14), O + Vector2(-30, -30), O + Vector2(30, -30), O + Vector2(72, 2), 10)
+	var lid := PackedVector2Array([O + Vector2(110, -110), O + Vector2(-110, -110)])
+	lid.append_array(edge)
 	_clip_fill(c, lid, white, BO_LID, 2165, 14.0)
-	_ink(c, _seg(O + Vector2(-64, -25), O + Vector2(64, -17), 4), 12.0, 2166)
+	_ink_in(c, edge, white, 11.0, 2166)
 	Crayon.marker_line(c, white, INK, W_EYE, 2167)
 
 
+## A wide, gentle, shallow smile.
 static func _boulder_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 2171, Vector2(84, 62), 0.4)
+	var m := _grin(Vector2(90, 36), 10.0, 2171)
+	_mouth_in(c, m, 2172, O + Vector2(0, 24), Vector2(46, 12))
+	Crayon.marker_line(c, m, INK, W_MOUTH, 2175)
 
 
-## A curved horn: out to the front, then hooking back up.
+## A curved horn: out to the side, then sweeping up and in at the tip.
 static func _boulder_horn(c: CanvasItem) -> void:
-	var path := _bez(Vector2(256, 462), Vector2(326, 420), Vector2(412, 326), Vector2(332, 222), 18)
+	var path := _bez(Vector2(256, 462), Vector2(222, 392), Vector2(214, 300), Vector2(262, 230), 18)
 	var horn := _tube(path, 36.0, 9.0, 1.0, 0.6)
 	_fill(c, horn, BO_HORN, 2181)
 	for k in 3:
@@ -1288,14 +1455,13 @@ static func _boulder_horn(c: CanvasItem) -> void:
 	Crayon.marker_line(c, horn, INK, W_HORN, 2190)
 
 
-## A shaggy forelock swept back over the top of its head.
+## A shaggy forelock on top of its head: a lumpy mop of dark fur, combed with lighter strokes.
 static func _boulder_hair(c: CanvasItem) -> void:
-	var curves := [
-		[Vector2(256, 434), Vector2(226, 380), Vector2(190, 346), Vector2(128, 344)],
-		[Vector2(282, 434), Vector2(268, 364), Vector2(226, 306), Vector2(166, 292)],
-		[Vector2(310, 434), Vector2(308, 360), Vector2(280, 300), Vector2(226, 262)],
-		[Vector2(336, 434), Vector2(346, 380), Vector2(332, 324), Vector2(292, 288)]]
-	_locks(c, curves, BO_DARK, BO_SHAG, 2191, 34.0)
+	var mop := _fluffy(Vector2(300, 372), Vector2(92, 66), 2191, 9, 0.16, 90, 0.02, 0.2)
+	_fill(c, mop, BO_DARK, 2192)
+	_fur(c, [Vector2(250, 330), Vector2(290, 316), Vector2(334, 326), Vector2(270, 372), Vector2(318, 370)],
+		mop, BO_SHAG, 2193, 40.0, 6.0)
+	Crayon.marker_line(c, mop, INK, W_HAIR, 2199)
 
 
 static func _boulder_leg(c: CanvasItem) -> void:
@@ -1353,30 +1519,51 @@ static func _dottie_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 2320)
 
 
+## No neck: a round puppy head tucked in low at the front, under the edge of the shell, turned
+## three-quarters to the right - a floppy ear hanging down the back of it (the far one hangs
+## out of sight behind) and a cream muzzle poking out to the right.
 static func _dottie_head(c: CanvasItem) -> void:
-	var skull := Crayon.blob(Vector2(278, 310), Vector2(94, 88), 2331, 20, 0.04)
-	var muzzle := Crayon.blob(Vector2(356, 350), Vector2(58, 42), 2332, 14, 0.05)
-	var neck := _tube(_seg(Vector2(206, 412), Vector2(244, 364), 6), 32.0, 32.0)
-	var head := _merge_all([skull, neck, muzzle])
+	var skull := Crayon.blob(Vector2(270, 372), Vector2(90, 84), 2331, 20, 0.04)
+	var muzzle := Crayon.blob(Vector2(342, 410), Vector2(56, 40), 2332, 14, 0.05)
+	var head := _merge(skull, muzzle)
 	_fill(c, head, DT_RED, 2333)
-	_clip_fill(c, Crayon.blob(Vector2(366, 358), Vector2(52, 36), 2334, 12, 0.06), head, DT_CREAM, 2335)
-	_clip_solid(c, Crayon.blob(Vector2(336, 258), Vector2(13, 12), 2336, 10, 0.08), head, INK)
-	# a floppy puppy ear
-	var ear := _tube(_bez(Vector2(236, 238), Vector2(222, 262), Vector2(208, 292), Vector2(208, 330), 8), 16.0, 30.0)
-	_clip_fill(c, ear, head, DT_LEG, 2337, 14.0, 7.0)
+	_clip_fill(c, Crayon.blob(Vector2(352, 418), Vector2(52, 34), 2334, 12, 0.06), head, DT_CREAM, 2335)
+	_clip_solid(c, Crayon.blob(Vector2(286, 308), Vector2(14, 13), 2336, 10, 0.08), head, INK)
 	Crayon.marker_line(c, head, INK, W_BODY, 2340)
-	var nose := Crayon.blob(Vector2(404, 338), Vector2(16, 13), 2341, 10, 0.05)
+	# the floppy near ear, hanging down the back of the head
+	var ear := _tube(_bez(Vector2(222, 300), Vector2(200, 326), Vector2(188, 362), Vector2(194, 404), 8), 16.0, 30.0)
+	_part(c, ear, DT_LEG, 2337, 7.0, 14.0)
+	var nose := Crayon.blob(Vector2(390, 398), Vector2(17, 13), 2341, 10, 0.05)
 	c.draw_colored_polygon(nose, INK)
-	c.draw_circle(Vector2(399, 333), 4.0, Color(1, 1, 1, 0.8))
+	c.draw_circle(Vector2(385, 393), 4.0, Color(1, 1, 1, 0.8))
 
 
+## Big glossy dark domes, like a bug's, with a scatter of little shine dots.
 static func _dottie_eye(c: CanvasItem) -> void:
-	_eye(c, 2351, Vector2(64, 70), Color("#7d4b2f"), 46.0, Vector2(26, 30), Vector2(8, 6))
-	c.draw_circle(O + Vector2(24, 30), 7.0, Color.WHITE)
+	var dome := PackedVector2Array()
+	for i in 21:
+		var a := PI + PI * i / 20.0
+		var k := 1.0 + Crayon.noise(2351, i) * 0.02
+		dome.append(O + Vector2(0, 26) + Vector2(cos(a) * 54.0, sin(a) * 68.0) * k)
+	var base := _bez(O + Vector2(54, 26), O + Vector2(30, 38), O + Vector2(-30, 38), O + Vector2(-54, 26), 8)
+	dome.append_array(base.slice(1, base.size() - 1))
+	c.draw_colored_polygon(dome, Color("#2c2135"))
+	_clip_fill(c, Crayon.blob(O + Vector2(4, 34), Vector2(46, 16), 2352, 12, 0.05), dome, Color("#8a3448"), 2353, 10.0)
+	Crayon.marker_line(c, dome, INK, W_EYE, 2354)
+	c.draw_colored_polygon(Crayon.blob(O + Vector2(-16, -14), Vector2(11, 10), 2355, 10, 0.05), Color.WHITE)
+	var dots := [[Vector2(-30, 6), 5.0], [Vector2(-4, -32), 5.0], [Vector2(14, -26), 4.0],
+		[Vector2(26, -12), 3.5], [Vector2(-34, -16), 3.5]]
+	for d in dots:
+		var at: Vector2 = d[0]
+		var r: float = d[1]
+		c.draw_circle(O + at, r, Color(1, 1, 1, 0.9))
 
 
+## A tiny round "o".
 static func _dottie_mouth(c: CanvasItem) -> void:
-	_open_mouth(c, 2361, Vector2(74, 62), 0.4)
+	var m := Crayon.blob(O, Vector2(26, 30), 2361, 16, 0.04)
+	_mouth_in(c, m, 2362, O + Vector2(2, 18), Vector2(16, 10))
+	Crayon.marker_line(c, m, INK, W_MOUTH, 2365)
 
 
 static func _dottie_antenna(c: CanvasItem) -> void:

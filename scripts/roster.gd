@@ -4,9 +4,12 @@ extends RefCounted
 ## Adopt tab - put together exactly the way a kid's pet is: set_body, then PetBuilder.add_parts
 ## for each part type in PartTypes.ORDER, so they lay out and move the same way.
 ##
-## A roster entry is {name, look, parts}. Its parts map a part type to how many - or
+## A roster entry is {name, look, parts, layout}. Its parts map a part type to how many - or
 ## "<type>_on_<host>" for an add-on that is not on its usual host ("claw_on_arm": 2). Art ids
 ## are "<creature>_<part key>", baked to res://art/<group>/ with their dots in pivots.json.
+## The optional layout maps a part key to overrides of where it goes (PetBuilder.layout_on_host:
+## anchor, edge, spread, far) - so one creature's eyes sit high and wide and another's head
+## joins straight onto the front of its body, instead of every one in the same spot.
 
 static var _pivots := {}
 
@@ -22,6 +25,7 @@ static func assemble(group: String, id: String, entry: Dictionary, pivots := {},
 	pet["name"] = entry.get("name", id.capitalize())
 	PetBuilder.set_body(pet, body)
 	var parts: Dictionary = entry.get("parts", {})
+	var layout: Dictionary = entry.get("layout", {})
 	for type in PartTypes.ORDER:
 		for key in parts:
 			var split := split_key(key)
@@ -31,7 +35,8 @@ static func assemble(group: String, id: String, entry: Dictionary, pivots := {},
 			var img := _image(group, art, from_files)
 			if img == null:
 				continue
-			PetBuilder.add_parts(pet, type, int(parts[key]), img, _pivot(group, art, pivots), {}, split[1])
+			PetBuilder.add_parts(pet, type, int(parts[key]), img, _pivot(group, art, pivots), {}, split[1],
+				layout.get(key, {}))
 	return pet
 
 
