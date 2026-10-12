@@ -30,6 +30,9 @@ decision; do not restate it here.
 - `.ai/shop.md` - gold stars, every milestone, the shop, shiny things, room to grow and trust
 - `.ai/competitions.md` - the calendar, six events, cups, rivals, the stat-plus-timing rule
 - `.ai/art-direction.md` - creatures own black; pencil or marker; shine only for special things
+- `.ai/audio-direction.md` - how every sound is made, pet voices and their variation, the mic,
+  the mix. **Read before adding or changing any sound.**
+- `.ai/android.md` - building, installing and debugging on Android phones and tablets
 - `.ai/sharing.md` - ecec.dev sharing, and the child-privacy rules it must follow
 - `.ai/roadmap.md` - milestones, the idea backlog, open questions with their defaults
 
@@ -59,9 +62,17 @@ decision; do not restate it here.
   the real screens (real strokes, real bucket fills), then feeds it, plays fetch and pets it,
   writing a screenshot of every step to `.shots/demo_*.png`. **This is how changes to drawing,
   assembly, motion or the place get verified** - look at the shots, not just the log.
-  It goes on to feed, fetch, tug, decorate, shop, dress up, and play all six competitions.
+  It goes on to play with every kind of toy, pet it, decorate, shop, dress up, and play all six
+  competitions. **It plays on whatever save it finds**, so give it a fresh one that leaves the
+  real save alone: `APPDATA=<an empty folder> "$GODOT_BIN" --path . -- --demo --quit` (Godot puts
+  `user://` under `APPDATA`; the shots still go to `.shots/`).
 - `--screen=place|create|shop|calendar` boots straight into a screen; `--stars=N` adds stars;
   `--shot=N` screenshots frame N; F12 grabs a frame.
+- **`python tools/audio/build.py --all --sheet`** - regenerates every sound effect
+  (`sfx/*.wav`), pet-voice base (`sfx/voices/*.f32`), place ambience (`sfx/ambience/*.wav`) and
+  music loop (`music/*.wav`), and draws each as a spectrogram in `.shots/sound_*.png` - look at
+  those, since nobody here can listen. Then `--import`. Never hand-edit a sound. `tools/voice_check.gd`
+  + `tools/audio/sheet.py` check the voice sliders the same way (`.ai/audio-direction.md`).
 - **`"$GODOT_BIN" --path . -s tools/bake_art.gd -- --group=<group> [--only=a,b]`** - groups:
   things, wear, ui, homes, rivals, adopt_a, adopt_b, adopt_c, adopt_d (every
   `scripts/art_<group>.gd`) -
@@ -69,6 +80,9 @@ decision; do not restate it here.
   `pivots.json`, with a contact sheet in `.shots/art_<group>.png` (and the assembled rivals in
   `.shots/art_<group>_assembled.png` for any group with a ROSTER of creatures). Needs a window. Then run `--import` so Godot picks the
   PNGs up. Never hand-edit a baked PNG; change the drawing code.
+- **`python tools/app_icon.py`** - the app icon, cropped from a demo screenshot into `icon/`.
+- Android export, install and debugging: `.ai/android.md`. The demo has its own preset and
+  package (`dev.ecec.drawpets.demo`) so it never plays on a real save.
 - `$GODOT_BIN` is set in `.claude/settings.json` (the .NET build, which runs GDScript fine).
   If it is unset or missing, stop and say so rather than guessing a path.
 - Saves live in `user://` - on Windows `%APPDATA%\Godot\app_userdata\DrawPets\`:
@@ -102,10 +116,17 @@ have only parsed, say so and list what still needs checking in a run.
 - Randomise a crayon wobble. Hash it from a seed with `Crayon.noise`.
 - Add C#. It would cost the iOS and web exports.
 - Change the screen in the middle of a button press - go through `GameRoot.show_screen`, which
-  defers the swap.
+  defers the swap. A screen swapping its own steps or panels throws the old one away with
+  `UI.retire`, never `remove_child`: on a phone a lifted finger arrives as a mouse release AND a
+  touch release, and Godot errors if the button has left the tree in between.
 - Put a multi-line lambda in the middle of an argument list. Assign it to a variable first, or
   use a bound method (`_pick.bind(x)`).
 - Connect a static lambda to a long-lived signal (`profile.stars_changed`). Connect a method of
   the node that cares, so the connection dies with it.
 - Pay stars anywhere but `GameRoot.reward` / `reward_daily`, or add a repeatable reward without
   a daily cap (`.ai/shop.md`).
+- Add volume at a call site to balance a sound. The mix is the peak targets in
+  `tools/audio/sfx.py`; change one there and rebuild.
+- Store a sound the game must read back (a voice base, a recording) as an imported WAV - Godot
+  compresses those and the samples are gone. Raw float `.f32`, like `sfx/voices/`.
+- Upload, share or send a recording a child made. Ever.

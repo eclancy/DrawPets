@@ -87,7 +87,7 @@ static func set_body(pet: Dictionary, img: Image, shine := {}) -> void:
 static func _add_shine(pet: Dictionary, part: Dictionary, type: String, shine: Dictionary) -> void:
 	if shine.is_empty() or shine.get("mask") == null:
 		return
-	var file := type + "_shine.png"
+	var file := unused_file(pet, part["image"].get_basename() + "_shine")
 	pet["_img"][file] = shine["mask"]
 	part["shine"] = shine["mode"]
 	part["shine_image"] = file
@@ -160,11 +160,12 @@ static func ghost(pet: Dictionary, type: String, host := "") -> Dictionary:
 
 
 ## The same, from a host drawing that is not on the pet yet - the head still being drawn when
-## the kid adds its horns.
+## the kid adds its horns. `at` (host image pixels), when given, is the spot the kid tapped for
+## it, which goes on the dot instead of where it would go by itself.
 static func ghost_on(host_img: Image, host_scale: float, type: String, host: String,
-		headless := false) -> Dictionary:
+		headless := false, at := Vector2(-1, -1)) -> Dictionary:
 	var info := PartTypes.info(type)
-	var a := anchor_px(host_img, anchor_uv(type, host, headless), info.get("edge", Vector2.ZERO))
+	var a := at if at.x >= 0.0 else anchor_px(host_img, anchor_uv(type, host, headless), info.get("edge", Vector2.ZERO))
 	var gs := float(info["zoom"]) * host_scale
 	var dot: Vector2 = info["dot"]
 	return {"image": host_img, "rect": Rect2(dot - a * gs, Vector2(host_img.get_size()) * gs)}
@@ -174,11 +175,14 @@ static func ghost_on(host_img: Image, host_scale: float, type: String, host: Str
 ## most likely go: legs fanned along the bottom of the body in near/far pairs, eyes side by side
 ## on each head, a hand on the end of each arm. The kid can move all of it in the assembly
 ## screen; this just makes the first look good.
+## `layout` overrides where they go (see layout_on_host) - roster creatures use it so every one
+## does not have its eyes and head in the same spot. A kid's pet never needs it: they drag.
 static func add_parts(pet: Dictionary, type: String, count: int, img: Image, pivot: Vector2,
-		shine := {}, host := "") -> void:
+		shine := {}, host := "", layout := {}) -> void:
 	if host == "":
 		host = default_host(pet, type)
-	var file := type + ".png" if host == "body" or host == PartTypes.info(type).get("host", "body") 		else "%s_on_%s.png" % [type, host]
+	var stem := type if host == "body" or host == PartTypes.info(type).get("host", "body") 		else "%s_on_%s" % [type, host]
+	var file := unused_file(pet, stem)
 	pet["_img"][file] = img
 	var info := PartTypes.info(type)
 	for hp in parts_of(pet, host):
@@ -187,7 +191,7 @@ static func add_parts(pet: Dictionary, type: String, count: int, img: Image, piv
 		var rimg: Image = pet["_img"][hp["image"]]
 		var on_body := host == "body"
 		var spots := layout_on_host(type, host, count, rimg, sprite_xform(hp),
-			float(hp["draw_scale"]) * float(hp["scale"]), not has_type(pet, "head"))
+			float(hp["draw_scale"]) * float(hp["scale"]), not has_type(pet, "head"), layout)
 		for spot in spots:
 			pet["parts"].append({
 				"id": "%s_%d" % [type, _next_index(pet, type)], "type": type, "image": file,
@@ -203,14 +207,38 @@ static func add_parts(pet: Dictionary, type: String, count: int, img: Image, piv
 
 ## Where `count` copies of a type go on one host drawing: [{pos, pair, side, behind}], with pos
 ## mapped through `host_x` (host image pixels -> wherever the caller wants: body space for a
-## pet, the drawing sheet for a preview).
+## pet, the drawing sheet for a preview). `layout` may override the type's PartTypes values:
+## "anchor" [u, v] (a fraction of the host's ink box), "edge" [x, y] (the way it walks to the
+## outline; [0, 0] to stay put), "spread" (how far apart copies fan) and "far" [x, y] - or
+## "spots": the exact places a kid tapped (host image pixels), one copy each. Tapped pairs go
+## near-far from left to right, so the left ear is the near one and the right ear the far one.
 static func layout_on_host(type: String, host: String, count: int, host_img: Image,
-		host_x: Transform2D, host_scale: float, headless := false) -> Array:
+		host_x: Transform2D, host_scale: float, headless := false, layout := {}) -> Array:
 	var info := PartTypes.info(type)
 	var paired: bool = info["pairs"]
+	if layout.has("spots") and not (layout["spots"] as Array).is_empty():
+		var spots: Array = (layout["spots"] as Array).duplicate()
+		if paired:
+			spots.sort_custom(func(a, b): return v2(a).x < v2(b).x)
+		var tapped := []
+		for i in spots.size():
+			var side := i % 2 if paired else 0
+			tapped.append({"pos": host_x * v2(spots[i]), "pair": i / 2 if paired else i, "side": side,
+				"behind": side == 1 or BEHIND_TYPES.has(type)})
+		return tapped
 	var groups := ceili(count / 2.0) if paired else count
-	var spread: float = info["spread"]
+	var spread := float(layout.get("spread", info["spread"]))
 	var uv0 := anchor_uv(type, host, headless)
+	if layout.has("anchor"):
+		uv0 = Vector2(float(layout["anchor"][0]), float(layout["anchor"][1]))
+	var edge: Vector2 = info.get("edge", Vector2.ZERO)
+	if layout.has("edge"):
+		edge = Vector2(float(layout["edge"][0]), float(layout["edge"][1]))
+	var on_body_face: bool = host == "body" and info.get("host", "body") == "head"
+	var far_off: Vector2 = info.get("body_far" if on_body_face and info.has("body_far") else "far",
+		Vector2(-0.07, -0.02))
+	if layout.has("far"):
+		far_off = Vector2(float(layout["far"][0]), float(layout["far"][1]))
 	var size := Vector2(host_img.get_size())
 	var out := []
 	for i in count:
@@ -219,11 +247,14 @@ static func layout_on_host(type: String, host: String, count: int, host_img: Ima
 		var uv := uv0
 		if groups > 1:
 			uv.x += spread * (g / float(groups - 1) * 2.0 - 1.0)
-		var far: Vector2 = info.get("far", Vector2(-0.07, -0.02)) if side == 1 else Vector2.ZERO
+		var far: Vector2 = far_off if side == 1 else Vector2.ZERO
+		# An odd one out of a pair - a unicorn's horn, the middle of three - goes between the pair.
+		if paired and side == 0 and i == count - 1 and count % 2 == 1:
+			far = Vector2(far_off.x * 0.5, 0.0)
 		# The far copy is moved along BEFORE walking to the edge, so it lands on the outline
 		# there too - a far ear on a round head sits on the head, not in the air beside it.
 		uv.x += far.x
-		var a := anchor_px(host_img, uv, info.get("edge", Vector2.ZERO))
+		var a := anchor_px(host_img, uv, edge)
 		var pos: Vector2 = host_x * a
 		pos.y += far.y * size.y * host_scale
 		out.append({"pos": pos, "pair": g, "side": side,
@@ -366,6 +397,86 @@ static func copy_part(pet: Dictionary, id: String) -> Dictionary:
 	p["pair"] = int(src["pair"]) + 1
 	pet["parts"].append(p)
 	return p
+
+
+## "<stem>.png", or "<stem>_2.png" and so on if that is taken - a second, different drawing of
+## horns added later must not paint over the first.
+static func unused_file(pet: Dictionary, stem: String) -> String:
+	var file := stem + ".png"
+	var n := 2
+	while pet["_img"].has(file):
+		file = "%s_%d.png" % [stem, n]
+		n += 1
+	return file
+
+
+# --- Fixing a pet (FixScreen) ----------------------------------------------------------------
+
+## Each different drawing on the pet, once: [{file, type, count, host}] - what can be redrawn or
+## taken off. The body first, then in build order.
+static func drawings(pet: Dictionary) -> Array:
+	var seen := {}
+	var out := []
+	for type in ["body"] + PartTypes.ORDER:
+		for p in pet["parts"]:
+			if p["type"] != type:
+				continue
+			var file: String = p["image"]
+			if seen.has(file):
+				seen[file]["count"] += 1
+				continue
+			var parent := find(pet, p["parent"])
+			seen[file] = {"file": file, "type": type, "count": 1,
+				"host": parent.get("type", "") if not parent.is_empty() else ""}
+			out.append(seen[file])
+	return out
+
+
+## Swaps a drawing for a new one everywhere it is used, keeping where it is: the red dot is the
+## joint, so the new drawing hangs from the same joints the old one did.
+static func replace_drawing(pet: Dictionary, file: String, img: Image, pivot: Vector2,
+		shine := {}) -> void:
+	pet["_img"][file] = img
+	pet["_tex"].erase(file)
+	var parts := []
+	for p in pet["parts"]:
+		if p["image"] == file:
+			parts.append(p)
+	for p in parts:
+		p["pivot"] = arr(pivot)
+		var old_shine: String = p.get("shine_image", "")
+		if old_shine != "":
+			pet["_img"].erase(old_shine)
+			pet["_tex"].erase(old_shine)
+			p.erase("shine_image")
+			p.erase("shine")
+	if not shine.is_empty() and not parts.is_empty():
+		_add_shine(pet, parts[0], parts[0]["type"], shine)
+		for i in range(1, parts.size()):
+			parts[i]["shine"] = parts[0]["shine"]
+			parts[i]["shine_image"] = parts[0]["shine_image"]
+
+
+## Takes off every part drawn with `file`, and everything riding on those parts. Returns why it
+## could not, or "" when it did - a creature always keeps its body, eyes and a mouth.
+static func remove_drawing(pet: Dictionary, file: String) -> String:
+	var doomed := {}
+	for p in pet["parts"]:
+		if p["image"] == file:
+			if p["type"] == "body":
+				return "Every creature needs its body!"
+			for g in group(pet, p["id"]):
+				doomed[g["id"]] = true
+	for need in PartTypes.REQUIRED:
+		var left := 0
+		for p in pet["parts"]:
+			if p["type"] == need and not doomed.has(p["id"]):
+				left += 1
+		if left == 0:
+			return "It needs %s! Add new ones first, then take these off." % PartTypes.info(need)["plural"].to_lower()
+	for id in doomed:
+		pet["parts"].erase(find(pet, id))
+	return ""
 
 
 static func remove_part(pet: Dictionary, id: String) -> void:

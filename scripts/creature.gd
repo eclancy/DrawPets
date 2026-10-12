@@ -52,6 +52,12 @@ var wag := 0.2
 var wag_speed := 6.0
 var ear_droop := 0.0
 var lean := 0.0
+## Lying over on its back for a belly rub, 0-1. The whole rig tips over backwards about its feet.
+var roll := 0.0
+## Leaning into something heavy it is pushing along.
+var straining := false
+## Where a finger is petting it (global), or Vector2.INF. It leans into the finger.
+var touch_at := Vector2.INF
 var accel := Vector2.ZERO
 
 # --- Movement -------------------------------------------------------------------------------
@@ -74,6 +80,16 @@ var depth_scale := true
 ## Driven creatures (competitions) do not think or wander: something else sets drive_velocity
 ## every frame and they just move and animate.
 var driven := false
+## Makes footsteps, hops, flaps and snores - on for the pets in a home or a competition, off for
+## the little ones in cards and menus. Its voice is separate: a pet talks wherever it is.
+var audible := false
+## How loud its footsteps are, under the rest (rivals' are quieter than the kid's own pet).
+var step_volume_db := 0.0
+
+## Footsteps and flaps are pitched by size: a mouse patters, a dinosaur thumps.
+const SIZE_PITCH := {"tiny": 1.7, "small": 1.3, "medium": 1.0, "big": 0.85, "huge": 0.72, "giant": 0.6}
+var _flap_in := 0.0
+var _bubble_in := 0.0
 var drive_velocity := Vector2.ZERO
 
 var _goal := Vector2.ZERO
@@ -206,6 +222,14 @@ func _apply_size() -> void:
 	_shadow_w = rest.size.x * norm * 0.42
 
 
+## Sizes it to fit inside `box` (on-screen pixels) whatever its shape - a long pig in a tall
+## portrait frame as well as a tall fawn in a wide one. set_display_height sizes by height
+## (and lets a long creature run up to 1.7x as wide), which spills out of a narrow frame.
+func fit_in(box: Vector2) -> void:
+	var n := minf(box.y / maxf(rest.size.y, 1.0), box.x / maxf(rest.size.x, 1.0))
+	set_display_height(n * maxf(rest.size.y, rest.size.x * 0.6))
+
+
 func set_display_height(h: float) -> void:
 	fixed_height = h
 	_apply_size()
@@ -229,8 +253,8 @@ func stop() -> void:
 	_on_arrive = Callable()
 
 
-## Plays an action for `duration` seconds: eat, petted, celebrate, greet, hop, look, sniff,
-## sleep, bounce, dance, splash, scratch, chew, tug, hide.
+## Plays an action for `duration` seconds: eat, petted, wiggle, belly, cuddle, celebrate, greet,
+## hop, look, sniff, sleep, bounce, dance, splash, scratch, chew, tug, hide.
 func perform(action_name: String, duration: float, on_done := Callable()) -> void:
 	_end_action()
 	_action = action_name
@@ -276,8 +300,26 @@ func is_leaping() -> bool:
 
 
 func say(kind: String) -> void:
-	_bark = 0.35
+	if kind in ["heart", "star", "note", "question", "greet", "hello"]:
+		Voice.speak(pet, kind, self)
+	elif kind == "zzz" and audible:
+		Sounds.play_varied("snore", _size_pitch(), 0.05, -3.0)
+	_bark = maxf(_bark, 0.35)
 	emote.emit(kind, top_global())
+
+
+## Blinks right now, rather than when it next would - to show a kid the eyes they drew blink.
+func blink_now() -> void:
+	_blink_t = 0.0
+
+
+## Opens its mouth for `seconds` - while its voice is playing.
+func open_mouth(seconds: float) -> void:
+	_bark = maxf(_bark, seconds)
+
+
+func _size_pitch() -> float:
+	return float(SIZE_PITCH.get(pet.get("size", "medium"), 1.0))
 
 
 # --- Where things are -----------------------------------------------------------------------
@@ -297,10 +339,31 @@ func top_global() -> Vector2:
 
 ## True when a global point is on (or very near) the creature.
 func hit(point: Vector2) -> bool:
+	return _box().grow(12.0).has_point(point)
+
+
+## Where a finger is on it: "head" (its head, or its face if it has no head) or "body".
+func touch_zone(point: Vector2) -> String:
+	var face_parts := false
+	for part in parts:
+		if part.type != "head" and not PartTypes.FACE.has(part.type):
+			continue
+		face_parts = true
+		var g := part.sprite.get_global_transform()
+		var r := part.sprite.get_rect()
+		var box := Rect2(g * r.position, Vector2.ZERO).expand(g * r.end).abs()
+		if box.grow(10.0).has_point(point):
+			return "head"
+	if face_parts:
+		return "body"
+	var whole := _box()
+	return "head" if point.y < whole.position.y + whole.size.y * 0.4 else "body"
+
+
+## Its drawing's bounds on screen.
+func _box() -> Rect2:
 	var g := body.get_global_transform()
-	var box := Rect2(g * rest.position, Vector2.ZERO).expand(g * rest.end)
-	box = box.abs().grow(12.0)
-	return box.has_point(point)
+	return Rect2(g * rest.position, Vector2.ZERO).expand(g * rest.end).abs()
 
 
 # --- Every frame ----------------------------------------------------------------------------
@@ -318,8 +381,12 @@ func _process(delta: float) -> void:
 	_mood(delta)
 	for part in parts:
 		part.animate(self, delta)
-	rig.position.y = -z
-	rig.rotation = lean * facing
+	if _action != "belly":
+		roll = move_toward(roll, 0.0, delta * 3.0)
+	# Rolled over, it lies on its back where it stood: tipped backwards about its feet, then
+	# slid forwards so its middle stays over its shadow.
+	rig.position = Vector2(facing * roll * height_px * 0.3 / maxf(scale.x, 0.01), -z)
+	rig.rotation = (lean + (0.16 if straining else 0.0) - roll * 1.35) * facing
 	rig.scale = Vector2(move_toward(rig.scale.x, norm * facing, norm * delta * 10.0), norm)
 	if depth_scale:
 		var d := clampf(inverse_lerp(bounds.position.y, bounds.end.y, position.y), 0.0, 1.0)
@@ -397,7 +464,10 @@ func _move(delta: float) -> void:
 	var hopping := moving and not has_legs and not aloft
 
 	stride = move_toward(stride, 1.0 if walking else 0.0, delta * 6.0)
+	var old_step := int(phase / PI)
 	phase += delta * spd * PI / maxf(height_px * 0.35, 8.0)
+	if audible and walking and stride > 0.5 and int(phase / PI) != old_step:
+		Sounds.play_varied("step", _size_pitch(), 0.08, step_volume_db)
 	bob = absf(sin(phase)) * rest.size.y * 0.035 * stride
 
 	# Height above the ground: a leap, flying, swimming, hopping, or standing on something.
@@ -412,18 +482,33 @@ func _move(delta: float) -> void:
 		z = rest_z + sin(k * PI) * _leap_h
 		if k >= 1.0:
 			_leap_t = -1.0
+			if audible:
+				Sounds.play_varied("land", _size_pitch(), 0.06, step_volume_db)
 	elif aloft:
 		z = move_toward(z, lift, delta * maxf(height_px, 60.0) * 1.5)
 	elif hopping:
+		var old_hop := int(_hop / PI)
 		_hop += delta * spd * PI / maxf(height_px * 0.6, 10.0)
+		if audible and int(_hop / PI) != old_hop:
+			Sounds.play_varied("hop", _size_pitch(), 0.07, step_volume_db - 4.0)
 		z = rest_z + absf(sin(_hop)) * height_px * 0.22
-	elif _action not in ["hop", "celebrate", "greet", "bounce", "dance"]:
+	elif _action not in ["hop", "celebrate", "greet", "bounce", "dance", "wiggle"]:
 		z = move_toward(z, rest_z, delta * maxf(height_px, 60.0) * 3.0)
 		_hop = 0.0
 	if flying and not _has_goal and _action == "" and z >= lift - 2.0:
 		flying = false  # landed from the flight: drift back down next frame
 
 	flap = move_toward(flap, 1.0 if flying and z > 4.0 else 0.0, delta * 5.0)
+	if audible and flap > 0.5:
+		_flap_in -= delta
+		if _flap_in <= 0.0:
+			_flap_in = 0.32
+			Sounds.play_varied("flap", _size_pitch(), 0.08, step_volume_db)
+	if audible and swimming:
+		_bubble_in -= delta
+		if _bubble_in <= 0.0:
+			_bubble_in = randf_range(0.6, 1.6)
+			Sounds.play_varied("bubble", _size_pitch(), 0.15, step_volume_db - 2.0)
 	swim = move_toward(swim, 1.0 if swimming and moving else 0.0, delta * 3.0)
 	tuck = move_toward(tuck, 1.0 if (z - rest_z > 6.0 and not walking) else 0.0, delta * 4.0)
 	var target_squash := 0.0
@@ -436,7 +521,7 @@ func _move(delta: float) -> void:
 
 func _mood(delta: float) -> void:
 	happiness = PetStore.happiness(pet) if pet.has("needs") else 0.7
-	var excited := 1.0 if _action in ["celebrate", "petted", "greet", "dance", "bounce"] else 0.0
+	var excited := 1.0 if _action in ["celebrate", "petted", "greet", "dance", "bounce", "wiggle", "belly"] else 0.0
 	wag = 0.08 + 0.3 * happiness + 0.2 * excited
 	wag_speed = 3.0 + 11.0 * happiness + 8.0 * excited
 	ear_droop = (1.0 - happiness) * 0.35
@@ -449,13 +534,15 @@ func _mood(delta: float) -> void:
 		target_mouth = 0.45 + 0.2 * sin(time * 14.0)
 	if excited > 0.0 and _action != "petted":
 		target_mouth = 0.65
+	if _action == "cuddle":
+		target_mouth = 0.2
 	if _bark > 0.0:
 		_bark -= delta
 		target_mouth = 1.0
 	if _action not in ["eat", "chew", "sleep", "tug"]:
 		mouth_open = move_toward(mouth_open, target_mouth, delta * 6.0)
 
-	if _action in ["petted", "sleep"]:
+	if _action in ["petted", "sleep", "belly", "cuddle"]:
 		blink = move_toward(blink, 0.85, delta * 6.0)
 		return
 	_next_blink -= delta
@@ -484,7 +571,26 @@ func _run_action(delta: float) -> void:
 			nod = 0.06
 			lean = 0.1
 		"petted":
+			# Eyes shut, head tipped into the hand, leaning towards the finger.
 			head_tilt = 0.14
+			if touch_at != Vector2.INF:
+				var toward := clampf((touch_at.x - global_position.x) / maxf(height_px, 1.0), -1.0, 1.0)
+				lean = move_toward(lean, toward * 0.12 * facing, delta * 1.5)
+		"wiggle":
+			# A back rub: the happy whole-body wiggle.
+			lean = sin(t * 13.0) * 0.07
+			head_tilt = sin(t * 13.0 + 1.2) * 0.1
+			z = rest_z + absf(sin(t * 6.5)) * height_px * 0.03
+		"belly":
+			# Rolled over for a belly rub, legs kicking in the air.
+			roll = move_toward(roll, 1.0, delta * 4.0)
+			stride = 1.0
+			phase += delta * 14.0
+			head_tilt = sin(t * 5.0) * 0.08
+		"cuddle":
+			# Hugging a soft toy, swaying a little.
+			head_tilt = 0.16 + sin(t * 2.0) * 0.05
+			lean = sin(t * 1.8) * 0.05
 		"sniff":
 			sniff = 1.0
 			nod = 0.05
@@ -523,9 +629,12 @@ func _run_action(delta: float) -> void:
 			mouth_open = 0.5
 			stride = 0.6
 			phase += delta * 9.0
+			head_tilt = sin(t * 15.0) * 0.1  # the growly shake
 		"hide":
 			head_tilt = sin(t * 1.5) * 0.1
 		"sleep":
+			if t <= delta:
+				Voice.yawn(pet, self)
 			mouth_open = sin(clampf(t / 1.4, 0.0, 1.0) * PI) * 0.9  # one big yawn first
 			_zzz -= delta
 			if _zzz <= 0.0 and t > 1.4:

@@ -15,6 +15,9 @@ extends Control
 ## Nothing here smooths, straightens or tidies a stroke. Wobbly is the point.
 
 signal message(text: String)
+## While `placing`, a tap on the sheet does not draw: it says where (sheet pixels) - the kid is
+## showing where the eyes, mouth or ears go before drawing them.
+signal tapped(at: Vector2)
 
 const SHEET := PartTypes.SHEET
 
@@ -92,6 +95,8 @@ var shine := ""
 var _viewport: SubViewport
 var _ops: Node2D
 var _sheet: Control
+var placing := false
+var _marks: MarkLayer
 var _ghost: TextureRect
 var _ink: TextureRect
 var _dot_layer: DotLayer
@@ -109,6 +114,13 @@ var _unfill_shader: Shader
 var _mask_viewport: SubViewport
 var _mask_ops: Node2D
 var _shine_mode := ""
+## The crayon (or eraser) scratching while a finger is down, and how fast it is moving.
+var _scratch := -1
+var _scratch_speed := 0.0
+## The shiny marker drawn with on this sheet, if any - the one that gets used up.
+var used_marker := ""
+## Ops at the bottom that undo never removes: a drawing loaded to be fixed.
+var _base_ops := 0
 
 
 func _ready() -> void:
@@ -167,6 +179,11 @@ func _ready() -> void:
 	_dot_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(_dot_layer)
 
+	_marks = MarkLayer.new()
+	_marks.size = Vector2(SHEET, SHEET)
+	_marks.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(_marks)
+
 	_erase_material = ShaderMaterial.new()
 	var erase := Shader.new()
 	erase.code = ERASE_SHADER
@@ -215,6 +232,12 @@ func set_previews(list: Array) -> void:
 	_previews_front.queue_redraw()
 
 
+## Numbered rings where the kid has tapped for a part (sheet pixels). Empty to clear.
+func set_marks(spots: Array) -> void:
+	_marks.spots = spots
+	_marks.queue_redraw()
+
+
 func set_dot(at: Vector2, visible_dot := true) -> void:
 	dot = at
 	show_dot = visible_dot
@@ -230,14 +253,42 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var at := _to_sheet(event.position)
+		if placing:
+			if event.pressed:
+				tapped.emit(at.clamp(Vector2.ZERO, Vector2(SHEET, SHEET)))
+			accept_event()
+			return
 		if event.pressed:
 			_press(at)
+			if _stroke != null:
+				_scratch = Sounds.loop_start("eraser" if tool == Tool.ERASER else "crayon", -40.0)
 		else:
 			_stroke = null
+			_stop_scratch()
 		accept_event()
 	elif event is InputEventMouseMotion and _stroke != null:
 		_extend(_to_sheet(event.position))
+		_scratch_speed = maxf(_scratch_speed, event.velocity.length())
 		accept_event()
+
+
+## The scratching follows the stroke: loud while the crayon moves fast, quiet while it rests.
+func _process(delta: float) -> void:
+	if _scratch < 0:
+		return
+	var v := clampf(_scratch_speed / 900.0, 0.0, 1.0)
+	Sounds.loop_set(_scratch, lerpf(-34.0, 0.0, sqrt(v)), 0.85 + 0.35 * v)
+	_scratch_speed = move_toward(_scratch_speed, 0.0, delta * 4000.0)
+
+
+func _stop_scratch() -> void:
+	if _scratch >= 0:
+		Sounds.loop_stop(_scratch)
+		_scratch = -1
+
+
+func _exit_tree() -> void:
+	_stop_scratch()
 
 
 func _to_sheet(local: Vector2) -> Vector2:
@@ -253,6 +304,7 @@ func _press(at: Vector2) -> void:
 		Tool.DOT:
 			if show_dot:
 				set_dot(at.clamp(Vector2.ZERO, Vector2(SHEET, SHEET)))
+				Sounds.play("dot")
 
 
 # --- Drawing operations ----------------------------------------------------------------------
@@ -277,6 +329,7 @@ func begin_stroke(at: Vector2) -> void:
 		twin.default_color = Color.WHITE
 		twin.antialiased = true
 		_use_shine()
+		used_marker = shine
 	else:
 		twin.material = _erase_material
 		twin.antialiased = false
@@ -330,10 +383,16 @@ func fill_at(at: Vector2) -> void:
 	_busy = true
 	var sheet_image := await snapshot()
 	var blockers := _ghost_walls(sheet_image)
+	# The ghost is a wall for a fill that starts off it - a leg's colour stops at the body - but not
+	# for one that starts on it: eyes and mouths are drawn on top of the head, whose ghost fills
+	# the whole zoomed sheet, so inside an eye it is the kid's own lines that hold the colour in.
+	if blockers != null and blockers.get_pixelv(start).a > 0.5 and sheet_image.get_pixelv(start).a < 0.5:
+		blockers = null
 	var result := flood(sheet_image, start, FILL_GAP, blockers)
 	_busy = false
 	if result.get("leaked", false):
 		message.emit("That would colour the whole page! Fill INSIDE a closed shape.")
+		Sounds.play("ui_nope")
 		return
 	if not result.has("mask"):
 		return
@@ -355,16 +414,39 @@ func fill_at(at: Vector2) -> void:
 	if shine != "":
 		twin_mat.set_shader_parameter("fill_color", Color.WHITE)
 		_use_shine()
+		used_marker = shine
 	else:
 		twin_mat.shader = _unfill_shader
 	twin.material = twin_mat
+	Sounds.play_varied("fill", 1.0, 0.08)
 	_add_op(sprite, twin)
 	_changed()
 
 
+## Starts from an existing drawing - fixing a part - with its top-left at `at` on the sheet.
+## It can be drawn on, filled and rubbed out like anything drawn here, but undo stops at it.
+func load_drawing(img: Image, at: Vector2, shine_mask: Image = null, shine_mode := "") -> void:
+	var sprite := Sprite2D.new()
+	sprite.centered = false
+	sprite.position = at
+	sprite.texture = ImageTexture.create_from_image(img)
+	var twin := Sprite2D.new()
+	twin.centered = false
+	twin.position = at
+	if shine_mask != null and shine_mode != "":
+		twin.texture = ImageTexture.create_from_image(shine_mask)
+		shine = shine_mode
+		_use_shine()
+		shine = ""
+	_add_op(sprite, twin)
+	_base_ops = _ops.get_child_count()
+	_changed()
+
+
 func undo() -> void:
-	if _ops.get_child_count() == 0:
+	if _ops.get_child_count() <= _base_ops:
 		return
+	Sounds.play("undo")
 	var last := _ops.get_child(_ops.get_child_count() - 1)
 	var twin: Node = last.get_meta("twin")
 	_ops.remove_child(last)
@@ -377,6 +459,7 @@ func undo() -> void:
 
 ## Wipes the sheet - as one more undoable step, so a mis-tap on Clear is never a disaster.
 func clear() -> void:
+	Sounds.play("clear")
 	var wipe := Polygon2D.new()
 	wipe.polygon = PackedVector2Array([Vector2.ZERO, Vector2(SHEET, 0), Vector2(SHEET, SHEET),
 		Vector2(0, SHEET)])
@@ -407,7 +490,8 @@ func finish() -> Dictionary:
 		return {}
 	var cropped := img.get_region(used)
 	Crayon.unpremultiply(cropped)
-	var result := {"image": cropped, "pivot": dot - Vector2(used.position), "shine": {}}
+	var result := {"image": cropped, "pivot": dot - Vector2(used.position), "shine": {},
+		"used_marker": used_marker}
 	if _shine_mode != "":
 		var mask := _mask_viewport.get_texture().get_image().get_region(used)
 		if mask.get_used_rect().size.x > 0:
@@ -511,6 +595,21 @@ static func _walls(img: Image, gap: int) -> PackedByteArray:
 	var walls := ink.convert_to_image()
 	walls.convert(Image.FORMAT_L8)
 	return walls.get_data()
+
+
+## Where the kid has tapped for a part: a ring with a number in it for each.
+class MarkLayer extends Control:
+	var spots := []
+
+	func _draw() -> void:
+		var font := get_theme_default_font()
+		for i in spots.size():
+			var at: Vector2 = spots[i]
+			draw_circle(at, 22.0, Color(1, 0.99, 0.95, 0.9))
+			draw_arc(at, 22.0, 0.0, TAU, 32, UI.ACCENT, 5.0, true)
+			var label := str(i + 1)
+			var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
+			draw_string(font, at + Vector2(-w / 2.0, 9.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, UI.INK)
 
 
 ## Add-ons shown in place on the sheet (set_previews).

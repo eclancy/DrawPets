@@ -9,6 +9,11 @@ extends Control
 ## horn and you come back here, the horns now showing on the head. Some add-ons are required
 ## (every creature needs eyes and a mouth) and Done says so until they are there.
 ##
+## Tapping an add-on first asks WHERE: the kid taps their drawing once for each one (two eyes,
+## one mouth, an ear each side), and its sheet opens zoomed in on the first tap (`on_placed`
+## gets the type and the taps). Making a pet, Back goes back a step and Stop offers to save the
+## drawing for later or throw it away (`on_back`, `on_quit`).
+##
 ## Set the fields, then add it to the tree. `on_done` gets {image, pivot, shine, count}, or {}
 ## when the kid skipped an optional part.
 
@@ -35,6 +40,13 @@ var added := {}
 var required: Array = []
 var on_addon := Callable()
 var on_remove_addon := Callable()
+var on_placed := Callable()
+var on_back := Callable()
+var on_quit := Callable()
+## Fixing a part: the drawing to start from, its dot, and {mode, mask} if it had shiny strokes.
+var start_image: Image
+var start_pivot := Vector2.ZERO
+var start_shine := {}
 
 var canvas: DrawCanvas
 var _message: Label
@@ -43,6 +55,13 @@ var _addon_box: HFlowContainer
 var _addon_buttons := {}
 var _count_label: Label
 var _done := false
+var _place_box: VBoxContainer
+var _place_label: Label
+var _place_go: Button
+var _place_type := ""
+var _spots: Array = []
+## The crayon box - hidden while the kid taps where an add-on goes, so the page fits a phone.
+var _crayon_box: Array[Control] = []
 
 
 func _ready() -> void:
@@ -65,14 +84,38 @@ func _ready() -> void:
 	side.add_theme_constant_override("separation", 8)
 	row.add_child(side)
 
-	if step_text != "":
-		var step := UI.label(step_text, 18)
-		step.add_theme_color_override("font_color", UI.INK_SOFT)
-		side.add_child(step)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	if on_back.is_valid():
+		top.add_child(UI.icon_button("tool_back", "Back", func(): on_back.call(), 28, Vector2(78, 64)))
+	var step := UI.label(step_text, 18)
+	step.add_theme_color_override("font_color", UI.INK_SOFT)
+	step.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	step.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(step)
+	if on_quit.is_valid():
+		top.add_child(UI.icon_button("icon_home", "Stop", func(): on_quit.call(), 28, Vector2(78, 64)))
+	if step_text != "" or top.get_child_count() > 1:
+		side.add_child(top)
 	side.add_child(UI.label(prompt, 22, true))
 	_message = UI.label("", 19, true)
 	_message.add_theme_color_override("font_color", Color("#d0482a"))
 	side.add_child(_message)
+
+	# Where does it go? Shown while the kid taps spots for an add-on.
+	_place_box = VBoxContainer.new()
+	_place_box.add_theme_constant_override("separation", 6)
+	_place_box.visible = false
+	_place_label = UI.label("", 22, true)
+	_place_box.add_child(_place_label)
+	var place_row := HBoxContainer.new()
+	place_row.add_theme_constant_override("separation", 8)
+	_place_go = UI.icon_button("tool_done", "Draw it!", press_place_done, 34, Vector2(150, 70))
+	place_row.add_child(_place_go)
+	place_row.add_child(UI.icon_button("tool_back", "Cancel", end_placing, 34, Vector2(110, 70)))
+	_place_box.add_child(place_row)
+	side.add_child(_place_box)
+	canvas.tapped.connect(place_at)
 
 	var colours := GridContainer.new()
 	colours.columns = 8
@@ -84,6 +127,7 @@ func _ready() -> void:
 	for mode in markers:
 		colours.add_child(_marker_swatch(mode, int(markers[mode]), colour_group))
 	side.add_child(colours)
+	_crayon_box.append(colours)
 
 	# Brush sizes, then the tools, then undo and clear - all pictures.
 	var tools := HBoxContainer.new()
@@ -111,6 +155,7 @@ func _ready() -> void:
 	tools.add_child(_picture_button("tool_undo", func(): canvas.undo()))
 	tools.add_child(_picture_button("tool_clear", func(): canvas.clear()))
 	side.add_child(tools)
+	_crayon_box.append(tools)
 
 	if count > 0:
 		var stepper := HBoxContainer.new()
@@ -148,6 +193,12 @@ func _ready() -> void:
 	canvas.set_dot(dot, show_dot)
 	if not ghost.is_empty():
 		canvas.set_ghost(ghost["image"], ghost["rect"])
+	if start_image != null:
+		# The old drawing hangs from its dot as before; nudged onto the sheet if the dot moved.
+		var room := (Vector2(DrawCanvas.SHEET, DrawCanvas.SHEET) - Vector2(start_image.get_size())).max(Vector2.ZERO)
+		var at := (dot - start_pivot).clamp(Vector2.ZERO, room)
+		canvas.load_drawing(start_image, at, start_shine.get("mask"), start_shine.get("mode", ""))
+		canvas.set_dot(at + start_pivot, show_dot)
 
 
 ## The add-on buttons: a part picture (or the kid's own drawing once added, with how many),
@@ -281,9 +332,77 @@ func _say(text: String) -> void:
 	_message.text = text
 
 
+# --- Where does it go? ----------------------------------------------------------------------
+
+## Asks the kid to tap where an add-on goes, one tap for each copy; `spots` are taps from last
+## time (sheet pixels), to move or add to.
+func begin_placing(type: String, spots: Array = []) -> void:
+	_place_type = type
+	_spots = spots.duplicate()
+	canvas.placing = true
+	canvas.set_marks(_spots)
+	var info := PartTypes.info(type)
+	var what: String = info["plural"].to_lower()
+	_place_label.text = "Tap your drawing where its %s go - one tap for each! Tap one again to take it away." % what
+	_place_box.visible = true
+	for c in _crayon_box:
+		c.visible = false
+	_say("")
+	_update_place()
+
+
+## A tap on the drawing while placing: a new spot, or (on a spot) taking it away again.
+func place_at(at: Vector2) -> void:
+	if _place_type == "":
+		return
+	for i in _spots.size():
+		if (_spots[i] as Vector2).distance_to(at) < 30.0:
+			_spots.remove_at(i)
+			canvas.set_marks(_spots)
+			Sounds.play("undo")
+			_update_place()
+			return
+	if _spots.size() >= int(PartTypes.info(_place_type)["max"]):
+		_say("That's as many as it can have!")
+		return
+	_spots.append(at)
+	canvas.set_marks(_spots)
+	Sounds.play("dot")
+	_update_place()
+
+
+func _update_place() -> void:
+	_place_go.disabled = _spots.is_empty()
+
+
+func press_place_done() -> void:
+	if _spots.is_empty():
+		return
+	var type := _place_type
+	var spots := _spots.duplicate()
+	end_placing()
+	on_placed.call(type, spots)
+
+
+func end_placing() -> void:
+	_place_type = ""
+	_spots.clear()
+	canvas.placing = false
+	canvas.set_marks([])
+	_place_box.visible = false
+	for c in _crayon_box:
+		c.visible = true
+
+
+func is_placing() -> bool:
+	return _place_type != ""
+
+
 func press_done() -> void:
 	if _done:
 		return
+	if is_placing():
+		end_placing()
 	var missing := []
 	for type in required:
 		if not added.has(type):
@@ -302,6 +421,7 @@ func press_done() -> void:
 		_say("Draw something first!" if not can_skip else "Draw something - or tap %s." % skip_text)
 		return
 	result["count"] = count
+	Sounds.play("done")
 	_finish(result)
 
 

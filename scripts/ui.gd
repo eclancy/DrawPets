@@ -49,9 +49,35 @@ static func make_theme() -> Theme:
 	theme.set_stylebox("panel", "PanelContainer", _box(CARD, INK, 3))
 	theme.set_stylebox("panel", "Panel", _box(CARD, INK, 3))
 
+	# Sliders a thumb can hold: a thick track and a big round knob.
+	var track := _box(Color("#ece7da"), INK, 2, 8, 0)
+	track.content_margin_top = 7
+	track.content_margin_bottom = 7
+	theme.set_stylebox("slider", "HSlider", track)
+	var filled := _box(Color("#ffd27a"), INK, 2, 8, 0)
+	filled.content_margin_top = 7
+	filled.content_margin_bottom = 7
+	theme.set_stylebox("grabber_area", "HSlider", filled)
+	theme.set_stylebox("grabber_area_highlight", "HSlider", filled)
+	theme.set_icon("grabber", "HSlider", _knob(ACCENT))
+	theme.set_icon("grabber_highlight", "HSlider", _knob(Color("#ff9f78")))
 	theme.set_stylebox("background", "ProgressBar", _box(Color("#ece7da"), INK, 2, 8, 0))
 	theme.set_stylebox("fill", "ProgressBar", _box(GOOD, INK, 0, 8, 0))
 	return theme
+
+
+## A round slider knob, drawn once at start.
+static func _knob(fill: Color) -> ImageTexture:
+	var size := 38
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c := Vector2(size, size) / 2.0
+	for y in size:
+		for x in size:
+			var d := Vector2(x + 0.5, y + 0.5).distance_to(c)
+			if d <= size / 2.0 - 0.5:
+				img.set_pixel(x, y, INK if d > size / 2.0 - 3.5 else fill)
+	return ImageTexture.create_from_image(img)
 
 
 static func _box(bg: Color, border: Color, width: int, radius := 16, margin := 14) -> StyleBoxFlat:
@@ -115,6 +141,17 @@ static func margin(child: Control, all := 24) -> MarginContainer:
 static func full_rect(c: Control) -> Control:
 	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	return c
+
+
+## Throws away a step or panel from inside one of its own button presses. It stays in the tree,
+## hidden and switched off, until the frame ends. On a phone a lifted finger arrives twice - as a
+## mouse release (which presses the button) and then as a touch release aimed at the same button -
+## and Godot complains if that button has been taken out of the tree in between.
+static func retire(node: Node) -> void:
+	if node is CanvasItem:
+		(node as CanvasItem).visible = false
+	node.process_mode = Node.PROCESS_MODE_DISABLED
+	node.queue_free()
 
 
 ## The game's own drawing of an icon (art/wear/icon_*.png), `px` square. Shiny ones sparkle.

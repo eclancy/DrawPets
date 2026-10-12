@@ -35,19 +35,45 @@ the parts; sizes and places; pet, feed, fetch; gentle needs; save and load; `--d
 - Forty adoptable pets in the shop, with a meet panel.
 - Fourteen ready-built homes for empty plots, named by the kid.
 
-## M2 - On a real phone
+## M1.6 - Fixing pets, sound (built)
 
-- Android export: JDK 17, the Android SDK, the standard (non-.NET) Godot 4.5.1 and its export
-  templates, a debug keystore, an Android preset. **The preset's include filter needs `*.json`**
-  so `art/*/pivots.json` ships.
-- Test by finger: drawing feel, fill speed on a cheap tablet, drag-from-drawer, the back gesture.
-- Pinch to turn and resize parts; a settings screen (mic off by default, volume).
-- Redraw a part; delete or rehome a pet.
-- Sounds, generated like DrawFight's.
+- Fix a pet (redraw from the old drawing, add, take off, move parts, every detail), move it to
+  another home, let it go to live in the wild (hold to confirm).
+- Sound for everything: 59 generated effects, 14 place ambiences, three music loops, settings.
+- Pet voices: 18 base sounds, seven sliders, own recordings (3 s), varied every time it talks.
+  Drawn toys can have a sound.
 
-## M3 - Voice (optional, off by default)
+## M1.7 - Toys that play their own way, petting by touch (built)
 
-Record its voice or keep the generated one; pitch by size and mood; call and clap by loudness.
+- Every toy plays the way its words say: fetch (held out for another throw), tug (a pet comes
+  for the other end), cuddle, chew, squeak-and-pounce, treat puzzle, push. Toys lying about can
+  be picked up again and tapped. A chew bone and a big log join the starter kit.
+- Petting: head rubs, body wiggles, belly rubs, tickles, and a tap to say hello (`pet-life.md`).
+
+## M1.8 - Drawing a pet, kinder (built)
+
+- Body and head prompts say "draw the SHAPE"; every add-on asks where it goes first (tap once
+  per copy) and its sheet opens zoomed in on the tap.
+- Back and Stop on every drawing step; a half-drawn pet saves as a draft and can be finished
+  later; Android's back gesture never loses one.
+- Faces look at us: nose between the eyes, ears/horns/antennae either side - for kids' pets by
+  default, and every ready-made creature checked against it (profile ones kept as profiles).
+- Every ready-made creature has its own eyes, mouth and neck; shiny markers last a whole
+  drawing and cost 120-150.
+
+## M2 - On a real phone - see `android.md`
+
+- Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a
+  debug keystore, the Android and Android Demo presets (include filter `*.json, *.f32`), an icon.
+  Both export signed APKs.
+- Next: a device. Test by finger: drawing feel, fill speed on a cheap tablet, drag-from-drawer,
+  scrolling the drawers, the back gesture, petting and toy play.
+- Pinch to turn and resize parts.
+
+## M3 - Calling by voice (optional, off by default)
+
+Voices and recordings are built (M1.6). Still to do: call or clap by loudness to make a pet come
+over or wake up - always with the tap-the-ground way round it.
 
 ## M4 - Tricks, walks and presents
 
@@ -101,8 +127,9 @@ Needs a Mac with Xcode and an Apple developer account.
 
 ## Open questions (current default in brackets)
 
-1. Can a kid delete or rehome a pet, and should a parent confirm? [rehome yes; delete with a
-   confirm, framed as "goes to live in the wild"]
+1. ~~Can a kid delete or rehome a pet?~~ Decided and built: Move, and Let go (hold for two
+   seconds, "goes to live in the wild"). Should a parent confirm letting go? [no - the hold is
+   enough; revisit if a sibling lets someone else's pet go]
 2. Profiles for siblings sharing a tablet? [none]
 3. Should stars ever be earnable from competitions on past days (catch-up)? [no - come back
    next week]

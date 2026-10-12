@@ -11,7 +11,10 @@ and visit it in its favourite place.
 
 Pets live together in homes the kid decorates - with furniture they draw or pick from a
 starter kit - and everything is described with preset words that decide how it plays: a
-"stretchy" toy is for tug of war, a "cozy" bed is where they nap. Playing trains six stats,
+"bouncy" ball is fetched and held out for another throw, a "stretchy" rope is for tug of war, a
+"soft" teddy gets a cuddle, a "squeaky" duck gets pounced on, a "cozy" bed is where they nap.
+Rub a pet's head and it leans into your finger; keep rubbing its tummy and it rolls over for a
+belly rub. Playing trains six stats,
 milestones earn gold stars for a shop of shiny toys, clothes, special places and room for more
 pets, and a weekly calendar of competitions - one per stat - pits them against eight rival pets.
 
@@ -32,7 +35,8 @@ godot --path .
 shop and enter every competition, screenshotting every step into `.shots/`.
 
 The game's own art is drawing code in `scripts/art_*.gd`, baked to `art/` with
-`godot --path . -s tools/bake_art.gd -- --group=things` (or `wear`, `rivals`).
+`godot --path . -s tools/bake_art.gd -- --group=things` (or any other `art_<group>.gd`).
+Every sound, ambience and music loop is generated too: `python tools/audio/build.py --all`.
 
 ## Where things are
 

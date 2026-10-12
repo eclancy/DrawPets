@@ -22,6 +22,8 @@ const SPRINGS := {
 ## How far a mouth is squashed when shut. Kids draw it wide open; shut is that drawing
 ## squeezed to a line, and it opens back up to the drawing they made.
 const MOUTH_SHUT := 0.14
+## The largest step a spring takes. Stiff springs (spikes: 480) blow up past about 0.09 s.
+const SPRING_STEP := 1.0 / 120.0
 
 var type := ""
 var base := Transform2D.IDENTITY
@@ -109,6 +111,14 @@ func _spring(c: Creature, delta: float) -> float:
 	var k: Array = SPRINGS.get(type, SPRINGS["other"])
 	var accel_x := c.accel.x * c.facing
 	var target := clampf(-accel_x * 0.0005 + c.bob_vel * 0.0025, -0.6, 0.6)
-	spring_vel += (k[0] * (target - spring) - k[1] * spring_vel) * delta
-	spring += spring_vel * delta
+	# Small fixed steps, never one big one: a long frame on a phone (working out a voice, loading
+	# a screen) made one giant step that flung ears and horns round and round for seconds.
+	var left := minf(delta, 0.1)
+	while left > 0.0:
+		var dt := minf(left, SPRING_STEP)
+		spring_vel += (k[0] * (target - spring) - k[1] * spring_vel) * dt
+		spring += spring_vel * dt
+		left -= dt
+	spring = clampf(spring, -0.9, 0.9)
+	spring_vel = clampf(spring_vel, -20.0, 20.0)
 	return spring
