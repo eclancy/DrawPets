@@ -52,6 +52,11 @@ const ASSETS := {
 	"kit_puzzle_ball": {"pivot": "center", "look": "green ball with holes and a treat peeking out"},
 	"kit_chew_bone": {"pivot": "center", "look": "pale blue rubber chew bone with little bumps"},
 	"kit_log": {"pivot": "center", "look": "short heavy log on its side, a pale cut end with rings"},
+	# Bath things - free starter kit.
+	"kit_sponge": {"pivot": "center", "look": "yellow bath sponge, green scrubby top, holes, bubbles"},
+	"kit_brush": {"pivot": "center", "look": "pet brush: wooden handle, pink oval pad of bristle dots"},
+	# Found on walks.
+	"prop_present": {"pivot": "center", "look": "a gift box in pale blue paper, pink ribbon and a big bow"},
 	# Toys - shop, shiny at runtime.
 	"shiny_ball": {"pivot": "center", "look": "ball with a star on it (gold)"},
 	"golden_bone": {"pivot": "center", "look": "chew bone (gold)"},
@@ -176,6 +181,12 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_puzzle_ball(c)
 		"kit_chew_bone":
 			_chew_bone(c)
+		"kit_sponge":
+			_sponge(c)
+		"kit_brush":
+			_brush(c)
+		"prop_present":
+			_present(c)
 		"kit_log":
 			_heavy_log(c)
 		"shiny_ball":
@@ -1705,6 +1716,80 @@ static func _chew_bone(c: CanvasItem) -> void:
 		var p := a.lerp(b, 0.25 + i * 0.125) + n * (9.0 if i % 2 == 0 else -11.0)
 		_mfill(c, _circle(p, 7.0, 12), blue.darkened(0.2), 4903 + i)
 	_mline(c, _pv([a + t * 54 + n * 17, b - t * 54 + n * 17]), Color(1, 1, 1, 0.8), 7.0, 4910)
+
+
+## Marker: a fat yellow sponge with a green scrubby top, pitted with holes, bubbles rising.
+static func _sponge(c: CanvasItem) -> void:
+	var yellow := Color("#ffd96a")
+	var body := Crayon.rounded_rect(Rect2(122, 236, 268, 148), 34)
+	_mark(c, body, yellow, 5101, 7.0)
+	_shade(c, body, yellow, 5102, Vector2(-18, -20), 0.14)
+	var holes := [[Vector2(170, 300), 13.0], [Vector2(226, 336), 10.0], [Vector2(282, 296), 15.0],
+		[Vector2(340, 340), 11.0], [Vector2(196, 352), 8.0], [Vector2(352, 286), 9.0], [Vector2(254, 270), 8.0],
+		[Vector2(310, 360), 7.0]]
+	for i in holes.size():
+		var at: Vector2 = holes[i][0]
+		var r: float = holes[i][1]
+		_mfill(c, Crayon.ellipse(at, Vector2(r, r * 0.78), 14), Color("#eeae46"), 5110 + i)
+	var scrub := Crayon.rounded_rect(Rect2(114, 192, 284, 62), 26)
+	_mark(c, scrub, Color("#8fd18a"), 5120, 7.0)
+	for i in 9:
+		var x := 136.0 + i * 30.0
+		_mline(c, _pv([Vector2(x, 206), Vector2(x + 12, 238)]), Color("#6fb36b"), 4.0, 5121 + i)
+	var bubbles := [[Vector2(176, 142), 30.0], [Vector2(246, 104), 21.0], [Vector2(318, 136), 38.0],
+		[Vector2(392, 168), 18.0]]
+	for i in bubbles.size():
+		var at: Vector2 = bubbles[i][0]
+		var r: float = bubbles[i][1]
+		var b := _circle(at, r, 28)
+		_mfill(c, b, Color("#e6f4ff"), 5140 + i)
+		Crayon.marker_line(c, b, Color("#8cc6ee"), 5.0, 5145 + i)
+		_mline(c, _arc(at, Vector2(r * 0.6, r * 0.6), PI * 1.1, PI * 1.45, 8), Color(1, 1, 1, 0.95), 5.0, 5150 + i)
+
+
+## Pencil: a grooming brush - a wooden handle and a pink oval pad dotted with bristle tips.
+static func _brush(c: CanvasItem) -> void:
+	var wood := Color("#d9a46c")
+	var handle := _capsule(Vector2(108, 404), Vector2(232, 300), 24.0)
+	_pen(c, handle, wood, 5201, 5.0)
+	_shade(c, handle, wood, 5202, Vector2(-8, -10), 0.16)
+	var back := _rot(Crayon.ellipse(Vector2(318, 222), Vector2(132, 92), 40), Vector2(318, 222), -0.62)
+	_pen(c, back, wood, 5203, 5.0)
+	var pad := _rot(Crayon.ellipse(Vector2(318, 222), Vector2(112, 74), 40), Vector2(318, 222), -0.62)
+	var pink := Color("#f6b5c9")
+	_pen(c, pad, pink, 5204, 4.0)
+	var u := Vector2(cos(-0.62), sin(-0.62))
+	var v := u.orthogonal()
+	for i in range(-3, 4):
+		for j in range(-2, 3):
+			var p := Vector2(318, 222) + u * (i * 28.0) + v * (j * 24.0)
+			if Geometry2D.is_point_in_polygon(p, pad) and Geometry2D.is_point_in_polygon(p + u * 10.0, pad):
+				c.draw_circle(p, 6.0, pink.darkened(0.32))
+				c.draw_circle(p + Vector2(-2, -2), 2.0, Color(1, 1, 1, 0.8))
+
+
+## Marker: a gift box seen a little from above - pale blue paper with dots, a pink ribbon both
+## ways round and a big floppy bow.
+static func _present(c: CanvasItem) -> void:
+	var blue := Color("#a9d4f2")
+	var pink := Color("#f497b8")
+	var front := _pv([Vector2(126, 236), Vector2(386, 236), Vector2(380, 430), Vector2(132, 430)])
+	_mark(c, front, blue, 5301, 7.0)
+	_shade(c, front, blue, 5302, Vector2(-20, -18), 0.12)
+	var lid := _pv([Vector2(104, 196), Vector2(408, 196), Vector2(404, 250), Vector2(108, 250)])
+	_mark(c, lid, blue.lightened(0.15), 5303, 7.0)
+	for i in 6:
+		var at := Vector2(160 + (i % 3) * 92, 290 + (i / 3) * 80)
+		c.draw_circle(at, 7.0, Color(1, 1, 1, 0.85))
+	_mark(c, _pv([Vector2(234, 250), Vector2(278, 250), Vector2(278, 430), Vector2(234, 430)]), pink, 5310, 6.0)
+	_mark(c, _pv([Vector2(234, 196), Vector2(278, 196), Vector2(278, 250), Vector2(234, 250)]), pink, 5311, 6.0)
+	var left := _pv([Vector2(256, 196), Vector2(176, 120), Vector2(150, 150), Vector2(168, 186), Vector2(256, 200)])
+	var right := _pv([Vector2(256, 196), Vector2(336, 120), Vector2(362, 150), Vector2(344, 186), Vector2(256, 200)])
+	_mark(c, _smooth(left), pink, 5312, 6.0)
+	_mark(c, _smooth(right), pink, 5313, 6.0)
+	_mark(c, _circle(Vector2(256, 194), 22.0, 20), pink.darkened(0.08), 5314, 6.0)
+	_mline(c, _pv([Vector2(248, 210), Vector2(218, 262)]), pink, 12.0, 5315)
+	_mline(c, _pv([Vector2(264, 210), Vector2(296, 262)]), pink, 12.0, 5316)
 
 
 ## Pencil: a short, heavy log lying on its side - bark lines, a pale cut end with rings, and a

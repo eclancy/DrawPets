@@ -16,6 +16,9 @@ extends Node2D
 ##                        picked up again, and tapped.
 ##   Decorate drawer   -> drag furniture in, drag it about, drag it back to put it away.
 ##   Wardrobe drawer   -> drag clothes onto a pet.
+##   Bath drawer       -> scrub a muddy pet with the sponge till it shakes itself dry, squeaky
+##                        clean; brush it fluffy. Pets get muddy (Mud) splashing about a muddy
+##                        place, digging, and running about in a passing shower of rain.
 ## Left alone, pets use the furniture by its words: nap on cozy things, bounce on bouncy ones.
 ## Every kind of play trains a stat (Stats), and milestones pay gold stars (GameRoot.reward).
 ## At night (Clock) the place goes lavender, glowy things light up, and the pets curl up asleep
@@ -24,7 +27,7 @@ extends Node2D
 
 const ZOOM := {"tiny": 1.5, "small": 1.2, "medium": 1.0, "big": 0.9, "huge": 0.78, "giant": 0.66}
 const TABS := [["food", "icon_pantry", "Food"], ["toy", "icon_toys", "Toys"],
-	["furniture", "icon_decorate", "Decorate"], ["clothing", "icon_wardrobe", "Wardrobe"]]
+	["furniture", "icon_decorate", "Decorate"], ["clothing", "icon_wardrobe", "Wardrobe"], ["bath", "icon_bath", "Bath"]]
 ## Where pets walk. It stops short of the screen's bottom edge, which the drawer bar covers -
 ## the camera sits CAM_DROP lower so the whole band shows above the bar.
 const GROUND := Rect2(70, 458, 1140, 172)
@@ -101,6 +104,19 @@ var _squeak_in := 0.0
 ## Night: when each pet woken up, or played with, goes back to bed (Creature -> _now() seconds).
 var _up_till := {}
 var _was_night := false
+## Bath: who the sponge or brush is on, how far it has rubbed, whether this wash is done.
+var _washing: Creature
+var _wash_dist := 0.0
+var _wash_total := 0.0
+var _wash_last := Vector2.INF
+var _wash_sound_in := 0.0
+var _bathed := false
+## What this place gets on a pet (Mud.kind_for): mud, sand, dust, or "" for nowhere dirty.
+var _mud_kind := ""
+var _painter: PlacePainter
+var _rain_in := -1.0
+var _rain_left := 0.0
+var _rain_loop := -1
 
 
 func _ready() -> void:
@@ -109,6 +125,12 @@ func _ready() -> void:
 	var painter := PlacePainter.new()
 	painter.place_id = home["place"]
 	add_child(painter)
+	_painter = painter
+	_mud_kind = Mud.kind_for(home["place"])
+	# Now and then a shower passes over an outdoor place, a little while after you arrive.
+	var tags := Places.tags(home["place"])
+	if _mud_kind != "" and tags.has("outside") and not tags.has("dry") and randf() < 0.12:
+		_rain_in = randf_range(8.0, 30.0)
 	world = Node2D.new()
 	world.y_sort_enabled = true
 	add_child(world)
@@ -213,6 +235,10 @@ func _build_hud() -> void:
 	var home_btn := UI.icon_button("icon_home", "Home", func(): game.go_home(), 40, Vector2(92, 84))
 	home_btn.position = Vector2(12, 12)
 	root.add_child(home_btn)
+	if not creatures.is_empty():
+		var walk_btn := UI.icon_button("icon_walk", "Walk", go_walk, 40, Vector2(92, 84))
+		walk_btn.position = Vector2(12, 104)
+		root.add_child(walk_btn)
 
 	var title := UI.title("%s  -  %d of %d rooms" % [Places.display_name(home["place"]), home["pets"].size(),
 		int(home["rooms"])], 30)
@@ -228,7 +254,7 @@ func _build_hud() -> void:
 	right.offset_top = 12
 	right.add_theme_constant_override("separation", 10)
 	right.add_child(UI.star_counter(game.profile, 40))
-	right.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(func(): game.go_place(home["id"])),
+	right.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(game.go_place.bind(home["id"])),
 		40, Vector2(84, 84)))
 	right.add_child(UI.icon_button("icon_calendar", "Events", func(): game.go_calendar(), 40, Vector2(84, 84)))
 	root.add_child(right)
@@ -283,6 +309,9 @@ func _build_hud() -> void:
 
 func open_tab(which: String) -> void:
 	tab = "" if tab == which else which
+	if tab == "bath" and not _hinted.has("bath"):
+		_hinted["bath"] = true
+		_show_hint("Rub a pet with the sponge to wash the mud off. The brush makes it fluffy!")
 	for t in _tab_buttons:
 		_tab_buttons[t].set_pressed_no_signal(t == tab)
 	_select_furniture(null)
@@ -293,7 +322,7 @@ func _fill_drawer() -> void:
 	for c in _drawer.get_children():
 		c.queue_free()
 	if tab == "":
-		var l := UI.label("Open a drawer: Food, Toys, Decorate or Wardrobe.", 22)
+		var l := UI.label("Open a drawer: Food, Toys, Decorate, Wardrobe or Bath.", 22)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_drawer.add_child(l)
 		return
@@ -303,14 +332,14 @@ func _fill_drawer() -> void:
 				["edit_remove", "Put away", _remove_selected], ["tool_done", "Done", _select_furniture.bind(null)]]:
 			_drawer.add_child(UI.icon_button(entry[0], entry[1], entry[2], 52, Vector2(104, 96)))
 		return
-	var back_here := func(_item: Dictionary): game.go_place(home["id"], focus_id)
-	var draw_new := func(): game.make_item(tab, back_here)
-	var draw := UI.icon_button("icon_draw", "Draw", draw_new, 52, Vector2(96, 96))
-	draw.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 3))
-	_drawer.add_child(draw)
+	var draw_new := func(): game.make_item(tab, game.back_to_place.bind(home["id"], focus_id))
+	if tab != "bath":
+		var draw := UI.icon_button("icon_draw", "Draw", draw_new, 52, Vector2(96, 96))
+		draw.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 3))
+		_drawer.add_child(draw)
 	var ids := Items.available(game.profile, tab)
 	if tab == "clothing" and ids.is_empty():
-		_drawer.add_child(UI.button("Get clothes in the shop!", func(): game.go_shop(func(): game.go_place(home["id"])),
+		_drawer.add_child(UI.button("Get clothes in the shop!", func(): game.go_shop(game.go_place.bind(home["id"])),
 			Vector2(0, 96), 22))
 	for id in ids:
 		var item := Items.get_item(id)
@@ -443,6 +472,16 @@ func _now() -> float:
 	return Time.get_ticks_msec() / 1000.0
 
 
+## Out for a walk - the pet whose card is open, or the one this home is looking at.
+func go_walk() -> void:
+	var c := _panel_pet if _panel.visible and _panel_pet != null else _focus_creature()
+	if c == null:
+		return
+	if c.action() == "sleep":
+		_wake(c)
+	_leave_with(c.pet, game.go_walk.bind(home["id"], c.pet["id"]))
+
+
 ## Saves everyone (the pet is about to be loaded fresh by another screen), then goes.
 func _leave_with(_pet: Dictionary, go: Callable) -> void:
 	_save_all()
@@ -557,7 +596,7 @@ func _grab(id: String) -> void:
 			var f := _spawn_furniture({"item": id, "pos": [640, 600], "scale": 1.0, "flip": false})
 			_held = f
 			_held_kind = "furniture"
-		"clothing":
+		"clothing", "bath":
 			var ghost := Sprite2D.new()
 			var tex: Texture2D = item["_tex"]
 			ghost.texture = tex
@@ -565,7 +604,10 @@ func _grab(id: String) -> void:
 			ghost.z_index = 100
 			add_child(ghost)
 			_held = ghost
-			_held_kind = "clothing"
+			_held_kind = item["category"]
+			_washing = null
+			_wash_last = Vector2.INF
+			_bathed = false
 	if _held is PlaceItem:
 		(_held as PlaceItem).held = true
 	if _held != null:
@@ -608,6 +650,9 @@ func _move_held(at: Vector2) -> void:
 			_held.position = Vector2(at.x, clampf(at.y + 20.0, GROUND.position.y - 30.0, GROUND.end.y))
 		"clothing":
 			_held.position = at
+		"bath":
+			_held.position = at
+			_scrub(at)
 
 
 func _drop_held(at: Vector2, screen_at: Vector2) -> void:
@@ -668,6 +713,11 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 			var c := _creature_at(at)
 			if c != null:
 				dress(c, _held_item)
+		"bath":
+			held.queue_free()
+			if _washing != null:
+				_washing.touch_at = Vector2.INF
+			_washing = null
 
 
 ## Puts a piece of clothing on a pet.
@@ -1632,6 +1682,138 @@ func _use_furniture(c: Creature, f: Furniture, word: String) -> void:
 			c.perform("look", 2.5, func(): _train(c, "charm", 0.6))
 
 
+# --- Mud and the bath ------------------------------------------------------------------------
+
+## Every so often: running about a muddy place, or out in the rain, gets feet muddy.
+func _mud_tick() -> void:
+	if _mud_kind == "" or (_rain_left <= 0.0 and not Places.tags(home["place"]).has("muddy")):
+		return
+	for c in creatures:
+		if c.velocity.length() < 40.0 or c.z > 8.0 or c.flying:
+			continue
+		if randf() < (0.18 if _rain_left > 0.0 else 0.1):
+			get_muddy(c, 1, "feet")
+
+
+## Splats `n` spots of this place's mud on a pet (Mud) - fun, never a telling-off.
+func get_muddy(c: Creature, n: int, where: String) -> void:
+	if Mud.splat(c.pet, n, where, _mud_kind) <= 0:
+		return
+	c.refresh_mud()
+	Sounds.play_varied("splat", c._size_pitch(), 0.1)
+	_on_emote("dirt", c.global_position + Vector2(0, -12))
+	if not _hinted.has("mud"):
+		_hinted["mud"] = true
+		_show_hint("%s is all muddy! Open the Bath drawer and scrub it clean." % c.pet["name"])
+
+
+## Left alone, a pet sometimes digs - and comes up with muddy paws and a muddy nose.
+func _dig(c: Creature) -> void:
+	_sfx_times("scratch", 4, 0.5, 0.8, -2.0)
+	c.perform("dig", 2.4, _dug.bind(c))
+
+
+func _dug(c: Creature) -> void:
+	get_muddy(c, 1 + randi() % 2, "front")
+	_train(c, "strength", 0.3)
+
+
+## A passing shower: rain streaks, a patter, and muddy feet for anyone who runs about in it.
+func start_rain(seconds: float) -> void:
+	_rain_in = -1.0
+	_rain_left = seconds
+	_painter.start_rain()
+	if _rain_loop < 0:
+		_rain_loop = Sounds.loop_start("rain")
+	_show_hint("It's raining! Splish splash - somebody might get muddy.")
+
+
+func _stop_rain() -> void:
+	_rain_left = 0.0
+	_painter.stop_rain()
+	if _rain_loop >= 0:
+		Sounds.loop_stop(_rain_loop)
+		_rain_loop = -1
+
+
+## The sponge or the brush rubbing over a pet. Soapy things scrub off the mud where they rub, in
+## a froth of bubbles, and once it is all off (or after a good long wash) the pet shakes itself
+## dry, squeaky clean. Fluffy things brush it: hearts and charm, like petting. It shuts its eyes
+## and enjoys it either way.
+func _scrub(at: Vector2) -> void:
+	var c := _creature_at(at)
+	if c == null:
+		_wash_last = Vector2.INF
+		return
+	var soapy: bool = _held_item.get("words", []).has("soapy")
+	if c != _washing:
+		_washing = c
+		_wash_total = 0.0
+		_bathed = false
+	if _wash_last == Vector2.INF:
+		_wash_last = at
+		return
+	var d := at.distance_to(_wash_last)
+	_wash_last = at
+	if d < 2.0:
+		return
+	var asleep := c.action() == "sleep"
+	if asleep and soapy:
+		_wake(c)  # a wet sponge wakes anybody
+	elif not asleep and c != _eater and c != _tug and not (c == _toy_pet and toy_state != "") \
+			and c.action() not in ["shake", "stretch"]:
+		if c.action() != "petted":
+			c.perform("petted", 0.6)
+		c.extend_action(0.5)
+		c.touch_at = at
+	_wash_dist += d
+	_wash_total += d
+	_wash_sound_in -= d
+	if _wash_sound_in <= 0.0:
+		_wash_sound_in = 90.0
+		Sounds.play_varied("scrub" if soapy else "brush", 1.0, 0.1)
+	if _wash_dist < 45.0:
+		return
+	_wash_dist = 0.0
+	if not soapy:
+		_on_emote("twinkle", at + Vector2(randf_range(-24, 24), randf_range(-24, 8)))
+		if int(_wash_total / 45.0) % 3 == 0:
+			_on_emote("heart", c.top_global())
+			_love(c, 1)
+			_train(c, "charm", 0.3)
+		return
+	_on_emote("bubble", at + Vector2(randf_range(-22, 22), randf_range(-16, 6)))
+	if Mud.scrub_near(c, at, maxf(80.0, c.height_px * 0.3)):
+		c.refresh_mud()
+		_on_emote("bubble", at)
+		Sounds.play_varied("bubble", 1.3, 0.2, -2.0)
+	if not _bathed and c.action() != "shake" and (Mud.count(c.pet) == 0 and _wash_total > 260.0):
+		_bath_done(c)
+
+
+## Squeaky clean: it shakes itself dry, glints, and loves you for it.
+func _bath_done(c: Creature) -> void:
+	_bathed = true
+	Mud.clear(c.pet)
+	c.refresh_mud()
+	PetStore.change_need(c.pet, "clean", 1.0)
+	c.interrupt()
+	Sounds.play("shake")
+	c.perform("shake", 1.3, _shaken.bind(c))
+
+
+func _shaken(c: Creature) -> void:
+	Sounds.play("clean")
+	for i in 5:
+		_on_emote("twinkle", c.global_position + Vector2(randf_range(-0.5, 0.5) * c.height_px,
+			-randf_range(0.2, 1.0) * c.height_px))
+	c.say("heart")
+	_love(c, 2)
+	_train(c, "charm", 0.5)
+	game.reward_daily("bath", 2, 1, "%s is squeaky clean!" % c.pet["name"])
+	_panel.refresh()
+
+
 # --- Night ----------------------------------------------------------------------------------
 
 ## Bedtime: off to something cozy (or warm), a big yawn, and curled up asleep till morning - or
@@ -1761,6 +1943,14 @@ func _love(c: Creature, n: int) -> void:
 # --- Every frame -----------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	if _rain_in > 0.0:
+		_rain_in -= delta
+		if _rain_in <= 0.0:
+			start_rain(randf_range(45.0, 80.0))
+	if _rain_left > 0.0:
+		_rain_left -= delta
+		if _rain_left <= 0.0:
+			_stop_rain()
 	_update_toy(delta)
 	_update_tug(delta)
 	_update_food(delta)
@@ -1775,6 +1965,7 @@ func _process(delta: float) -> void:
 	if _ai_in <= 0.0:
 		_ai_in = 1.2
 		_night_tick()
+		_mud_tick()
 		var night := Clock.is_night()
 		for c in creatures:
 			if c.is_busy() or c == _toy_pet or c == _eater or c == _tug or c == _tug_caller or _chasers.has(c):
@@ -1782,6 +1973,9 @@ func _process(delta: float) -> void:
 			if night and _now() > float(_up_till.get(c, 0.0)):
 				if randf() < 0.3:
 					_go_to_bed(c)
+				continue
+			if _mud_kind != "" and randf() < 0.03:
+				_dig(c)
 				continue
 			if randf() < 0.22:
 				_play_with_furniture(c)
@@ -1823,6 +2017,8 @@ func _save_all() -> void:
 
 func _exit_tree() -> void:
 	_save_all()
+	if _rain_loop >= 0:
+		Sounds.loop_stop(_rain_loop)
 
 
 # --- Script entry points (DemoKid), down the same paths a finger takes -----------------------

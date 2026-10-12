@@ -374,6 +374,75 @@ func _play_at_home() -> void:
 	await _wait(5.0)
 	await _shot("furniture_play")
 	await _night()
+	await _bath()
+	await _walk()
+
+
+## A walk: off along the place, a glint in the grass, a dig, a present - and drawing what's in it.
+func _walk() -> void:
+	_place().go_walk()
+	await _wait(1.5)
+	var walk := game.screen as WalkScreen
+	await _shot("walk")
+	walk.creature.position.x = walk._glints[0].position.x - 420.0  # skip ahead to the first glint
+	walk.creature.interrupt()
+	await _until(func(): return walk._present != null, 12.0)
+	await _wait(0.4)
+	await _shot("present")
+	walk.open_present("food", "crunchy")
+	await _wait(0.8)
+	var maker := game.screen as ItemMaker
+	var d := maker._current as DrawScreen
+	await _shot("present_draw")
+	await _draw("food", d.canvas)
+	await d.press_done()
+	await _wait(0.4)
+	var w := maker._current as WordPickerScreen
+	w.toggle("sweet")
+	await _shot("present_words")
+	w.press_done()
+	await _wait(1.2)
+	await _shot("present_home")
+
+
+## Mud and a bath: a shower of rain, a dig, muddy paws - then the sponge, a shake, squeaky clean.
+func _bath() -> void:
+	var place := _place()
+	var zorp: Creature = place.creatures[0]
+	place.start_rain(5.0)
+	zorp.go_to(Vector2(400, 560))
+	await _wait(1.2)
+	await _shot("rain")
+	place._dig(zorp)
+	await _wait(1.0)
+	await _shot("dig")
+	await _wait(1.8)
+	place.get_muddy(zorp, 5, "all")
+	place.open_tab("bath")
+	await _wait(0.5)
+	await _shot("muddy")
+	place._grab("kit_sponge")
+	for k in 40:
+		var spots: Array = zorp.pet.get("mud", [])
+		if spots.is_empty():
+			break
+		var at := Mud.where_is(zorp, spots[0])
+		if at.x == INF:
+			break
+		for w in 3:
+			place._move_held(at + Vector2(18.0 * (w % 2) - 9.0, 6.0 * w))
+			await _wait(0.05)
+		if k == 2:
+			await _shot("scrubbing")
+	for w in 12:  # a good long wash all over
+		place._move_held(zorp.global_position + Vector2(28.0 * (w % 2) - 14.0, -zorp.height_px * 0.5))
+		await _wait(0.04)
+	await _wait(0.4)
+	await _shot("shake")
+	place._drop_held(zorp.global_position, Vector2(640, 300))
+	await _wait(1.2)
+	await _shot("clean")
+	place.open_tab("")
 
 
 ## Half past nine: the place goes lavender, lamps glow, everyone is curled up asleep - and a tap

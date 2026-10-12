@@ -82,9 +82,9 @@ Every effect is normalised to its peak in `REGISTRY` (`tools/audio/sfx.py`) and 
 | how often | peak dBFS | members |
 |---|---|---|
 | once in a while | -4 to -9 | fanfare, adopt, count_go, level_up, trust_up, buy, star, build, cheer |
-| now and then | -10 to -14 | munch, squeak, trampoline, splash, catch, good, place, throw, done, fill |
-| often | -15 to -20 | bounce, hop, heart, sniff, snore, flap, the crayon and eraser loops |
-| constantly | -21 and below | ui_tap (-22), step (-23) |
+| now and then | -10 to -14 | munch, squeak, trampoline, splash, splat, shake, clean, catch, good, place, throw, done, fill |
+| often | -15 to -20 | bounce, hop, heart, sniff, snore, flap, scrub, brush, the crayon and eraser loops |
+| constantly | -21 and below | ui_tap (-22), step (-23), the rain loop (-25) |
 
 Pet voices are rendered to a steady peak and play on their own bus. Ambiences peak at -20 dBFS
 (steady beds lower: Moon -29, mountains -23, desert -22, beach -21) and the music at -3 dBFS.

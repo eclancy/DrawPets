@@ -321,6 +321,68 @@ def scratch():
 
 
 # ---------------------------------------------------------------------------
+# mud and the bath
+# ---------------------------------------------------------------------------
+
+def _pop(f0, f1=None, dur=0.05):
+    f1 = f1 or f0 * 2.0
+    return S.env_mul(S.osc("sine", S.sweep(dur, f0, f1, 0.6), dur), S.ad(dur, 0.002, 4.0))
+
+
+def splat():
+    """Mud landing on a pet: a wet, low thwack and a drip or two."""
+    dur = 0.3
+    n = S.n_samples(dur)
+    wet = S.lowpass(S.osc("noise", 0, dur, seed=SEED + 300), S.sweep(dur, 1800, 300, 0.5))
+    wet = S.env_mul(wet, S.expdecay(n, 14.0))
+    body = thump(0.16, 170, 80, 16.0)
+    drips = S.layer([(tone("sine", f, 0.05, cutoff=3000.0), t, 0.18) for f, t in ((520, 0.1), (690, 0.17))])
+    return S.layer([(body, 0.0, 0.9), (wet, 0.0, 1.0), (drips, 0.0, 1.0)])
+
+
+def scrub():
+    """A soapy sponge rubbing: a squishy swish and tiny bubble pops."""
+    dur = 0.32
+    v = S.bandpass(S.osc("noise", 0, dur, seed=SEED + 301), S.sweep(dur, 900, 2200, 1.0), 1.4)
+    v = S.gate(v, 22.0, 0.6, seed=SEED + 302)
+    v = S.env_mul(v, swell(dur, 0.4))
+    pops = S.layer([(_pop(f), t, 0.3) for f, t in ((900, 0.06), (1300, 0.16), (1100, 0.24))])
+    return S.layer([(v, 0.0, 1.0), (pops, 0.0, 1.0)])
+
+
+def brush():
+    """A brush through fur: two soft bristly swishes."""
+    return S.layer([(S.env_mul(S.highpass(S.osc("noise", 0, 0.16, seed=SEED + 305 + i), 3500),
+                               swell(0.16, 0.5)), i * 0.12, 1.0 - 0.3 * i) for i in range(2)])
+
+
+def shake():
+    """Shaking dry: a fast fluttery brrrr that slows, drops flicking off."""
+    dur = 0.9
+    v = S.bandpass(S.osc("noise", 0, dur, seed=SEED + 310), 1300, 0.9)
+    v = S.tremolo(v, 17.0, 0.9)
+    v = S.env_mul(v, S.ad(dur, 0.02, 2.0))
+    drops = S.layer([(tone("sine", f, 0.05, cutoff=4000.0), t, 0.2) for f, t in
+                     ((880, 0.1), (1040, 0.22), (760, 0.35), (990, 0.5))])
+    return S.layer([(v, 0.0, 1.0), (drops, 0.0, 1.0)])
+
+
+def clean():
+    """Squeaky clean: a rubbery squeak up, then a glassy ting (C major: E6 G6 C7)."""
+    sq = S.env_mul(S.osc("sine", S.sweep(0.12, 1100, 1700, 0.8), 0.12), S.ad(0.12, 0.005, 3.0))
+    ting = S.layer([(bell(E6, 0.6, 0.8), 0.12, 0.8), (bell(G6, 0.7, 0.8), 0.2, 0.7), (bell(C7, 0.8, 0.6), 0.28, 0.5)])
+    return S.layer([(sq, 0.0, 0.6), (ting, 0.0, 1.0)])
+
+
+def rain():
+    """A passing shower, looped: a soft hiss and a patter on leaves."""
+    dur = 4.0
+    hiss = S.highpass(S.lowpass(S.osc("noise", 0, dur, seed=SEED + 320), 2400), 300)
+    patter = crackle(dur, 30.0, 2500, 321, 0.15)
+    return S.tremolo(S.mix(S.gain(hiss, 0.5), S.gain(patter, 0.6)), 0.5, 0.2)
+
+
+# ---------------------------------------------------------------------------
 # toys and things
 # ---------------------------------------------------------------------------
 
@@ -524,6 +586,13 @@ REGISTRY = [
     ("sparkle", "pet", -15.0, sparkle, False),
     ("splash", "pet", -12.0, splash, False),
     ("scratch", "pet", -16.0, scratch, False),
+    ("splat", "pet", -13.0, splat, False),
+    ("scrub", "pet", -16.0, scrub, False),
+    ("brush", "pet", -18.0, brush, False),
+    ("shake", "pet", -13.0, shake, False),
+    ("clean", "reward", -10.0, clean, False),
+    # A bed under everything while it rains.
+    ("rain", "pet", -25.0, rain, True),
 
     ("throw", "toy", -14.0, throw, False),
     ("bounce", "toy", -15.0, bounce, False),

@@ -243,13 +243,41 @@ func go_competition(event: Dictionary, tier: int, pet_id: String) -> void:
 
 ## Draws a new item (a toy, a snack, furniture, clothes) and calls on_done with it - or with
 ## {} if the kid backed out.
-func make_item(category: String, on_done: Callable, prompt := "") -> void:
+func make_item(category: String, on_done: Callable, prompt := "", words := []) -> void:
 	var s := ItemMaker.new()
 	s.game = self
 	s.category = category
 	s.prompt = prompt
+	s.words = words
 	s.on_done = on_done
 	show_screen(s)
+
+
+## After drawing something from a home's drawer: back to that home. Screens that come back to a
+## home are given a method of the game, bound - never a lambda of the home screen, which has
+## been freed by the time they finish.
+func back_to_place(_item: Dictionary, home_id: String, focus := "") -> void:
+	go_place(home_id, focus)
+
+
+## Out for a walk with one pet (WalkScreen).
+func go_walk(home_id: String, pet_id: String) -> void:
+	var h := profile.home(home_id)
+	if h.is_empty():
+		go_home()
+		return
+	var s := WalkScreen.new()
+	s.game = self
+	s.home = h
+	s.pet_id = pet_id
+	show_screen(s)
+
+
+## A present from a walk has been drawn: a star (three a day), and home with the new thing.
+func present_drawn(item: Dictionary, home_id: String, pet_id: String) -> void:
+	if not item.is_empty():
+		reward_daily("present", 3, 1, "A present from your walk!")
+	go_place(home_id, pet_id)
 
 
 ## Swaps screens at the end of the frame - never mid-way through the button press that asked
@@ -320,6 +348,8 @@ func _music_for(node: Node) -> void:
 		track = "contest"
 	elif node is PlaceScreen:
 		place = (node as PlaceScreen).home.get("place", "")
+	elif node is WalkScreen:
+		place = (node as WalkScreen).home.get("place", "")
 	elif node is LetGoScreen:
 		place = (node as LetGoScreen).home.get("place", "")
 	Sounds.music(track)

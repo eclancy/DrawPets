@@ -19,14 +19,24 @@ var animate := true
 var by_clock := true
 ## How much it is night, 0-1, as drawn.
 var night := 0.0
+## On a walk the place goes on and on: tile k of it is drawn from x = 0 to 1280 (placed at
+## k * 1280 by the walk), its hills carrying on from the tile before. -1: a place on its own.
+var tile := -1
+## What this painter covers, in its own pixels: all a zoomed-out camera can see, or one tile.
+var world := WORLD
+var _x0 := 0.0
 var _place: Dictionary
 var _drift: Drift
 var _sky: SkyLayer
 var _clock_in := 0.0
+var _rain: Drift
 
 
 func _ready() -> void:
 	_place = Places.get_place(place_id)
+	if tile >= 0:
+		world = Rect2(0, WORLD.position.y, 1280, WORLD.size.y)
+		_x0 = tile * 1280.0
 	night = Clock.night() if by_clock else 0.0
 	self_modulate = Clock.tint(night)
 	_sky = SkyLayer.new()
@@ -56,6 +66,22 @@ func _process(delta: float) -> void:
 		_sky.queue_redraw()
 
 
+## A shower over the place - PlaceScreen decides when.
+func start_rain() -> void:
+	if _rain != null:
+		return
+	_rain = Drift.new()
+	_rain.kind = "rain"
+	_rain.count = 110
+	add_child(_rain)
+
+
+func stop_rain() -> void:
+	if _rain != null:
+		_rain.queue_free()
+		_rain = null
+
+
 ## The land: everything below the sky, under the night tint (self_modulate).
 func _draw() -> void:
 	var p := _place
@@ -68,14 +94,15 @@ func _draw() -> void:
 	_far(p.get("far_shape", "hills"), p["far"], horizon)
 
 	var ground: Color = p["ground"]
-	draw_rect(Rect2(WORLD.position.x, horizon, WORLD.size.x, WORLD.end.y - horizon), ground)
+	draw_rect(Rect2(world.position.x, horizon, world.size.x, world.end.y - horizon), ground)
 	# A few long crayon strokes across the ground, so it is not a flat slab.
+	var reach := minf(400.0, world.size.x * 0.2)
 	for i in 26:
 		var y := horizon + 14.0 + i * 24.0 + Crayon.noise(5, i) * 6.0
 		var c := ground.darkened(0.06 + 0.04 * absf(Crayon.noise(9, i)))
 		c.a = 0.55
-		var x0 := WORLD.position.x + absf(Crayon.noise(13, i)) * 400.0
-		Crayon.line(self, Vector2(x0, y), Vector2(WORLD.end.x - absf(Crayon.noise(17, i)) * 400.0, y),
+		var x0 := world.position.x + absf(Crayon.noise(13 + tile, i)) * reach
+		Crayon.line(self, Vector2(x0, y), Vector2(world.end.x - absf(Crayon.noise(17 + tile, i)) * reach, y),
 			c, 5.0, i * 31, 3.0)
 
 	for prop in p["props"]:
@@ -89,11 +116,14 @@ func _draw_sky(ci: CanvasItem) -> void:
 	var p := _place
 	var horizon := Places.HORIZON
 	var colors := Clock.sky(p["sky"], night)
-	Crayon.sky(ci, Rect2(WORLD.position, Vector2(WORLD.size.x, horizon - WORLD.position.y + 60)),
+	Crayon.sky(ci, Rect2(world.position, Vector2(world.size.x, horizon - world.position.y + 60)),
 		colors[0], colors[1])
 	var moon_at := Vector2(1040, 110)
 	for prop in p["props"]:
 		if prop[0] not in SKY_PROPS:
+			continue
+		# One sun (or moon, or planet) on a walk, at its start.
+		if tile > 0 and prop[0] in ["sun", "planet"]:
 			continue
 		var at := Vector2(prop[1], prop[2])
 		if prop[0] == "sun":
@@ -104,13 +134,15 @@ func _draw_sky(ci: CanvasItem) -> void:
 	if night < 0.5 or not Places.tags(place_id).has("outside"):
 		return
 	var star_c := Color(Clock.GLOW, (night - 0.5) * 2.0)
-	for i in 26:
-		var at := Vector2(WORLD.position.x + 140.0 + i * 96.0 + Crayon.noise(61, i) * 40.0,
-			-60.0 + absf(Crayon.noise(67, i)) * 300.0)
-		if at.distance_to(moon_at) < 110.0:
+	for i in int(world.size.x / 103.0):
+		var at := Vector2(world.position.x + 40.0 + i * 96.0 + Crayon.noise(61 + tile, i) * 40.0,
+			-60.0 + absf(Crayon.noise(67 + tile, i)) * 300.0)
+		if at.distance_to(moon_at) < 110.0 and tile <= 0:
 			continue
 		var r := 7.0 + absf(Crayon.noise(71, i)) * 7.0
 		Crayon.fill(ci, Crayon.star(at, r, i), star_c, i, 3.0, 1.0, 2.0)
+	if tile > 0:
+		return
 	# A crescent: a round moon with a bite taken out of it, coloured in yellow pencil.
 	Crayon.glow(ci, moon_at, 95.0, 1.0, 5)
 	var whole := Crayon.blob(moon_at, Vector2(48, 48), 7, 22, 0.03)
@@ -122,8 +154,8 @@ func _draw_sky(ci: CanvasItem) -> void:
 
 func _far(shape: String, color: Color, horizon: float) -> void:
 	var pts := PackedVector2Array()
-	var left := WORLD.position.x
-	var right := WORLD.end.x
+	var left := world.position.x
+	var right := world.end.x
 	match shape:
 		"sea":
 			Crayon.fill(self, PackedVector2Array([Vector2(left, horizon - 70), Vector2(right, horizon - 70),
@@ -164,16 +196,17 @@ func _far(shape: String, color: Color, horizon: float) -> void:
 				var by := horizon - 95.0 + (i / 15) * 40.0
 				Crayon.line(self, Vector2(bx, by), Vector2(bx + 70, by), color.darkened(0.08), 4.0, i, 1.0)
 			return
-	var step := 60.0
+	var step := 64.0  # 1280 / 20: a walk's tiles sample their hills at the same points
 	var bump := 70.0 if shape == "hills" else 45.0
 	var period := 0.006 if shape == "hills" else 0.004
 	pts.append(Vector2(left, horizon + 40))
 	var x := left
-	while x <= right:
-		var h := bump * (0.55 + 0.45 * sin(x * period + 1.3)) + 20.0 * Crayon.noise(23, int(x))
+	while x <= right + step:
+		var gx := x + _x0  # hills carry on from one tile of a walk to the next
+		var h := bump * (0.55 + 0.45 * sin(gx * period + 1.3)) + 20.0 * Crayon.noise(23, int(gx))
 		pts.append(Vector2(x, horizon - h))
 		x += step
-	pts.append(Vector2(right, horizon + 40))
+	pts.append(Vector2(x - step, horizon + 40))
 	Crayon.fill(self, pts, color, 99, 12.0, 0.0, 7.0)
 
 
@@ -371,29 +404,34 @@ class SkyLayer extends Node2D:
 		painter._draw_sky(self)
 
 
-## Weather that drifts across a place: snow, bubbles, petals, leaves, embers, sparkles.
+## Weather that drifts across a place: snow, bubbles, petals, leaves, embers, sparkles, rain.
 class Drift extends Node2D:
 	var kind := ""
+	var count := 36
 	var _bits: Array[Vector3] = []   # x, y, phase
 
 	func _ready() -> void:
-		for i in 36:
+		for i in count:
 			_bits.append(Vector3(randf_range(-200, 1480), randf_range(-100, 720), randf() * TAU))
 
 	func _process(delta: float) -> void:
 		var fall: float = {"snow": 40.0, "sprinkles": 35.0, "petals": 30.0, "leaves": 45.0, "bubbles": -50.0, "embers": -35.0,
-			"sparkles": 0.0, "fireflies": 0.0, "twinkle": 0.0}.get(kind, 20.0)
+			"sparkles": 0.0, "fireflies": 0.0, "twinkle": 0.0, "rain": 720.0}.get(kind, 20.0)
 		for i in _bits.size():
 			var b := _bits[i]
 			b.z += delta
 			b.y += fall * delta
 			b.x += sin(b.z * 1.3) * 18.0 * delta + (12.0 if kind in ["petals", "leaves"] else 0.0) * delta
+			if kind == "rain":
+				b.x -= 170.0 * delta
 			if b.y > 760.0:
 				b.y = -40.0
 			elif b.y < -60.0:
 				b.y = 740.0
 			if b.x > 1500.0:
 				b.x = -200.0
+			elif b.x < -220.0:
+				b.x = 1480.0
 			_bits[i] = b
 		queue_redraw()
 
@@ -404,6 +442,8 @@ class Drift extends Node2D:
 			match kind:
 				"snow":
 					draw_circle(p, 4.0, Color(1, 1, 1, 0.9))
+				"rain":
+					draw_line(p, p + Vector2(-6, 22), Color(0.56, 0.66, 0.9, 0.6), 2.5, true)
 				"bubbles":
 					draw_arc(p, 7.0, 0, TAU, 16, Color(1, 1, 1, 0.75), 2.0, true)
 				"petals":

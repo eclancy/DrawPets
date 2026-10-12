@@ -73,6 +73,22 @@ The kit lamp, campfire, lantern, crystal lamp and candy lamp are glowy.
 
 `--hour=21.5` pretends it is that time, to see it; the demo forces midday, then has a night turn.
 
+## Walks (built)
+
+**Walk** (under Home in a home) takes one pet - the one whose card is open, else the one the home
+is looking at - out along its home's place (`WalkScreen`). The place goes on for six screens,
+each a tile of the same place with its hills running on from the last (`PlacePainter.tile`), one
+sun at the start. The pet trots ahead by itself; tap ahead and it runs there, tap behind and it
+turns back. Every 700 px walked trains stamina; the walk ends at the far end ("What a walk!") or
+with Home. A walk is good fun (+fun) and a little tiring.
+
+**Presents.** Glints in the grass (pale pencil twinkles, not shine) hide presents - as many as
+are left today, two a walk at most, **three a day**. Near one the pet stops, sniffs, digs (muddy
+paws) and up pops a present. Tap it: **"What's inside the present? Draw it! It's a CRUNCHY
+snack."** - a toy (most often), a snack or a thing for its home, one word for it, that word
+already picked on the words page. Drawing it makes it a real item in the drawers, and pays **1
+star** (`GameRoot.present_drawn`). Backing out of the drawing loses the present.
+
 ## The camera
 
 Zooms by the biggest pet in the home: a home of tiny pets gets a 1.5x close-up that follows
@@ -83,5 +99,6 @@ them, a giant one a 0.66x wide shot. The walking band stops above the drawer bar
 - **Visiting**: friends' homes, through ecec.dev (`sharing.md`).
 - **Outings**: take a pet to one of your other homes for the afternoon.
 - **Seasons** from the device clock: snow in December, leaves in October.
-- **Place effects**: the Moon's low gravity (higher hops, floating toys), mud in the swamp,
-  a bubble helmet for non-swimmers under the sea.
+- **Place effects**: the Moon's low gravity (higher hops, floating toys), a bubble helmet for
+  non-swimmers under the sea. (Mud in the swamp, and passing showers of rain, are built - see
+  `pet-life.md`.)

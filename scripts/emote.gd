@@ -61,6 +61,25 @@ func _draw() -> void:
 				var p := Vector2((i - 1) * 14.0, -absf(Crayon.noise(_seed, i)) * 10.0)
 				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -9), p + Vector2(6, 2), p + Vector2(0, 7),
 					p + Vector2(-6, 2)]), Color("#8fcdea"))
+		"bubble":
+			var r := 9.0 + absf(Crayon.noise(_seed, 1)) * 9.0
+			draw_circle(Vector2.ZERO, r, Color(0.92, 0.97, 1.0, 0.7))
+			draw_arc(Vector2.ZERO, r, 0.0, TAU, 20, Color("#8cc6ee"), 2.5, true)
+			draw_arc(Vector2.ZERO, r * 0.6, PI * 1.1, PI * 1.5, 6, Color(1, 1, 1, 0.95), 2.5, true)
+		"twinkle":
+			# Squeaky clean: a pale four-pointed glint in pencil blue - not shine, which is bought.
+			var pts := PackedVector2Array()
+			for i in 8:
+				var rr := 16.0 if i % 2 == 0 else 4.5
+				var a := -PI / 2.0 + i * PI / 4.0
+				pts.append(Vector2(cos(a), sin(a)) * rr)
+			draw_colored_polygon(pts, Color("#f4fbff"))
+			pts.append(pts[0])
+			draw_polyline(pts, Color("#7fb7e6"), 2.5, true)
+		"dirt":
+			for i in 5:
+				draw_circle(Vector2(Crayon.noise(_seed, i) * 22.0, Crayon.noise(_seed + 3, i) * 10.0),
+					3.0 + absf(Crayon.noise(_seed + 5, i)) * 3.0, Color("#a98262"))
 		"crumb":
 			for i in 4:
 				draw_circle(Vector2(Crayon.noise(_seed, i) * 14.0, Crayon.noise(_seed + 3, i) * 8.0),

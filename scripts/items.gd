@@ -86,6 +86,9 @@ const KIT := {
 	"kit_pizza": {"category": "food", "name": "Pizza", "words": ["meaty"]},
 	"kit_icecream": {"category": "food", "name": "Ice Cream", "words": ["cold", "sweet"]},
 	"kit_chili": {"category": "food", "name": "Chili", "words": ["spicy"]},
+	# The Bath drawer. "soapy" washes mud off; "fluffy" brushes a pet till it is fluffy.
+	"kit_sponge": {"category": "bath", "name": "Sponge", "words": ["soapy"]},
+	"kit_brush": {"category": "bath", "name": "Brush", "words": ["fluffy"]},
 }
 
 ## Bought with gold stars (.ai/shop.md). "uses" marks a consumable; everything else is kept.

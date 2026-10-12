@@ -61,6 +61,8 @@ const ASSETS := {
 	"icon_wardrobe": {"pivot": "center", "look": "coat hanger with a little shirt"},
 	"icon_decorate": {"pivot": "center", "look": "paint palette with a brush"},
 	"icon_toys": {"pivot": "center", "look": "toy box with a ball on top"},
+	"icon_bath": {"pivot": "center", "look": "a little bathtub on feet, heaped with bubbles"},
+	"icon_walk": {"pivot": "center", "look": "a red lead with a loop handle, and two paw prints"},
 	"icon_pantry": {"pivot": "center", "look": "picnic basket with an apple"},
 	"icon_draw": {"pivot": "center", "look": "a crayon drawing a squiggle"},
 	"marker_gold": {"pivot": "center", "look": "felt-tip marker, gold cap (gold)"},
@@ -173,6 +175,10 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_lock(c)
 		"icon_wardrobe":
 			_hanger(c)
+		"icon_bath":
+			_icon_bath(c)
+		"icon_walk":
+			_icon_walk(c)
 		"icon_decorate":
 			_palette(c)
 		"icon_toys":
@@ -1270,6 +1276,52 @@ static func _trick_bow(c: CanvasItem) -> void:
 
 
 # --- Drawing helpers ---------------------------------------------------------------------------
+
+## Marker: a pale blue bathtub on little feet, bubbles heaped over the top.
+static func _icon_bath(c: CanvasItem) -> void:
+	var blue := Color("#a9d4f2")
+	for x in [150.0, 362.0]:
+		_mark(c, Crayon.ellipse(Vector2(x, 420), Vector2(26, 22), 16), Color("#f2c46a"), 9301 + int(x), 8.0)
+	var tub := PackedVector2Array()
+	for i in 25:
+		var a := PI * i / 24.0
+		tub.append(Vector2(256, 262) + Vector2(cos(a) * 214, sin(a) * 158))
+	_mark(c, tub, blue, 9310)
+	var rim := Crayon.rounded_rect(Rect2(28, 236, 456, 46), 22)
+	_mark(c, rim, Color("#d7ecfb"), 9320)
+	var bubbles := [[Vector2(110, 214), 50.0], [Vector2(196, 176), 64.0], [Vector2(300, 184), 58.0],
+		[Vector2(392, 214), 48.0], [Vector2(250, 112), 44.0], [Vector2(352, 120), 30.0], [Vector2(150, 120), 28.0]]
+	for i in bubbles.size():
+		var at: Vector2 = bubbles[i][0]
+		var r: float = bubbles[i][1]
+		var b := Crayon.ellipse(at, Vector2(r, r), 28)
+		_under(c, b)
+		Crayon.marker_fill(c, b, Color("#eef8ff"), 9330 + i)
+		Crayon.marker_line(c, b, Color("#7fb7e6"), 9.0, 9340 + i)
+		Crayon.marker_line(c, PackedVector2Array([at + Vector2(-r * 0.55, -r * 0.1), at + Vector2(-r * 0.4, -r * 0.45),
+			at + Vector2(-r * 0.1, -r * 0.6)]), Color(1, 1, 1, 0.95), 8.0, 9350 + i, false)
+
+
+## Marker: a red lead - a loop handle, a swinging line and a clip - beside two paw prints.
+static func _icon_walk(c: CanvasItem) -> void:
+	var red := Color("#ef7f7f")
+	var loop := Crayon.ellipse(Vector2(150, 150), Vector2(78, 92), 28)
+	Crayon.marker_line(c, loop, red.darkened(0.45), 40.0, 9401)
+	Crayon.marker_line(c, loop, red, 24.0, 9401)
+	var lead := PackedVector2Array([Vector2(196, 222), Vector2(250, 300), Vector2(330, 330), Vector2(392, 300)])
+	Crayon.marker_line(c, lead, red.darkened(0.45), 34.0, 9402, false)
+	Crayon.marker_line(c, lead, red, 20.0, 9402, false)
+	var clip := Crayon.rounded_rect(Rect2(380, 262, 64, 76), 18)
+	_mark(c, clip, Color("#c9c6d8"), 9403, 9.0)
+	var paw := Color("#b48ad8")
+	for p in [[Vector2(160, 410), 0.0], [Vector2(330, 440), 0.3]]:
+		var at: Vector2 = p[0]
+		_mark(c, Crayon.ellipse(at, Vector2(42, 34), 20), paw, 9410 + int(at.x), 8.0)
+		for i in 4:
+			var a := -PI * 0.85 + i * PI * 0.23 + float(p[1])
+			_mark(c, Crayon.ellipse(at + Vector2(cos(a), sin(a)) * 56.0, Vector2(15, 18), 14), paw,
+				9420 + int(at.x) + i, 7.0)
+
 
 static func _under(c: CanvasItem, poly: PackedVector2Array) -> void:
 	if poly.size() >= 3:

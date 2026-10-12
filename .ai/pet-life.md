@@ -111,6 +111,26 @@ Touch is the whole of it - a finger, or a mouse standing in for one.
 - **Tap it**: it looks up, hops and says hello, and its card opens (how it is doing, its stats).
 - Every so far of rubbing is a heart (trust, charm, a little fun).
 
+## Mud and the bath (built)
+
+Getting muddy is **fun, not a telling-off**. Mud is crayon splats laid **over** the drawing
+(`Mud`), riding the part they landed on - the drawing itself is never touched (rule 1). Each
+splat lowers the clean need a little (never under the floor).
+- **Muddy Swamp**: running about splashes up muddy feet.
+- **Digging**: left alone, a pet sometimes digs - nose down, paws going, dirt flying - and comes
+  up with muddy paws and a muddy nose. It trains a little strength.
+- **Rain**: now and then a shower passes over an outdoor place a little while after you arrive
+  (12%, 45-80 seconds); anyone running about in it gets muddy feet.
+- What gets on it is the place's: mud, sand on sandy places, dust on rocky ones; nothing under
+  the sea, in the clouds or in the snow.
+
+The **Bath** drawer has a **Sponge** ("soapy") and a **Brush** ("fluffy").
+- Rub the sponge over a pet: bubbles, and the splat under the sponge comes off. When the last
+  one is gone (or after a good long wash of a clean pet) it **shakes itself dry** and glints:
+  clean is full, two hearts of trust, a little charm, and **1 star (2 baths a day)**. A wet
+  sponge wakes a sleeping pet.
+- Brush a pet: pale glints and hearts, like petting - and a sleeper sleeps on.
+
 ## Bedtime (built)
 
 At night (`places.md`) pets yawn and curl up asleep - legs folded under, head down, ears droopy -
@@ -155,8 +175,8 @@ From the pet panel (tap a pet in its home):
 
 ## Planned next
 
-1. **Bath and mud**: muddy places splat crayon mud overlays; a sponge scrubs them off.
-2. **Trick cards**: the kid draws a symbol; doing the gesture with the card teaches the trick.
-3. **Walks and presents**: sparkles hide presents; opening one is a drawing prompt.
-4. **Photo mode** and a pet journal.
-5. **Voice** (optional, see above).
+1. **Trick cards**: the kid draws a symbol; doing the gesture with the card teaches the trick.
+2. **Photo mode** and a pet journal.
+3. **Voice** (optional, see above).
+
+Walks and presents are built - see `places.md`.

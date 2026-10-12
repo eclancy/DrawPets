@@ -67,6 +67,16 @@ The device clock: dusk, a lavender night with a moon, stars and fireflies, glowy
 pets asleep somewhere cozy, a tap to wake one gently, and good morning (`places.md`,
 `pet-life.md`).
 
+## M1.10 - Mud and the bath (built)
+
+Crayon mud splats over the drawing from the swamp, digging and passing rain; a Bath drawer with a
+sponge (scrub it off, shake dry, squeaky clean) and a brush (`pet-life.md`).
+
+## M1.11 - Walks and presents (built)
+
+A Walk button: one pet along its place, glints in the grass, a dig, a present - "What's inside?
+Draw it!" with a word already picked - three a day (`places.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a
@@ -81,10 +91,10 @@ pets asleep somewhere cozy, a tap to wake one gently, and good morning (`places.
 Voices and recordings are built (M1.6). Still to do: call or clap by loudness to make a pet come
 over or wake up - always with the tap-the-ground way round it.
 
-## M4 - Tricks, walks and presents
+## M4 - Tricks, photos and a journal
 
-Trick cards (drawn by the kid, taught by gesture - and used in the Trick Show), walks with
-presents ("draw what's inside"), bath and mud, photo album and journal.
+Trick cards (drawn by the kid, taught by gesture - and used in the Trick Show), photo album and
+journal.
 
 ## M5 - Visiting through ecec.dev
 
@@ -119,7 +129,7 @@ Needs a Mac with Xcode and an Apple developer account.
   (every pet loves the box).
 - More special places: Pirate Ship, Treehouse Village, Underwater Palace, Dinosaur Valley,
   Haunted House (friendly), Space Station.
-- Place effects: low gravity on the Moon, mud in the swamp, wind in the sky.
+- Place effects: low gravity on the Moon, wind in the sky.
 
 **Currency and shop**
 - Seasonal stock, a weekly "special of the week", sticker book of milestones.

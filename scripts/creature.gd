@@ -190,11 +190,29 @@ func _build() -> void:
 			parts.append(part)
 			pending.erase(p)
 
+	refresh_mud()
 	has_legs = PetBuilder.has_type(pet, "leg") or PetBuilder.has_type(pet, "tentacle")
 	can_fly = PetBuilder.has_type(pet, "wing")
 	can_swim = PetBuilder.has_type(pet, "fin")
 	_mouth = _find_mouth()
 	_apply_size()
+
+
+## Lays its mud splats (Mud) over the parts they landed on - again after a splat or a scrub.
+func refresh_mud() -> void:
+	var by_part := {}
+	for s in pet.get("mud", []):
+		if not by_part.has(s[0]):
+			by_part[s[0]] = []
+		by_part[s[0]].append(s)
+	for part in parts:
+		for child in part.sprite.get_children():
+			if child is Mud.Layer:
+				child.queue_free()
+		if by_part.has(String(part.name)):
+			var layer := Mud.Layer.new()
+			layer.spots = by_part[String(part.name)]
+			part.sprite.add_child(layer)
 
 
 ## Where it carries things, in body space: its mouth if it has one, else the front of its head,
@@ -256,7 +274,7 @@ func stop() -> void:
 
 
 ## Plays an action for `duration` seconds: eat, petted, wiggle, belly, cuddle, celebrate, greet,
-## hop, look, sniff, sleep, stretch, bounce, dance, splash, scratch, chew, tug, hide. `from`
+## hop, look, sniff, sleep, stretch, bounce, dance, splash, scratch, dig, shake, chew, tug, hide. `from`
 ## starts it part way in - a pet already sound asleep, past its yawn.
 func perform(action_name: String, duration: float, on_done := Callable(), from := 0.0) -> void:
 	_end_action()
@@ -634,6 +652,22 @@ func _run_action(delta: float) -> void:
 			stride = 1.0
 			phase += delta * 22.0
 			head_tilt = 0.1
+		"dig":
+			# Nose down, front paws going like mad, dirt flying out behind.
+			stride = 1.0
+			phase += delta * 26.0
+			head_tilt = 0.16
+			lean = 0.12
+			if int(t * 5.0) != int((t - delta) * 5.0):
+				emote.emit("dirt", global_position + Vector2(-facing * height_px * 0.3, -height_px * 0.2))
+		"shake":
+			# Shaking dry after a bath: a fast wiggle that dies away, drops flying off.
+			var fade := 1.0 - k
+			lean = sin(t * 40.0) * 0.16 * fade
+			head_tilt = sin(t * 40.0 + 1.3) * 0.14 * fade
+			z = rest_z + absf(sin(t * 20.0)) * height_px * 0.04 * fade
+			if int(t * 6.0) != int((t - delta) * 6.0) and k < 0.8:
+				emote.emit("drop", global_position + Vector2(randf_range(-0.6, 0.6) * height_px, -height_px * 0.6))
 		"tug":
 			lean = -0.18
 			mouth_open = 0.5

@@ -21,6 +21,8 @@ const WEAR := [["head", "On its head", "hats, crowns, bows"], ["eyes", "Over its
 var game: GameRoot
 var category := "toy"
 var prompt := ""
+## Words already picked when it asks what it is like - a present says what it is.
+var words := []
 var on_done := Callable()
 
 var _current: Control
@@ -65,6 +67,7 @@ func _drawn(result: Dictionary) -> void:
 	s.category = category
 	s.question = QUESTIONS.get(category, "What's it like?")
 	s.picture = ImageTexture.create_from_image(result["image"])
+	s.picked = words.duplicate()
 	s.on_done = _worded
 	_show(s)
 

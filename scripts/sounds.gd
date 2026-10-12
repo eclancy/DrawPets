@@ -18,8 +18,9 @@ const SFX := ["ui_tap", "ui_toggle", "ui_nope", "toast", "star", "buy", "level_u
 	"land", "flap", "bubble", "munch", "chew", "sniff", "snore", "heart", "sparkle", "splash", "scratch",
 	"throw", "bounce", "squeak", "thud", "catch", "tug", "place", "pickup", "trampoline", "drum", "piano",
 	"slide", "shiny", "count_tick", "count_go", "good", "bad", "jump", "drum_beat", "heave", "card_flip",
-	"correct", "wrong", "camera", "cheer", "fanfare", "ribbon"]
-const LOOPS := ["crayon", "eraser"]
+	"correct", "wrong", "camera", "cheer", "fanfare", "ribbon", "splat", "scrub", "brush", "shake", "clean",
+	"rain"]
+const LOOPS := ["crayon", "eraser", "rain"]
 ## The longest a kid's own recording may be, in seconds.
 const MAX_RECORD := 3.0
 ## How loud each bus sits under its setting slider, so a "full" music slider is still under the
