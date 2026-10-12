@@ -115,6 +115,8 @@ var _leap_h := 60.0
 var _bark := 0.0
 var _mouth := Vector2.ZERO
 var _shadow_w := 50.0
+## How far below its body its legs reach, in body space - how far it sinks to lie down.
+var _leg_drop := 0.0
 
 
 func setup(p: Dictionary, display_height := -1.0) -> void:
@@ -191,6 +193,9 @@ func _build() -> void:
 			pending.erase(p)
 
 	refresh_mud()
+	# The bottom of the body drawing, in body space (the body's joint is body space's origin).
+	var body_bottom := (body.sprite.texture.get_height() + body.sprite.offset.y) * body.sprite.scale.y
+	_leg_drop = maxf(0.0, rest.end.y - body_bottom)
 	has_legs = PetBuilder.has_type(pet, "leg") or PetBuilder.has_type(pet, "tentacle")
 	can_fly = PetBuilder.has_type(pet, "wing")
 	can_swim = PetBuilder.has_type(pet, "fin")
@@ -438,11 +443,13 @@ func _process(delta: float) -> void:
 		curl = move_toward(curl, 0.55, delta * 3.0)
 	else:
 		curl = move_toward(curl, 1.0 if is_asleep() else 0.0, delta * 1.5)
+	# Lying down: its legs fold (CreaturePart's "leg" recipe turns them CURL_LEGS radians) and its
+	# body comes down by as much height as the folded legs lose, so its tummy is on the ground.
+	var sink := 0.0
+	if has_legs:
+		sink = _leg_drop * norm * (1.0 - cos(curl * CreaturePart.CURL_LEGS))
 	# Rolled over, it lies on its back where it stood: tipped backwards about its feet, then
 	# slid forwards so its middle stays over its shadow.
-	var sink := curl * height_px * 0.2 / maxf(scale.y, 0.01) if has_legs else 0.0
-	if _action == "sit" and not has_legs:
-		sink = 0.0
 	rig.position = Vector2(facing * roll * height_px * 0.3 / maxf(scale.x, 0.01), -z + sink)
 	rig.rotation = (lean + (0.16 if straining else 0.0) - roll * 1.35) * facing
 	rig.scale = Vector2(move_toward(rig.scale.x, norm * facing, norm * delta * 10.0), norm)
@@ -583,6 +590,9 @@ func _mood(delta: float) -> void:
 	wag = 0.08 + 0.3 * happiness + 0.2 * excited
 	wag_speed = 3.0 + 11.0 * happiness + 8.0 * excited
 	ear_droop = (1.0 - happiness) * 0.35 + (0.3 if is_asleep() else 0.0)
+	if is_asleep():
+		wag = 0.03  # its tail lies still, just stirring
+		wag_speed = 1.5
 	breath_speed = 1.2 if _action == "sleep" else 2.2 + stride * 2.0
 
 	# The mouth: shut unless something opens it. It pants when running, grins when excited,
@@ -600,7 +610,10 @@ func _mood(delta: float) -> void:
 	if _action not in ["eat", "chew", "sleep", "tug"]:
 		mouth_open = move_toward(mouth_open, target_mouth, delta * 6.0)
 
-	if _action in ["petted", "sleep", "belly", "cuddle"] or (_action == "stretch" and _action_left > 0.5):
+	if _action == "sleep":
+		blink = move_toward(blink, 1.0, delta * 3.0)  # fast asleep: eyes right shut
+		return
+	if _action in ["petted", "belly", "cuddle"] or (_action == "stretch" and _action_left > 0.5):
 		blink = move_toward(blink, 0.85, delta * 6.0)
 		return
 	_next_blink -= delta
@@ -729,8 +742,11 @@ func _run_action(delta: float) -> void:
 			if t <= delta:
 				Voice.yawn(pet, self)
 			mouth_open = sin(clampf(t / 1.4, 0.0, 1.0) * PI) * 0.9  # one big yawn first
+			# Getting comfy: round once on the spot, the way a dog turns before it lies down.
+			if t < 0.9 and int(t * 3.0) != int((t - delta) * 3.0):
+				facing = -facing
 			if t > 1.2:
-				head_tilt = move_toward(head_tilt, 0.12, delta * 0.5)  # its head sinks
+				head_tilt = move_toward(head_tilt, 0.16, delta * 0.4)  # its head comes down to rest
 			_zzz -= delta
 			if _zzz <= 0.0 and t > 1.4:
 				_zzz = 1.6

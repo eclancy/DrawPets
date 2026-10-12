@@ -942,8 +942,7 @@ func _still_mine(c: Creature) -> bool:
 
 
 func _carry(c: Creature) -> void:
-	toy.global_position = c.mouth_global() + Vector2(0, toy.radius * 0.9 * toy.scale.y)
-	toy.z = 0.0
+	toy.hold_in_mouth(c)
 
 
 func _update_toy(delta: float) -> void:
@@ -1214,13 +1213,13 @@ func _cuddled(c: Creature) -> void:
 		c.say("heart")
 		return
 	# Off to bed with it.
-	c.go_to(cozy.position + Vector2(0, 3), _nap_with_toy.bind(c, cozy))
+	c.go_to(cozy.nap_spot(), _nap_with_toy.bind(c, cozy))
 
 
 func _nap_with_toy(c: Creature, cozy: Furniture) -> void:
 	if not _still_mine(c) or not is_instance_valid(cozy):
 		return
-	c.rest_z = cozy.perch_height()
+	c.rest_z = cozy.nap_height()
 	c.perform("sleep", 5.0, _napped.bind(c))
 
 
@@ -1536,8 +1535,7 @@ func _update_food(delta: float) -> void:
 		return
 	if _eater != null:
 		if food.carrier == _eater:
-			food.global_position = _eater.mouth_global() + Vector2(0, food.radius * 0.6 * food.scale.y)
-			food.z = 0.0
+			food.hold_in_mouth(_eater)
 			food.sprite.scale *= 1.0 - delta * 0.3
 			if randf() < delta * 2.5:
 				_on_emote("crumb", _eater.mouth_global())

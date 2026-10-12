@@ -170,7 +170,8 @@ stickers are crayon drawn in code, never shine.
 
 ## Bedtime (built)
 
-At night (`places.md`) pets yawn and curl up asleep - legs folded under, head down, ears droopy -
+At night (`places.md`) pets yawn, turn round once to get comfy, and lie down flat on their
+tummies - front legs stretched forward, back legs tucked back, head down, ears droopy, eyes shut -
 on a cozy bed or cushion, else on the doorstep of a house or tent, else by something warm, else
 where they are. Opening a home at night finds them already asleep ("It's night time - shh!").
 - **Tap a sleeping pet** and it wakes gently: a long stretch and a yawn, then hello. It stays up

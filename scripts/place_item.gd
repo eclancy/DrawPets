@@ -116,6 +116,20 @@ func throw_scale() -> float:
 	return 0.45 if has_word("heavy") else 1.0
 
 
+## How much smaller a thing looks in a pet's mouth than lying on the grass.
+const HELD := 0.72
+
+
+## In a pet's mouth: held by its edge, out in front of the mouth and a little below it, so the
+## pet's face is never hidden behind it.
+func hold_in_mouth(c: Creature) -> void:
+	var k := scale.y  # already HELD-small while it is carried
+	# The sprite sits radius * 0.9 above the item's spot (_place_sprite); the spot goes where that
+	# puts the sprite's middle just in front of and under the mouth.
+	global_position = c.mouth_global() + Vector2(c.facing * radius * 1.0, radius * 0.7 + radius * 0.9) * k
+	z = 0.0
+
+
 func pick_up(by: Creature) -> void:
 	carrier = by
 	vel = Vector2.ZERO
@@ -138,6 +152,8 @@ func _process(delta: float) -> void:
 	var d := clampf(inverse_lerp(bounds.position.y, bounds.end.y, position.y), 0.0, 1.0)
 	scale = Vector2.ONE * lerpf(0.82, 1.12, d)
 	z_index = 1 if carrier != null else 0
+	if carrier != null and stretch_to == Vector2.INF:
+		scale *= HELD
 	var n := Clock.night()
 	if n != _lit:
 		_lit = n

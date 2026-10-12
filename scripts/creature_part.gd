@@ -24,6 +24,9 @@ const SPRINGS := {
 const MOUTH_SHUT := 0.14
 ## The largest step a spring takes. Stiff springs (spikes: 480) blow up past about 0.09 s.
 const SPRING_STEP := 1.0 / 120.0
+## How far legs fold when a creature lies down (Creature.curl = 1): front legs stretch forward,
+## back legs tuck back, like a dog flat on its tummy.
+const CURL_LEGS := 1.35
 
 var type := ""
 var base := Transform2D.IDENTITY
@@ -82,7 +85,9 @@ func animate(c: Creature, delta: float) -> void:
 		"nose":
 			sc = Vector2.ONE * (1.0 + c.sniff * 0.12 * sin(c.time * 26.0))
 		"leg":
-			rot = sin(gait) * 0.5 * c.stride + c.tuck * 0.45 + c.curl * 1.15
+			# Joined to the front half of the body it reaches forward to lie down; the back half, back.
+			var fold := -1.0 if base.origin.x > 0.0 else 1.0
+			rot = sin(gait) * 0.5 * c.stride + c.tuck * 0.45 + c.curl * CURL_LEGS * fold
 		"arm":
 			rot = -sin(gait) * 0.4 * c.stride + c.wave * sin(c.time * 14.0 + side) * 0.7 + c.curl * 0.8
 		"wing":
