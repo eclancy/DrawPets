@@ -8,6 +8,8 @@ var game: GameRoot
 var pet: Dictionary
 var on_done := Callable()
 var on_cancel := Callable()
+## Moving a pet: the home it already lives in is not offered.
+var exclude_home := ""
 
 var _content: Control
 
@@ -18,8 +20,7 @@ func _ready() -> void:
 
 func _swap(c: Control) -> void:
 	if _content != null:
-		remove_child(_content)
-		_content.queue_free()
+		UI.retire(_content)
 	_content = c
 	add_child(UI.full_rect(c))
 
@@ -42,7 +43,7 @@ func _list() -> void:
 	homes.add_theme_constant_override("h_separation", 14)
 	homes.add_theme_constant_override("v_separation", 14)
 	for h in p.homes():
-		if not p.has_room(h):
+		if not p.has_room(h) or h["id"] == exclude_home:
 			continue
 		var caption := "%s\n%d of %d rooms - %s" % [Profile.home_name(h), h["pets"].size(), int(h["rooms"]),
 			_feeling(fav, h["place"])]

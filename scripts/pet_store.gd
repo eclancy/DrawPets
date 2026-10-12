@@ -53,16 +53,38 @@ static func load_pet(id: String) -> Dictionary:
 		var img := Image.load_from_file(folder(id) + "/" + file)
 		if img != null:
 			pet["_img"][file] = img
+	pet["_recording"] = Voice.load_recording(folder(id) + "/voice.pcm")
 	return pet
 
 
-## Writes pet.json, and the drawings too when `with_images` - they only change when drawn.
+## Gone for good - a pet let go to live in the wild (FixScreen).
+static func delete_pet(id: String) -> void:
+	var dir := folder(id)
+	var d := DirAccess.open(dir)
+	if d == null:
+		return
+	for file in d.get_files():
+		d.remove(file)
+	DirAccess.remove_absolute(dir)
+
+
+## Writes pet.json, and the drawings (and a recorded voice) too when `with_images` - they only
+## change when drawn or recorded. Drawings no longer used - a part redrawn or taken off - are
+## deleted, so a folder holds exactly the pet.
 static func save_pet(pet: Dictionary, with_images := false) -> void:
 	var dir := folder(pet["id"])
 	DirAccess.make_dir_recursive_absolute(dir)
 	if with_images:
-		for file in pet["_img"]:
-			(pet["_img"][file] as Image).save_png(dir + "/" + file)
+		var used := image_files(pet)
+		for file in used:
+			if pet["_img"].has(file):
+				(pet["_img"][file] as Image).save_png(dir + "/" + file)
+		var d := DirAccess.open(dir)
+		if d != null:
+			for file in d.get_files():
+				if file.ends_with(".png") and not used.has(file):
+					d.remove(file)
+		Voice.save_recording(dir + "/voice.pcm", pet.get("_recording", PackedFloat32Array()))
 	var plain := {}
 	for key in pet:
 		if not str(key).begins_with("_"):
