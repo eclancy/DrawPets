@@ -100,6 +100,11 @@ static func image_files(pet: Dictionary) -> Array:
 			var file: String = p.get(key, "")
 			if file != "" and not files.has(file):
 				files.append(file)
+	# The cards the kid drew for its tricks (Tricks).
+	for t in pet.get("tricks", {}):
+		var card: String = pet["tricks"][t].get("image", "")
+		if card != "" and not files.has(card):
+			files.append(card)
 	return files
 
 

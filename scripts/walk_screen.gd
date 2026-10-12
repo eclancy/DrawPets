@@ -270,6 +270,11 @@ func go_home() -> void:
 	game.go_place(home["id"], pet_id)
 
 
+## Android's back gesture: home, like the Home button.
+func go_back() -> void:
+	go_home()
+
+
 func _save() -> void:
 	PetStore.change_need(pet, "fun", 0.2)
 	PetStore.change_need(pet, "energy", -0.08)

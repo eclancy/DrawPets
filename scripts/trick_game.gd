@@ -4,10 +4,14 @@ extends Node2D
 ## time; the kid taps the cards back in the same order. Each round adds a trick. Smarts makes
 ## the cards stay up longer, and a clever pet (smarts level 5+) hints the first card of each
 ## answer. Five rounds is a perfect show.
+##
+## The cards are the pet's own (Tricks): every trick it knows, on the card the kid drew for it,
+## topped up with the game's cards to at least four.
 
 signal finished(scores: Array)
 
-const TRICKS := ["spin", "jump", "sit", "wave", "roll", "bow"]
+## The fewest cards a show is played with.
+const DECK := 4
 
 var screen: CompetitionScreen
 
@@ -20,10 +24,17 @@ var _card: TextureRect
 var _msg: Label
 var _buttons := {}
 var _rng := RandomNumberGenerator.new()
+var _deck: Array = []
 
 
 func _ready() -> void:
 	_rng.seed = Events.seed_of(screen.event, screen.tier) + 3
+	_deck = Tricks.known(screen.pet)
+	for t in ["spin", "jump", "sit", "wave", "roll", "bow", "dance"]:
+		if _deck.size() >= DECK:
+			break
+		if not _deck.has(t):
+			_deck.append(t)
 	var cam := Camera2D.new()
 	cam.position = Vector2(640, 360)
 	add_child(cam)
@@ -82,23 +93,48 @@ func _build_hud() -> void:
 	row.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	row.offset_bottom = -16
 	row.add_theme_constant_override("separation", 10)
-	for t in TRICKS:
-		var b := UI.icon_button("trick_" + t, t.capitalize(), press.bind(t), 64, Vector2(118, 112))
+	for t in _deck:
+		var b := _card_button(t)
 		b.disabled = true
 		_buttons[t] = b
 		row.add_child(b)
 	root.add_child(row)
 
 
+## A card to tap: the kid's own drawing if the pet knows the trick, else the game's.
+func _card_button(t: String) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(118, 112)
+	b.pressed.connect(press.bind(t))
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	UI.full_rect(col)
+	var pic := TextureRect.new()
+	pic.texture = Tricks.card_texture(screen.pet, t)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.custom_minimum_size = Vector2(64, 64)
+	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(pic)
+	var l := UI.label(Tricks.display_name(t), 18)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(l)
+	b.add_child(col)
+	return b
+
+
 func _next_round() -> void:
 	_round += 1
-	_sequence.append(TRICKS[_rng.randi_range(0, TRICKS.size() - 1)])
+	_sequence.append(_deck[_rng.randi_range(0, _deck.size() - 1)])
 	_state = "show"
 	_msg.text = "Round %d - watch!" % _round
 	_set_buttons(false)
 	var hold := 0.7 + Stats.value(screen.pet, "smarts") / 140.0
 	for t in _sequence:
-		_card.texture = Items.art_texture("trick_" + t)
+		_card.texture = Tricks.card_texture(screen.pet, t)
 		Sounds.play_varied("card_flip", 1.0, 0.05)
 		_perform(t)
 		await get_tree().create_timer(hold).timeout
@@ -133,7 +169,7 @@ func press(trick: String) -> void:
 	if trick != _sequence[_answer]:
 		_state = "done"
 		_set_buttons(false)
-		_msg.text = "Oops! That was %s." % _sequence[_answer]
+		_msg.text = "Oops! That was %s." % Tricks.display_name(_sequence[_answer])
 		Sounds.play("wrong")
 		_finish()
 		return
@@ -157,21 +193,7 @@ func press(trick: String) -> void:
 
 ## The pet acts out a trick with the motions every creature has.
 func _perform(trick: String) -> void:
-	match trick:
-		"spin":
-			_pet.perform("celebrate", 0.7)
-		"jump":
-			_pet.leap(_pet.height_px * 0.5, 0.5)
-		"sit":
-			_pet.perform("hide", 0.7)
-			_pet.leap(-_pet.height_px * 0.05, 0.6)
-		"wave":
-			_pet.perform("dance", 0.8)
-		"roll":
-			_pet.perform("hop", 0.7)
-			_pet.facing = -_pet.facing
-		"bow":
-			_pet.perform("eat", 0.7)
+	_pet.do_trick(trick)
 
 
 func _finish() -> void:

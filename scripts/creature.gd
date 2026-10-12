@@ -274,7 +274,8 @@ func stop() -> void:
 
 
 ## Plays an action for `duration` seconds: eat, petted, wiggle, belly, cuddle, celebrate, greet,
-## hop, look, sniff, sleep, stretch, bounce, dance, splash, scratch, dig, shake, chew, tug, hide. `from`
+## hop, look, sniff, sleep, stretch, bounce, dance, splash, scratch, dig, shake, chew, tug, hide,
+## and the tricks spin, sit, rollover, wave, bow (do_trick). `from`
 ## starts it part way in - a pet already sound asleep, past its yawn.
 func perform(action_name: String, duration: float, on_done := Callable(), from := 0.0) -> void:
 	_end_action()
@@ -283,6 +284,29 @@ func perform(action_name: String, duration: float, on_done := Callable(), from :
 	_action_left = duration - from
 	_on_action_done = on_done
 	_has_goal = false
+
+
+## Does a trick (Tricks) with the motions every creature has: sit, jump, spin, roll over,
+## wave, bow, dance.
+func do_trick(trick: String) -> void:
+	match trick:
+		"jump":
+			perform("look", 0.7)
+			leap(height_px * 0.5, 0.55)
+		"spin":
+			perform("spin", 0.9)
+		"sit":
+			perform("sit", 1.2)
+		"roll":
+			perform("rollover", 1.2)
+		"wave":
+			perform("wave", 1.2)
+		"bow":
+			perform("bow", 1.2)
+		"dance":
+			perform("dance", 1.4)
+	if audible:
+		Sounds.play_varied("hop", _size_pitch(), 0.08, -4.0)
 
 
 ## Asleep: curled up, past the yawn and the first snore.
@@ -407,12 +431,18 @@ func _process(delta: float) -> void:
 	_mood(delta)
 	for part in parts:
 		part.animate(self, delta)
-	if _action != "belly":
+	if _action not in ["belly", "rollover"]:
 		roll = move_toward(roll, 0.0, delta * 3.0)
-	curl = move_toward(curl, 1.0 if is_asleep() else 0.0, delta * 1.5)
+	# Curled up asleep; legs folded half way to sit.
+	if _action == "sit":
+		curl = move_toward(curl, 0.55, delta * 3.0)
+	else:
+		curl = move_toward(curl, 1.0 if is_asleep() else 0.0, delta * 1.5)
 	# Rolled over, it lies on its back where it stood: tipped backwards about its feet, then
 	# slid forwards so its middle stays over its shadow.
 	var sink := curl * height_px * 0.2 / maxf(scale.y, 0.01) if has_legs else 0.0
+	if _action == "sit" and not has_legs:
+		sink = 0.0
 	rig.position = Vector2(facing * roll * height_px * 0.3 / maxf(scale.x, 0.01), -z + sink)
 	rig.rotation = (lean + (0.16 if straining else 0.0) - roll * 1.35) * facing
 	rig.scale = Vector2(move_toward(rig.scale.x, norm * facing, norm * delta * 10.0), norm)
@@ -652,6 +682,25 @@ func _run_action(delta: float) -> void:
 			stride = 1.0
 			phase += delta * 22.0
 			head_tilt = 0.1
+		"spin":
+			# Round and round: facing flips fast, a little hop.
+			facing = 1.0 if int(t * 10.0) % 2 == 0 else -1.0
+			z = rest_z + sin(k * PI) * height_px * 0.12
+		"sit":
+			head_tilt = -0.06
+		"rollover":
+			# Down on its back, legs kicking, and over onto its feet the other way round.
+			roll = sin(k * PI)
+			stride = 1.0
+			phase += delta * 12.0
+			if k > 0.5 and t - delta < _action_len * 0.5:
+				facing = -facing
+		"wave":
+			wave = 1.0
+			head_tilt = sin(t * 6.0) * 0.08
+		"bow":
+			lean = sin(k * PI) * 0.3
+			head_tilt = sin(k * PI) * 0.22
 		"dig":
 			# Nose down, front paws going like mad, dirt flying out behind.
 			stride = 1.0

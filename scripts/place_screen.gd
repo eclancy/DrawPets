@@ -239,6 +239,9 @@ func _build_hud() -> void:
 		var walk_btn := UI.icon_button("icon_walk", "Walk", go_walk, 40, Vector2(92, 84))
 		walk_btn.position = Vector2(12, 104)
 		root.add_child(walk_btn)
+		var trick_btn := UI.icon_button("icon_tricks", "Tricks", go_tricks, 40, Vector2(92, 84))
+		trick_btn.position = Vector2(12, 196)
+		root.add_child(trick_btn)
 
 	var title := UI.title("%s  -  %d of %d rooms" % [Places.display_name(home["place"]), home["pets"].size(),
 		int(home["rooms"])], 30)
@@ -480,6 +483,13 @@ func go_walk() -> void:
 	if c.action() == "sleep":
 		_wake(c)
 	_leave_with(c.pet, game.go_walk.bind(home["id"], c.pet["id"]))
+
+
+## Teaching tricks - the pet whose card is open, or the one this home is looking at.
+func go_tricks() -> void:
+	var c := _panel_pet if _panel.visible and _panel_pet != null else _focus_creature()
+	if c != null:
+		_leave_with(c.pet, game.go_tricks.bind(home["id"], c.pet["id"]))
 
 
 ## Saves everyone (the pet is about to be loaded fresh by another screen), then goes.

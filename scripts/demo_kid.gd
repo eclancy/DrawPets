@@ -376,6 +376,35 @@ func _play_at_home() -> void:
 	await _night()
 	await _bath()
 	await _walk()
+	await _tricks()
+
+
+## Tricks: draw a card for SPIN, then teach it with circles - four lessons at most.
+func _tricks() -> void:
+	_place().go_tricks()
+	await _wait(1.0)
+	var ts := game.screen as TrickScreen
+	await _shot("tricks")
+	ts.pick("spin")
+	await _wait(0.5)
+	var d := ts._drawing as DrawScreen
+	await _draw("card", d.canvas)
+	await _shot("trick_card")
+	await d.press_done()
+	await _wait(0.6)
+	await _shot("trick_show_card")
+	var circle := Tricks.swipe_path("circle", Vector2(300, 300), 240.0)
+	ts.swipe(Tricks.swipe_path("up", Vector2(300, 300), 240.0))  # the wrong swipe first
+	await _wait(1.0)
+	await _shot("trick_wrong")
+	for i in 6:
+		ts.swipe(circle)
+		await _wait(1.3)
+		if Tricks.knows(ts.pet, "spin"):
+			break
+	await _shot("trick_learned")
+	ts.go_home()
+	await _wait(1.0)
 
 
 ## A walk: off along the place, a glint in the grass, a dig, a present - and drawing what's in it.
@@ -739,6 +768,13 @@ func _draw(subject: String, c: DrawCanvas) -> void:
 				Vector2(230, 222), Vector2(270, 120), Vector2(340, 232), Vector2(392, 170),
 				Vector2(366, 452), Vector2(300, 452)]), UI.PALETTE[0], 10.0, 10)
 			await _fill(c, Vector2(280, 320), UI.PALETTE[7])
+		"card":
+			var swirl := PackedVector2Array()
+			for i in 40:
+				var t := i / 39.0
+				var a := t * TAU * 2.2
+				swirl.append(Vector2(256, 256) + Vector2(cos(a), sin(a)) * (20.0 + t * 150.0))
+			_line(c, swirl, UI.PALETTE[7], 22.0, 30)
 		"food":
 			_line(c, _ellipse(Vector2(256, 296), Vector2(130, 125)), UI.PALETTE[0], 12.0, 11)
 			await _fill(c, Vector2(256, 296), UI.PALETTE[2])

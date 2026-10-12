@@ -75,6 +75,8 @@ const ASSETS := {
 	"trick_wave": {"pivot": "center", "look": "a waving hand with motion lines"},
 	"trick_roll": {"pivot": "center", "look": "two arrows chasing round in a loop, sideways"},
 	"trick_bow": {"pivot": "center", "look": "a curtsy - a little figure bowing, or a bow-down arc"},
+	"trick_dance": {"pivot": "center", "look": "two music notes and a twirly ribbon"},
+	"icon_tricks": {"pivot": "center", "look": "a trick card with a star on it, a swoosh arrow beside it"},
 }
 
 ## Paper laid under every shape first, so a drawing is opaque like a cut-out sticker: a worn hat
@@ -195,6 +197,10 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_felt_marker(c, Color("#f7a8d0"), Color("#fbcbe3"), Color("#f290c0"), "glitter", 541)
 		"trick_spin":
 			_trick_spin(c)
+		"trick_dance":
+			_trick_dance(c)
+		"icon_tricks":
+			_icon_tricks(c)
 		"trick_jump":
 			_trick_jump(c)
 		"trick_sit":
@@ -1211,6 +1217,33 @@ static func _felt_marker(c: CanvasItem, body_col: Color, cap_col: Color, nib_col
 static func _trick_spin(c: CanvasItem) -> void:
 	var path := _arc(Vector2(256, 266), Vector2(150, 150), deg_to_rad(-40), deg_to_rad(222), 40)
 	_mark(c, _arrow(path, 64.0, 96.0, 164.0), Color("#9d8af4"), 611, 12.0)
+
+
+## Marker: two purple music notes bouncing beside a pink twirl of ribbon.
+static func _trick_dance(c: CanvasItem) -> void:
+	var twirl := PackedVector2Array()
+	for i in 40:
+		var t := i / 39.0
+		twirl.append(Vector2(70 + t * 200, 420 - t * 300) + Vector2(cos(t * TAU * 2.0), sin(t * TAU * 2.0)) * 40.0)
+	Crayon.marker_line(c, twirl, Color("#f58fb8").darkened(0.4), 30.0, 661, false)
+	Crayon.marker_line(c, twirl, Color("#f58fb8"), 18.0, 661, false)
+	var purple := Color("#9d8af4")
+	for n in [[Vector2(330, 360), 0], [Vector2(420, 300), 1]]:
+		var at: Vector2 = n[0]
+		var head := _turn(Crayon.ellipse(at, Vector2(44, 32), 20), at, deg_to_rad(-20))
+		_mark(c, _union([head, _capsule(at + Vector2(36, -8), at + Vector2(36, -190), 12)]), purple, 662 + int(n[1]), 11.0)
+	_mark(c, _capsule(Vector2(366, 170), Vector2(456, 110), 16), purple, 665, 11.0)
+
+
+## Marker: a trick card - paper with a pink border and a gold star - and a swoosh beside it.
+static func _icon_tricks(c: CanvasItem) -> void:
+	var card := _turn(Crayon.rounded_rect(Rect2(126, 70, 230, 330), 30), Vector2(240, 235), deg_to_rad(-10))
+	_mark(c, card, Color("#f7b6cc"), 671, 11.0)
+	var inner := _turn(Crayon.rounded_rect(Rect2(152, 96, 178, 278), 20), Vector2(240, 235), deg_to_rad(-10))
+	_mark(c, inner, Color("#fffdf6"), 672, 0.1)
+	_mark(c, Crayon.star(Vector2(240, 236), 78.0, 3), Color("#ffd166"), 673, 9.0)
+	var swoosh := _arc(Vector2(250, 260), Vector2(200, 170), deg_to_rad(20), deg_to_rad(110), 18)
+	_mark(c, _arrow(swoosh, 40.0, 70.0, 110.0), Color("#9d8af4"), 674, 10.0)
 
 
 ## Marker: a green arrow arcing up and over.

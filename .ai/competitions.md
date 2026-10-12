@@ -20,7 +20,7 @@ same rhythm and a kid can plan ("Wednesday's Tug-of-War, let's train strength"):
 |---|---|---|---|
 | Sun | Fun Fair | any | practise any event (1 star, 3 a day) |
 | Mon | Dash Race | speed | tap while the ring's hand is in the green for a burst; stamina holds the pace over the last 40% |
-| Tue | Trick Show | smarts | watch the trick cards, tap them back in order; a round longer each time, 5 rounds |
+| Tue | Trick Show | smarts | watch the trick cards, tap them back in order; a round longer each time, 5 rounds. The cards are the pet's own: every trick it knows, on the card the kid drew, topped up with the game's cards to four |
 | Wed | Tug-of-War Cup | strength | three-round knockout; tap HEAVE! when the ring is biggest |
 | Thu | Style Show | charm | dress to the day's theme word, then tap to pose in the moving spotlight |
 | Fri | Hop Hurdles | agility | tap to jump; agility sets how high and how long |

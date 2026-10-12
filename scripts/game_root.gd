@@ -273,6 +273,19 @@ func go_walk(home_id: String, pet_id: String) -> void:
 	show_screen(s)
 
 
+## Teaching one pet tricks (TrickScreen).
+func go_tricks(home_id: String, pet_id: String) -> void:
+	var h := profile.home(home_id)
+	if h.is_empty():
+		go_home()
+		return
+	var s := TrickScreen.new()
+	s.game = self
+	s.home = h
+	s.pet_id = pet_id
+	show_screen(s)
+
+
 ## A present from a walk has been drawn: a star (three a day), and home with the new thing.
 func present_drawn(item: Dictionary, home_id: String, pet_id: String) -> void:
 	if not item.is_empty():

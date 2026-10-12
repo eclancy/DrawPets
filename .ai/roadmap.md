@@ -77,6 +77,11 @@ sponge (scrub it off, shake dry, squeaky clean) and a brush (`pet-life.md`).
 A Walk button: one pet along its place, glints in the grass, a dig, a present - "What's inside?
 Draw it!" with a word already picked - three a day (`places.md`).
 
+## M1.12 - Trick cards (built)
+
+Seven tricks, each with its own swipe; the kid draws each trick's card; the right swipe teaches it,
+faster for a clever pet; the Trick Show uses the pet's own cards (`pet-life.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a
@@ -91,10 +96,9 @@ Draw it!" with a word already picked - three a day (`places.md`).
 Voices and recordings are built (M1.6). Still to do: call or clap by loudness to make a pet come
 over or wake up - always with the tap-the-ground way round it.
 
-## M4 - Tricks, photos and a journal
+## M4 - Photos and a journal
 
-Trick cards (drawn by the kid, taught by gesture - and used in the Trick Show), photo album and
-journal.
+A photo mode with an album, and a journal for each pet that writes itself.
 
 ## M5 - Visiting through ecec.dev
 

@@ -131,6 +131,27 @@ The **Bath** drawer has a **Sponge** ("soapy") and a **Brush** ("fluffy").
   sponge wakes a sleeping pet.
 - Brush a pet: pale glints and hearts, like petting - and a sleeper sleeps on.
 
+## Trick cards (built)
+
+**Tricks** (under Walk in a home) opens `TrickScreen` for one pet: a stage with the pet on it and
+seven cards beside it - **Sit, Jump, Spin, Roll over, Wave, Bow, Dance**.
+- Tap a blank card and **draw a symbol on it** - a swirl, a star, anything; it is only a
+  picture, and the game never looks at it (rule 4). The card keeps the drawing (`card_<trick>.png`
+  in the pet's folder).
+- Tap a card to hold it up, then **do its swipe on the stage**: sit = down, jump = up, spin = a
+  circle, roll over = sideways, wave = a zigzag, bow = a V, dance = a hill. The swipe to do is
+  shown as a moving dotted line. Only the swipe's shape is read (`Tricks.read_swipe`).
+- The right swipe teaches it: a quarter more each time, more for a clever pet
+  (`Tricks.lesson`: 0.25 + smarts/240), four lessons at most. While it is learning it sometimes
+  gets it, sometimes thinks about it. Each lesson trains smarts. The wrong swipe gets a puzzled
+  "?" and the right one shown again - never a telling-off.
+- Learned: it does the trick every time it is shown the card and the swipe, and **3 stars** the
+  first time (once per trick per pet).
+- Tricks are motions every creature has (`Creature.do_trick`): sit folds its legs half way,
+  roll over goes onto its back and over, bow leans down, wave waves its arms, spin turns round
+  and round, jump leaps, dance dances.
+- The **Trick Show** is played with the pet's own cards (`competitions.md`).
+
 ## Bedtime (built)
 
 At night (`places.md`) pets yawn and curl up asleep - legs folded under, head down, ears droopy -
@@ -175,8 +196,7 @@ From the pet panel (tap a pet in its home):
 
 ## Planned next
 
-1. **Trick cards**: the kid draws a symbol; doing the gesture with the card teaches the trick.
-2. **Photo mode** and a pet journal.
-3. **Voice** (optional, see above).
+1. **Photo mode** and a pet journal.
+2. **Voice** (optional, see above).
 
 Walks and presents are built - see `places.md`.

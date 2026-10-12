@@ -22,6 +22,7 @@ with a toast that says what it was for; a kid should always know what they did t
 | decorating | 1 | 3 a day |
 | a bath (scrubbed squeaky clean) | 1 | 2 a day |
 | a present from a walk, drawn | 1 | 3 a day |
+| a pet learns a trick | 3 | once per trick per pet |
 | a stat goes up a level | 3 per level | - |
 | a pet's trust goes up | 5 x hearts | - |
 | competitions (first try at a cup that day) | 1st/2nd/3rd/4th by cup | see `competitions.md` |
