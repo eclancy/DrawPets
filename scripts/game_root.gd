@@ -263,10 +263,47 @@ func _swap(node: Node) -> void:
 	get_viewport().canvas_transform = Transform2D.IDENTITY
 	screen = node
 	if node is Control:
-		UI.full_rect(node)
+		UI.fit_safe(node)
 	add_child(node)
 	move_child(node, 0)
 	_music_for(node)
+
+
+# --- A phone's camera hole ---------------------------------------------------------------------
+
+var _safe_check := 0.0
+
+
+## Where the screen is safe to put buttons, as insets in game units - from the phone (zero on a
+## computer, where the "safe area" is just the desktop without its taskbar).
+func _read_safe_insets() -> Vector4:
+	if not OS.has_feature("mobile"):
+		return Vector4.ZERO
+	var screen_px := Vector2(DisplayServer.screen_get_size())
+	var safe := DisplayServer.get_display_safe_area()
+	if screen_px.x <= 0.0 or safe.size.x <= 0:
+		return Vector4.ZERO
+	var k := get_viewport().get_visible_rect().size.x / screen_px.x
+	return Vector4(safe.position.x, safe.position.y, screen_px.x - safe.end.x, screen_px.y - safe.end.y) * k
+
+
+## Turning the phone round moves the camera hole to the other edge - keep everything clear of it.
+func _check_safe_area(delta: float) -> void:
+	_safe_check -= delta
+	if _safe_check > 0.0:
+		return
+	_safe_check = 0.5
+	var insets := _read_safe_insets()
+	if insets.is_equal_approx(UI.safe_insets):
+		return
+	UI.safe_insets = insets
+	if screen is Control:
+		UI.fit_safe(screen)
+	elif screen != null and screen.has_method("fit_safe_area"):
+		screen.fit_safe_area()
+	if _toasts != null:
+		_toasts.offset_left = insets.x
+		_toasts.offset_right = -insets.z
 
 
 ## Each kind of screen has its music: calm for drawing, bouncy for competitions, the home tune
@@ -364,7 +401,8 @@ func _build_toasts() -> void:
 
 # --- Screenshots -----------------------------------------------------------------------------
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_check_safe_area(delta)
 	_frame += 1
 	if _frame == _shot_at:
 		capture("shot")

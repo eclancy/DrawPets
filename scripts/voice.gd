@@ -252,8 +252,10 @@ static func version(target: Dictionary, which: Variant, key := "voice") -> Audio
 	var src := source_of(target, r)
 	var ck := "%s|%s|%s|%d|%s" % [target.get("id", ""), key, JSON.stringify(r), src.size(), str(which)]
 	if not _cache.has(ck):
+		var t0 := Time.get_ticks_usec()
 		var nudge: Dictionary = NUDGES[int(which)] if which is int else (SLEEPY if which == "sleepy" else ASK)
 		_cache[ck] = to_stream(render(src, _nudged(r, nudge)))
+		print("[timing] voice %d ms" % ((Time.get_ticks_usec() - t0) / 1000))
 		if _cache.size() > 120:
 			_cache.erase(_cache.keys()[0])
 	return _cache[ck]

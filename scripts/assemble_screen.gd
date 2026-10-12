@@ -9,6 +9,9 @@ extends Control
 
 var pet: Dictionary
 var on_done := Callable()
+## Making a pet: back to the last thing drawn, or stop (save it for later / throw it away).
+var on_back := Callable()
+var on_quit := Callable()
 
 var _area: Control
 var _stage: Node2D
@@ -44,7 +47,16 @@ func _ready() -> void:
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	side.add_theme_constant_override("separation", 12)
 	row.add_child(side)
-	side.add_child(UI.title("Put it together!", 36))
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	if on_back.is_valid():
+		top.add_child(UI.icon_button("tool_back", "Back", func(): on_back.call(), 28, Vector2(78, 64)))
+	var title := UI.title("Put it together!", 36)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(title)
+	if on_quit.is_valid():
+		top.add_child(UI.icon_button("icon_home", "Stop", func(): on_quit.call(), 28, Vector2(78, 64)))
+	side.add_child(top)
 	_hint = UI.label("Drag parts to move them. Tap a part to turn it, resize it, or flip it.", 22, true)
 	side.add_child(_hint)
 

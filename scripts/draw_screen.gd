@@ -41,6 +41,9 @@ var required: Array = []
 var on_addon := Callable()
 var on_remove_addon := Callable()
 var on_placed := Callable()
+## Just "where does it go?" for this type, on `start_image` - no crayons, no Done: adding a part
+## to a pet that is already made. Cancel calls `on_done` with {}.
+var place_only := ""
 var on_back := Callable()
 var on_quit := Callable()
 ## Fixing a part: the drawing to start from, its dot, and {mode, mask} if it had shiny strokes.
@@ -97,6 +100,8 @@ func _ready() -> void:
 		top.add_child(UI.icon_button("icon_home", "Stop", func(): on_quit.call(), 28, Vector2(78, 64)))
 	if step_text != "" or top.get_child_count() > 1:
 		side.add_child(top)
+	else:
+		top.free()
 	side.add_child(UI.label(prompt, 22, true))
 	_message = UI.label("", 19, true)
 	_message.add_theme_color_override("font_color", Color("#d0482a"))
@@ -112,7 +117,7 @@ func _ready() -> void:
 	place_row.add_theme_constant_override("separation", 8)
 	_place_go = UI.icon_button("tool_done", "Draw it!", press_place_done, 34, Vector2(150, 70))
 	place_row.add_child(_place_go)
-	place_row.add_child(UI.icon_button("tool_back", "Cancel", end_placing, 34, Vector2(110, 70)))
+	place_row.add_child(UI.icon_button("tool_back", "Cancel", _cancel_placing, 34, Vector2(110, 70)))
 	_place_box.add_child(place_row)
 	side.add_child(_place_box)
 	canvas.tapped.connect(place_at)
@@ -199,6 +204,11 @@ func _ready() -> void:
 		var at := (dot - start_pivot).clamp(Vector2.ZERO, room)
 		canvas.load_drawing(start_image, at, start_shine.get("mask"), start_shine.get("mode", ""))
 		canvas.set_dot(at + start_pivot, show_dot)
+	if place_only != "":
+		finish.visible = false
+		if _addon_box != null:
+			_addon_box.visible = false
+		begin_placing(place_only)
 
 
 ## The add-on buttons: a part picture (or the kid's own drawing once added, with how many),
@@ -347,6 +357,8 @@ func begin_placing(type: String, spots: Array = []) -> void:
 	_place_box.visible = true
 	for c in _crayon_box:
 		c.visible = false
+	if place_only != "":
+		_place_label.text = "Where does it go? Tap the drawing once for each one, then Draw it!"
 	_say("")
 	_update_place()
 
@@ -384,6 +396,12 @@ func press_place_done() -> void:
 	on_placed.call(type, spots)
 
 
+func _cancel_placing() -> void:
+	end_placing()
+	if place_only != "":
+		_finish({})
+
+
 func end_placing() -> void:
 	_place_type = ""
 	_spots.clear()
@@ -391,7 +409,7 @@ func end_placing() -> void:
 	canvas.set_marks([])
 	_place_box.visible = false
 	for c in _crayon_box:
-		c.visible = true
+		c.visible = place_only == ""
 
 
 func is_placing() -> bool:

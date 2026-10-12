@@ -143,6 +143,23 @@ static func full_rect(c: Control) -> Control:
 	return c
 
 
+## The edges of the screen nothing important should sit in - a phone's camera hole, a rounded
+## corner - in game units: x left, y top, z right, w bottom. GameRoot keeps it up to date (it
+## moves to the other side when the phone is turned round). Zero on a computer.
+static var safe_insets := Vector4.ZERO
+
+
+## Fills the screen except the unsafe edges: menus and buttons go in this; a place's world and
+## a paper background can still run to the very edge underneath.
+static func fit_safe(c: Control) -> Control:
+	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	c.offset_left = safe_insets.x
+	c.offset_top = safe_insets.y
+	c.offset_right = -safe_insets.z
+	c.offset_bottom = -safe_insets.w
+	return c
+
+
 ## Throws away a step or panel from inside one of its own button presses. It stays in the tree,
 ## hidden and switched off, until the frame ends. On a phone a lifted finger arrives twice - as a
 ## mouse release (which presses the button) and then as a touch release aimed at the same button -

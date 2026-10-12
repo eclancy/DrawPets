@@ -41,7 +41,7 @@ const ROSTER := {
 		"layout": {"eye": {"anchor": [0.7, 0.31]}, "mouth": {"anchor": [0.74, 0.64]}}},
 	"clover": {"name": "Clover", "look": "little spotted fawn with flowery antlers",
 		"parts": {"head": 1, "eye": 2, "mouth": 1, "ear": 2, "horn": 2, "leg": 4, "tail": 1},
-		"layout": {"eye": {"anchor": [0.557, 0.152], "spread": 0.12}, "mouth": {"anchor": [0.823, 0.334]},
+		"layout": {"eye": {"anchor": [0.555, 0.191], "spread": 0.12}, "mouth": {"anchor": [0.822, 0.419]},
 			"ear": {"anchor": [0.08, 0.3], "far": [0.66, 0.0]}, "horn": {"anchor": [0.3, 0.3], "far": [0.28, 0.0]}}},
 	"tank": {"name": "Tank", "look": "chunky blue-grey rhino-armadillo with one big horn and stompy feet",
 		"parts": {"head": 1, "eye": 1, "mouth": 1, "horn": 1, "leg": 4, "foot": 1, "tail": 1},
@@ -844,25 +844,24 @@ static func _clover_body(c: CanvasItem) -> void:
 	Crayon.marker_line(c, body, INK, W_BODY, 1430)
 
 
-## A tall slender neck standing straight up from the dot, the little head held high on top,
-## turned three-quarters to the right: its cream muzzle pokes out to the right, the nose on its
-## front.
+## A slender neck standing straight up from the dot, the little head held high on top, turned
+## three-quarters to the right: its cream muzzle pokes out to the right, the nose on its front.
 static func _clover_head(c: CanvasItem) -> void:
-	var neck_path := _bez(Vector2(200, 420), Vector2(203, 340), Vector2(210, 262), Vector2(226, 196), 10)
+	var neck_path := _bez(Vector2(200, 420), Vector2(203, 370), Vector2(210, 320), Vector2(226, 272), 10)
 	var neck := _tube(neck_path, 25.0, 21.0)
-	var skull := Crayon.blob(Vector2(240, 146), Vector2(72, 62), 1431, 20, 0.04)
-	var muzzle := Crayon.blob(Vector2(298, 184), Vector2(46, 34), 1432, 14, 0.05)
+	var skull := Crayon.blob(Vector2(240, 222), Vector2(72, 62), 1431, 20, 0.04)
+	var muzzle := Crayon.blob(Vector2(298, 260), Vector2(46, 34), 1432, 14, 0.05)
 	var head := _merge_all([skull, neck, muzzle])
 	_fill(c, head, CL_TAN, 1433)
 	# a cream throat down the front of the neck
-	var throat := _bez(Vector2(222, 430), Vector2(224, 340), Vector2(232, 262), Vector2(254, 200), 10)
+	var throat := _bez(Vector2(222, 430), Vector2(224, 378), Vector2(232, 328), Vector2(254, 276), 10)
 	_clip_fill(c, _tube(throat, 9.0, 12.0), head, CL_CREAM, 1439, 10.0)
-	_clip_fill(c, Crayon.blob(Vector2(306, 192), Vector2(42, 30), 1434, 12, 0.06), head, CL_CREAM, 1435)
-	_clip_fill(c, Crayon.blob(Vector2(240, 184), Vector2(17, 11), 1436, 10, 0.08), head, CL_PINK, 1437, 10.0)
+	_clip_fill(c, Crayon.blob(Vector2(306, 268), Vector2(42, 30), 1434, 12, 0.06), head, CL_CREAM, 1435)
+	_clip_fill(c, Crayon.blob(Vector2(240, 260), Vector2(17, 11), 1436, 10, 0.08), head, CL_PINK, 1437, 10.0)
 	Crayon.marker_line(c, head, INK, W_BODY, 1438)
-	var nose := Crayon.blob(Vector2(332, 178), Vector2(15, 12), 1440, 10, 0.05)
+	var nose := Crayon.blob(Vector2(332, 254), Vector2(15, 12), 1440, 10, 0.05)
 	c.draw_colored_polygon(nose, INK)
-	c.draw_circle(Vector2(327, 174), 3.5, Color(1, 1, 1, 0.8))
+	c.draw_circle(Vector2(327, 250), 3.5, Color(1, 1, 1, 0.8))
 
 
 ## Big shiny tall ovals - a fawn's dark eyes - with two glints and long lashes sweeping back.
@@ -1134,17 +1133,38 @@ static func _waffles_ear(c: CanvasItem) -> void:
 	Crayon.marker_line(c, ear, INK, W_EAR, 1699)
 
 
-## A shaggy mop of locks, a rounded dome of them, all flopping forward towards its eyes.
+## A fluffy, curly sheepdog mop: lots of little round curls clumped into a cloud, piled up on top
+## and flopping forward (right) over its brow. Drawn curl by curl, back to front, so each one
+## shows as its own scallop, then gone round the whole clump.
 static func _waffles_hair(c: CanvasItem) -> void:
-	var tips := [Vector2(168, 384), Vector2(206, 330), Vector2(258, 302), Vector2(316, 300),
-		Vector2(372, 318), Vector2(420, 352), Vector2(452, 398)]
-	var curves := []
-	for i in tips.size():
-		var tip: Vector2 = tips[i]
-		var base := Vector2(206 + i * 26, 446)
-		var lean := 1.0 if i > 0 else -1.0
-		curves.append([base, base + Vector2(-6 * lean, -66), tip + Vector2(-40 * lean, 4), tip])
-	_locks(c, curves, WF_WHITE, WF_STRAND, 1701, 36.0, 20.0)
+	var curls := [
+		[Vector2(200, 350), 30.0], [Vector2(236, 318), 32.0], [Vector2(280, 300), 33.0],
+		[Vector2(326, 298), 33.0], [Vector2(370, 312), 32.0], [Vector2(406, 336), 30.0],
+		[Vector2(178, 394), 30.0], [Vector2(222, 372), 32.0], [Vector2(266, 348), 33.0],
+		[Vector2(312, 342), 34.0], [Vector2(356, 352), 33.0], [Vector2(398, 374), 32.0],
+		[Vector2(434, 398), 30.0], [Vector2(244, 412), 30.0], [Vector2(290, 396), 32.0],
+		[Vector2(336, 394), 32.0], [Vector2(380, 410), 31.0], [Vector2(420, 432), 29.0],
+		[Vector2(452, 446), 26.0]]
+	var shapes := []
+	for i in curls.size():
+		var at: Vector2 = curls[i][0]
+		var r: float = curls[i][1]
+		shapes.append(Crayon.blob(at, Vector2(r, r * 0.94), 1701 + i * 3, 14, 0.05))
+	var mop := _merge_all(shapes)
+	_fill(c, mop, WF_WHITE, 1760)
+	for i in shapes.size():
+		var at: Vector2 = curls[i][0]
+		var r: float = curls[i][1]
+		var curl: PackedVector2Array = shapes[i]
+		_fill(c, curl, WF_WHITE, 1702 + i * 3, 16.0)
+		Crayon.marker_line(c, curl, INK, 6.0, 1703 + i * 3)
+		# a little curl mark inside each one
+		var swirl := PackedVector2Array()
+		for k in 9:
+			var a := PI * 0.75 + k / 8.0 * PI * 1.2
+			swirl.append(at + Vector2(cos(a), sin(a)) * r * 0.48 + Vector2(r * 0.08, r * 0.1))
+		Crayon.marker_line(c, swirl, WF_STRAND.darkened(0.2), 4.0, 1704 + i * 3, false)
+	Crayon.marker_line(c, mop, INK, W_HAIR, 1761)
 
 
 static func _waffles_leg(c: CanvasItem) -> void:

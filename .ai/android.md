@@ -28,7 +28,7 @@ so far has been tested only on Windows with a mouse standing in for a finger.
 | **Android SDK**: cmdline-tools, platform-tools (adb), build-tools 35.0.1, platform 35 | `C:\Users\ericc\Android\Sdk` | installed |
 | **Android export template** `android_debug.apk` (CRC-checked) | `%APPDATA%\Godot\export_templates\4.5.1.stable.mono\` | installed |
 | the debug keystore | `%APPDATA%\Godot\keystores\debug.keystore` | made |
-| the editor's paths | Editor Settings > Export > Android > Java SDK Path, Android SDK Path | **Eric sets these in the editor** |
+| the editor's paths | Editor Settings > Export > Android > Java SDK Path, Android SDK Path | set (2026-10-11) |
 
 What was learned setting it up:
 - **The SDK is not under AppData on purpose.** Windows redirects new folders that the Claude
@@ -53,7 +53,7 @@ What was learned setting it up:
   one in its scratchpad (`godot_cfg/Godot/`: `editor_settings-4.5.tres` with the two paths and the
   real keystore path, plus `export_templates/4.5.1.stable.mono/`):
   `APPDATA=<that folder> "$GODOT_BIN" --headless --path . --export-debug "Android" build/drawpets-debug.apk`.
-  Once the paths are set in the editor, the plain command works.
+  The paths are set now, so the plain command works too (and the editor's own export).
 - **The silent export failure:** Godot refuses to export for Android unless
   `rendering/textures/vram_compression/import_etc2_astc` is on, and from the command line it says
   only ".NET on Android is experimental" (the editor shows a "Fix Import" button instead). It is
@@ -173,6 +173,15 @@ debugging > Pair device; `adb mdns services` finds the phone's address and ports
 - **Fixed:** the pet card was taller than the room above the drawer bar (Fix, Voice, Move and Let
   go were under it) - now two columns, and drawn above the bar.
 - The screen is 2424 x 1080 (2.24:1), so the 1280 x 720 design widens to about 1616 x 720.
+- **The camera hole** is an 84 px circle centred on one short edge - in landscape, the middle of
+  the left or right edge, whichever way the phone is held; Android reports a 173 px unsafe band
+  on that side. The game draws edge to edge, so GameRoot reads `DisplayServer.get_display_safe_area()`
+  twice a second (turning the phone moves the hole) and keeps every menu and the home's buttons
+  inside it (`UI.fit_safe`, `UI.safe_insets`); a place's world still runs to the edge. The extra
+  width of a 2.24:1 screen means this costs nothing. Zero on a computer.
+- **Timing**: `[timing] fill`, `[timing] voice` and `[timing] home` lines in the log
+  (`adb logcat -s godot`). On the PC a fill takes 84-132 ms and a voice 5-32 ms; a fill over
+  ~300 ms on a phone is the sign to move the flood fill out of GDScript.
 - **Hardened:** springy parts (ears, horns, antennae) took one step per frame, so a long frame
   (a voice being worked out, a screen loading) could overshoot them - now small fixed steps,
   capped. Prompted by "the pig's ears are all over the place"; not yet confirmed as the cause.

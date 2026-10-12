@@ -388,7 +388,11 @@ func fill_at(at: Vector2) -> void:
 	# the whole zoomed sheet, so inside an eye it is the kid's own lines that hold the colour in.
 	if blockers != null and blockers.get_pixelv(start).a > 0.5 and sheet_image.get_pixelv(start).a < 0.5:
 		blockers = null
+	var t0 := Time.get_ticks_usec()
 	var result := flood(sheet_image, start, FILL_GAP, blockers)
+	# Read off a phone with `adb logcat -s godot` - the bucket is GDScript, the slow case on a
+	# cheap tablet (.ai/android.md).
+	print("[timing] fill %d ms" % ((Time.get_ticks_usec() - t0) / 1000))
 	_busy = false
 	if result.get("leaked", false):
 		message.emit("That would colour the whole page! Fill INSIDE a closed shape.")

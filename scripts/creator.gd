@@ -42,9 +42,20 @@ var _addon_spots: Array = []
 var _markers_used := {}
 var _after_drawing := false
 var _dialog: Control
+## Stop, for the steps after drawing (name, personality, voice, favourites, its home) - they are
+## shared screens with no Stop of their own.
+var _stop_button: Button
 
 
 func _ready() -> void:
+	_stop_button = UI.icon_button("icon_home", "Stop", _ask_quit, 28, Vector2(78, 64))
+	_stop_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_stop_button.offset_left = -92
+	_stop_button.offset_right = -14
+	_stop_button.offset_top = 12
+	_stop_button.offset_bottom = 76
+	_stop_button.visible = false
+	add_child(_stop_button)
 	if has_draft():
 		_offer_draft()
 	else:
@@ -63,6 +74,19 @@ func _show(screen: Control, keep := false) -> void:
 	if screen.get_parent() == null:
 		add_child(UI.full_rect(screen))
 	screen.visible = true
+	if _stop_button != null:
+		move_child(_stop_button, -1)
+
+
+## Stop shows on the steps after drawing - not on Put it together (it has its own) and not while
+## a favourite snack or toy is being drawn, where it would sit on the prompt.
+func _process(_delta: float) -> void:
+	if _stop_button == null:
+		return
+	var show := _after_drawing and not (current is AssembleScreen)
+	if current is ItemPickerScreen and (current as ItemPickerScreen)._content is ItemMaker:
+		show = false
+	_stop_button.visible = show
 
 
 func _pick_parts() -> void:
@@ -365,6 +389,21 @@ func _back() -> void:
 	_autosave()
 
 
+## Back from putting it together: to the last thing drawn, drawing and add-ons and all. (Moving
+## parts about here is not kept - they are laid out afresh when the kid comes back.)
+func _back_from_assemble() -> void:
+	if _done_hosts.is_empty():
+		return
+	var e: Dictionary = _done_hosts.pop_back()
+	_rebuild_pet()
+	_host_type = e["type"]
+	var pending: Dictionary = e["pending"]
+	for t in pending:
+		pending[t].erase("layout")
+	_open_host({"image": e["image"], "pivot": e["pivot"], "shine": e["shine"], "pending": pending})
+	_autosave()
+
+
 ## The host sheet as it is now: {image, pivot, shine, pending} - or just its add-ons when the
 ## page is empty. An add-on sheet that is open is folded in as it is.
 func _host_state() -> Dictionary:
@@ -637,6 +676,8 @@ func _assemble() -> void:
 	var s := AssembleScreen.new()
 	s.pet = pet
 	s.on_done = _details
+	s.on_back = _back_from_assemble
+	s.on_quit = _ask_quit
 	_show(s)
 
 

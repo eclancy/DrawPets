@@ -90,6 +90,7 @@ var _tab_buttons := {}
 var _panel: PetPanel
 var _panel_pet: Creature
 var _hint: Label
+var _hud_root: Control
 var _hint_time := 8.0
 var _save_in := 10.0
 var _ai_in := 1.5
@@ -97,6 +98,7 @@ var _squeak_in := 0.0
 
 
 func _ready() -> void:
+	var t0 := Time.get_ticks_usec()
 	_place = Places.get_place(home["place"])
 	var painter := PlacePainter.new()
 	painter.place_id = home["place"]
@@ -145,6 +147,7 @@ func _ready() -> void:
 	_build_hud()
 	_drop_daily_snacks()
 	_greet()
+	print("[timing] home %d ms (%d pets)" % [(Time.get_ticks_usec() - t0) / 1000, creatures.size()])
 
 
 func _focus_creature() -> Creature:
@@ -185,7 +188,8 @@ func _build_hud() -> void:
 	add_child(hud)
 	var root := Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(UI.full_rect(root))
+	hud.add_child(UI.fit_safe(root))
+	_hud_root = root
 
 	var home_btn := UI.icon_button("icon_home", "Home", func(): game.go_home(), 40, Vector2(92, 84))
 	home_btn.position = Vector2(12, 12)
@@ -1666,6 +1670,12 @@ func _on_emote(kind: String, at: Vector2) -> void:
 	e.kind = kind
 	e.position = at
 	add_child(e)
+
+
+## The buttons and drawers keep clear of a phone's camera hole; the place itself runs edge to edge.
+func fit_safe_area() -> void:
+	if _hud_root != null:
+		UI.fit_safe(_hud_root)
 
 
 func save_now() -> void:

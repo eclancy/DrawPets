@@ -17,6 +17,7 @@ var current: Control
 var _hint := ""
 ## Shiny markers used while fixing: mode -> true. Used up on Done.
 var _markers_used := {}
+var _place_screen: DrawScreen
 
 
 func _ready() -> void:
@@ -262,28 +263,67 @@ func add_type(host: String) -> void:
 	_show(root)
 
 
+## Adding a part: first, where does it go? The drawing it goes on is shown, the kid taps once
+## for each copy, then draws it on a sheet zoomed in on the first tap - the same as making a pet.
 func add_draw(host: String, type: String) -> void:
+	var hp: Dictionary = PetBuilder.parts_of(pet, host)[0]
+	var s := DrawScreen.new()
+	s.subject = host
+	s.prompt = "Adding %s to %s." % [PartTypes.info(type)["plural"].to_lower(), pet["name"]]
+	s.step_text = "Adding to %s" % pet["name"]
+	s.place_only = type
+	s.start_image = pet["_img"][hp["image"]]
+	s.start_pivot = PetBuilder.v2(hp["pivot"])
+	s.dot = PartTypes.BODY["dot"] if host == "body" else PartTypes.info(host)["dot"]
+	s.on_placed = _draw_addon.bind(host, s)
+	s.on_done = func(_r: Dictionary): _hub()
+	_place_screen = s
+	_show(s)
+
+
+## Where the parts of a type would go by themselves on the "where does it go?" page, in sheet
+## pixels - for the demo kid, who taps where a kid most likely would.
+func suggest_spots(type: String, host: String) -> Array:
+	var hp: Dictionary = PetBuilder.parts_of(pet, host)[0]
+	var origin: Vector2 = _place_screen.canvas.dot - PetBuilder.v2(hp["pivot"])
+	var out := []
+	for sp in PetBuilder.layout_on_host(type, host, int(PartTypes.info(type).get("count", 1)),
+			pet["_img"][hp["image"]], Transform2D(0.0, Vector2.ONE, 0.0, origin), 1.0,
+			not PetBuilder.has_type(pet, "head")):
+		out.append(sp["pos"])
+	return out
+
+
+## The spots are tapped: draw it, zoomed in on the first one, and it goes on every spot.
+func _draw_addon(type: String, spots: Array, host: String, place: DrawScreen) -> void:
+	var hp: Dictionary = PetBuilder.parts_of(pet, host)[0]
+	var origin: Vector2 = place.canvas.dot - PetBuilder.v2(hp["pivot"])
+	var px := []
+	for sp in spots:
+		px.append((sp as Vector2) - origin)
 	var info := PartTypes.info(type)
 	var s := DrawScreen.new()
 	s.subject = type
-	s.prompt = info["prompt"]
+	s.prompt = info["prompt"] + (" It goes on all %d spots." % spots.size() if spots.size() > 1 else "")
 	s.step_text = "Adding to %s" % pet["name"]
-	s.ghost = PetBuilder.ghost(pet, type, host)
+	s.ghost = PetBuilder.ghost_on(pet["_img"][hp["image"]], float(hp["draw_scale"]) * float(hp["scale"]),
+		type, host, not PetBuilder.has_type(pet, "head"), px[0])
 	s.dot = info["dot"]
 	s.show_dot = true
 	s.can_skip = true
 	s.skip_text = "Back"
-	s.count = int(info.get("count", 1))
-	s.count_max = int(info["max"])
 	s.markers = _markers()
-	s.on_done = func(r: Dictionary):
-		if r.is_empty():
-			_hub()
-			return
-		PetBuilder.add_parts(pet, type, int(r["count"]), r["image"], r["pivot"], _spend_marker(r), host)
-		_hint = "Added! Tap Move parts to put it just where you want it."
-		_preview(type)
+	s.on_done = _addon_drawn.bind(type, host, px)
 	_show(s)
+
+
+func _addon_drawn(r: Dictionary, type: String, host: String, px: Array) -> void:
+	if r.is_empty():
+		_hub()
+		return
+	PetBuilder.add_parts(pet, type, px.size(), r["image"], r["pivot"], _spend_marker(r), host, {"spots": px})
+	_hint = "Added! Tap Move parts to nudge it if you like."
+	_preview(type)
 
 
 ## The pet shows off the part just drawn (PartPreview), then it is back to the list.

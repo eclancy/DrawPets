@@ -255,6 +255,13 @@ func _fix_pet() -> void:
 	await _wait(0.5)
 	fix.add_draw("head", "horn")
 	await _wait(0.5)
+	var where := fix.current as DrawScreen
+	for spot in fix.suggest_spots("horn", "head"):
+		where.place_at(spot)
+	await _wait(0.2)
+	await _shot("fix_place_horn")
+	where.press_place_done()
+	await _wait(0.5)
 	var a := fix.current as DrawScreen
 	await _draw("horn", a.canvas)
 	await _shot("fix_add_horn")

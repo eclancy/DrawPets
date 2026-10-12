@@ -42,6 +42,9 @@ on, so a kid is never asked about horns before there is a head to put them on.
    as it is on Save or when the app goes to the background. Starting a new pet offers to finish
    it. Android's back gesture does what Back does, never dropping a half-drawn pet.
 7. **Put it together** (`AssembleScreen`) - drag, turn, resize, flip, layer, copy, remove.
+   Back reopens the last thing drawn (parts moved here are laid out afresh); Stop as above.
+   The steps after it carry a Stop the creator floats top-right (hidden while a favourite
+   snack or toy is being drawn).
    Dropping an add-on on a head's, arm's or leg's ink re-hangs it there.
 8. Name, size, favourite place; two personality words; favourite food and toy; where it lives.
 
@@ -170,7 +173,8 @@ zoom in its place, toy and food scale, and - when voices land - pitch.
 
 ## Fixing a pet later
 
-`FixScreen` (see `pet-life.md`) reuses the same pieces: `DrawCanvas.load_drawing` starts a sheet
+`FixScreen` (see `pet-life.md`) reuses the same pieces - adding a part asks where it goes
+first, on the drawing it goes on (`DrawScreen.place_only`), then draws it zoomed in there: `DrawCanvas.load_drawing` starts a sheet
 from the existing drawing (undo stops at it), placed so its red dot - its joint - lands on the
 sheet's dot, and `PetBuilder.replace_drawing` swaps the drawing for every part using it while
 keeping their joints, so nothing moves. Adding uses `add_parts` with an explicit host; a second,
