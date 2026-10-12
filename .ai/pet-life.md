@@ -7,10 +7,11 @@ need, stat, activity, reaction or reward.
 
 | Nintendogs | DrawPets | status |
 |---|---|---|
-| pet the dog | rub a pet: hearts, eyes shut, charm and trust | built |
+| pet the dog | rub its head (eyes shut, leans in), its body (wiggles), a belly rub; tap to say hi | built |
 | food bowl | drag a snack out of the Food drawer; the hungriest pet munches it | built |
-| ball / frisbee | fling a toy; everyone chases; the fastest brings it back | built |
-| rope tug | hold a stretchy toy by a pet's mouth and pull | built |
+| ball / frisbee | fling it; everyone chases; the catcher brings it back and holds it out | built |
+| rope tug | hold a rope out; a pet comes for the other end; pull | built |
+| squeaky toys, chew toys, plushies | each toy plays its own way, by its words (below) | built |
 | toy physics | from the toy's words: bouncy, floaty, rolly, heavy, spinny... | built |
 | the room | a home to decorate: furniture drawn or from the kit, used by its words | built |
 | accessories | clothes from the shop or drawn, dragged onto a pet | built |
@@ -66,8 +67,7 @@ Kids never type a description - they tap words, and the words are what the game 
 (`Words`). A toy drawn as three wobbly lines still bounces exactly the way the kid meant.
 
 - **Toys** (2 words): bouncy, stretchy, floaty, rolly, squeaky, soft, heavy, chewy, puzzly,
-  spinny, glowy. Physics and what happens after the fetch both come from them: a soft toy is
-  carried to a cozy bed for a nap, a chewy one is chewed, a puzzly one pops out a treat.
+  spinny, glowy. How it flies AND how it is played with both come from them - see below.
 - **Food** (2): sweet, crunchy, juicy, spicy, healthy, fishy, meaty, buggy, cold, chewy,
   weird. A pet celebrates its favourite and is happy with anything sharing its words.
 - **Furniture** (2): cozy (naps), bouncy (bounces), climbable (perches), hidey (hides),
@@ -79,6 +79,38 @@ Kids never type a description - they tap words, and the words are what the game 
 - **Places** carry words too (hot, snowy, inside...). A pet loves its favourite place and
   likes places that share its words.
 
+## Every toy plays its own way (built)
+
+A toy's words decide what it is for (`Words.toy_play`): the first of stretchy, soft, puzzly,
+heavy, (bouncy, rolly, floaty, spinny), chewy, squeaky that it has. Nothing reads the drawing.
+
+| play | words | what the kid does | what the pet does | trains |
+|---|---|---|---|---|
+| **fetch** | bouncy, rolly, floaty, spinny (or none) | flick it | everyone chases, leaping for it in the air; the catcher brings it back to where it was thrown from and holds it out - take it and throw again. Put down, a pet brings it to you | speed, agility in the air, its words |
+| **tug** | stretchy | hold it out | the nearest pet comes for the other end (no need to find its mouth), then pulls back with its strength, shaking its head. Flung, it is fetched and held out end-first: grab it to pull | strength |
+| **cuddle** | soft | put it down (on a pet, or near one) | hugs it, eyes shut, hearts - then takes it to bed on something cozy for a nap | charm, stamina |
+| **chew** | chewy (and nothing above) | put it down | lies down with it for a long chew. A fetched chewy toy nobody takes is chewed too | stamina |
+| **squeak** | squeaky (and nothing above) | put it down, tap it | squeak! every pet looks; the nearest pounces on it and bats it away - tap again. Flung, it is chased and squeaked to bits in the catcher's mouth | agility, charm |
+| **puzzle** | puzzly | roll it | noses it along, three goes, until the treat falls out - and eats it | smarts, food |
+| **push** | heavy | put it down | goes round behind it and leans in, shoving it along (a rolly one rolls) | strength |
+
+Any toy lying about can be **picked up again** (drag it, or hold a finger on it) and **tapped**
+(it hops; a squeaky one squeaks). The starter kit has one of each: ball, flying disc, stick
+(fetch), rope (tug), teddy (cuddle), chew bone (chew), squeaky duck (squeak), treat ball
+(puzzle), big log (push). A toy coming out of the drawer says once what to do with it.
+
+## Petting (built)
+
+Touch is the whole of it - a finger, or a mouse standing in for one.
+- **Rub its head** (its head, or its face if it has no head): eyes shut, head tipped into your
+  hand, leaning towards your finger.
+- **Rub its body**: a happy wiggle, tail going. **Keep rubbing** - four hearts without lifting
+  your finger - and it **rolls over for a belly rub**, legs kicking; belly rubs train charm faster.
+  Lift your finger and it rolls back a moment later.
+- **Rub fast** and it is a tickle: it giggles.
+- **Tap it**: it looks up, hops and says hello, and its card opens (how it is doing, its stats).
+- Every so far of rubbing is a heart (trust, charm, a little fun).
+
 ## Favourites are mechanics, not labels
 
 - **Favourite food** always gets a celebration.
@@ -86,12 +118,27 @@ Kids never type a description - they tap words, and the words are what the game 
 - **Favourite place**: can be any place, even a locked one - a pet that dreams of the Moon is a
   reason to save up for it.
 
-## Microphone - optional (decided)
+## Voices and the microphone (built)
 
-The mic is **off until turned on** in settings, and every mic feature has a touch equivalent.
-Record the creature's own noise (or keep the generated one), played back pitched by size and
-mood; call or clap by loudness to make it come over or wake up. No speech recognition.
-`RECORD_AUDIO` is asked for only when the mic is switched on. Recordings never leave the device.
+Every pet has a voice the kid makes: a base sound shaped with sliders, or their own recording of
+up to 3 seconds - and it talks with small variations every time. See `audio-direction.md`. The mic
+is **off until turned on** (Settings, or a yes on first Record), every mic feature has a touch way
+round it, no speech recognition, and recordings never leave the device. Still planned: calling or
+clapping by loudness to make a pet come over or wake up.
+
+## Fixing and letting go (built)
+
+From the pet panel (tap a pet in its home):
+- **Fix** (`FixScreen`): redraw a part starting from the old drawing (draw on it, rub out, or
+  clear and start again - it keeps its joints, so it stays where it was), add a part to its body,
+  head, arms or legs, take a part off (and everything on it), move parts, and change its name,
+  size, place, personality, favourites and voice. Done saves; "Forget changes" leaves the pet as
+  it was. A creature always keeps its body, eyes and a mouth.
+- **Voice**: straight to the sound maker.
+- **Move**: to another home with a free room, or build a new one.
+- **Let go** (`LetGoScreen`): the pet goes off "to live in the wild" - gentle, and final. The
+  button must be **held for two seconds**, so a stray tap never sends a pet away. It waves, says
+  goodbye and wanders off, and its folder is deleted. An adopted pet goes back to the shop.
 
 ## Planned next
 

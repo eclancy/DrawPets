@@ -15,13 +15,38 @@ const TOY := {
 	"stretchy": {"hint": "for tug of war", "stat": "strength"},
 	"floaty": {"hint": "glides a long way", "stat": "agility"},
 	"rolly": {"hint": "rolls and rolls", "stat": "speed"},
-	"squeaky": {"hint": "squeak squeak!", "stat": "charm"},
-	"soft": {"hint": "it naps with it", "stat": "charm"},
+	"squeaky": {"hint": "tap it to squeak", "stat": "charm"},
+	"soft": {"hint": "for cuddles", "stat": "charm"},
 	"heavy": {"hint": "hard work to push", "stat": "strength"},
 	"chewy": {"hint": "a long happy chew", "stat": "stamina"},
 	"puzzly": {"hint": "a treat hides inside", "stat": "smarts"},
 	"spinny": {"hint": "spins in the air", "stat": "agility"},
 	"glowy": {"hint": "sparkles in the dark", "stat": ""},
+}
+
+## What a toy is FOR. The first of these words a toy has decides how a pet plays with it, so a
+## rope (stretchy, chewy) is for tug of war and a bouncy chewy thing is fetched, then chewed. A
+## toy with none of them - only glowy, say - is a fetch toy.
+##   fetch   flick it: everyone chases, the catcher brings it back and holds it out to you
+##   tug     hold it out: a pet grabs the other end and pulls
+##   cuddle  put it down: a pet hugs it, then naps with it on something cozy
+##   chew    put it down: a pet lies down with it for a long chew
+##   squeak  put it down and tap it: squeak! and the pets pounce on it
+##   puzzle  roll it: a pet noses it about until the treat falls out
+##   push    put it down: a pet leans into it and shoves it along
+const TOY_PLAY := [["stretchy", "tug"], ["soft", "cuddle"], ["puzzly", "puzzle"], ["heavy", "push"],
+	["bouncy", "fetch"], ["rolly", "fetch"], ["floaty", "fetch"], ["spinny", "fetch"],
+	["chewy", "chew"], ["squeaky", "squeak"]]
+
+## Shown when a toy comes out of the drawer, so a kid knows what to do with it.
+const PLAY_HINT := {
+	"fetch": "Flick it to throw it - fetch!",
+	"tug": "Hold it out - someone will grab the other end!",
+	"cuddle": "Put it down - someone wants a cuddle.",
+	"chew": "Put it down for a good long chew.",
+	"squeak": "Put it down, then tap it to squeak!",
+	"puzzle": "Roll it over - there's a treat inside!",
+	"push": "Put it down - who's strong enough to push it?",
 }
 
 ## What a food is like. Eating one gives a training boost to its stat for a while, and every
@@ -106,6 +131,14 @@ static func hint(category: String, word: String) -> String:
 static func stat_of(category: String, word: String) -> String:
 	var entry = table(category).get(word, {})
 	return entry.get("stat", "") if entry is Dictionary else ""
+
+
+## How a toy with these words is played with: fetch, tug, cuddle, chew, squeak, puzzle or push.
+static func toy_play(words: Array) -> String:
+	for entry in TOY_PLAY:
+		if words.has(entry[0]):
+			return entry[1]
+	return "fetch"
 
 
 ## The first stat any of these words trains, or "" if none do.

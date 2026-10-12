@@ -3,11 +3,17 @@ extends Node2D
 ## A home: a favourite place, the pets who live there, and whatever the kid has put in it.
 ## The Nintendogs part of the game (.ai/pet-life.md).
 ##
-##   Rub a pet         -> hearts, trust, charm. Tap it to see how it is doing.
+##   Rub a pet         -> hearts, trust, charm. Its head: eyes shut, it leans into your finger.
+##                        Its body: a happy wiggle - keep going and it rolls over for a belly rub.
+##   Tap a pet         -> it looks up and says hello, and its card opens.
 ##   Tap the ground    -> it comes over.
 ##   Food drawer       -> drag a snack out; the hungriest pet trots over and munches it.
-##   Toys drawer       -> fling a toy; everyone chases, the fastest brings it back. Hold a
-##                        stretchy toy by a pet's mouth for tug of war.
+##   Toys drawer       -> each toy plays the way its words say (Words.toy_play): fling a ball and
+##                        it is fetched and held out for another throw; hold out a rope and a pet
+##                        grabs the other end; a teddy gets a cuddle, a bone a long chew; tap a
+##                        squeaky duck and they pounce; a treat ball is nosed about till the treat
+##                        falls out; a heavy thing gets shoved along. Toys lying about can be
+##                        picked up again, and tapped.
 ##   Decorate drawer   -> drag furniture in, drag it about, drag it back to put it away.
 ##   Wardrobe drawer   -> drag clothes onto a pet.
 ## Left alone, pets use the furniture by its words: nap on cozy things, bounce on bouncy ones.
@@ -33,6 +39,10 @@ var world: Node2D
 var food: PlaceItem
 var toy: PlaceItem
 var tab := ""
+## What is happening with the toy (see "Toys"): "" lying about or not out, "chase" flung and
+## being chased, "return" being brought back, "offer" held out for the kid to take, "busy" a pet
+## is cuddling, chewing, pouncing on, nosing or pushing it (or on its way to).
+var toy_state := ""
 
 var _place: Dictionary
 var _cam: Camera2D
@@ -43,9 +53,25 @@ var _held_item := {}
 var _samples: Array = []
 var _petting: Creature
 var _pet_last := Vector2.ZERO
+var _pet_last_time := 0.0
 var _pet_dist := 0.0
-var _fetch := ""
-var _fetcher: Creature
+var _pet_moved := 0.0
+var _pet_press_time := 0.0
+var _pet_hearts := 0
+var _toy_pet: Creature
+var _toy_fresh := false
+var _toy_dropped_on: Creature
+var _toy_press := false
+var _toy_press_at := Vector2.ZERO
+var _toy_press_time := 0.0
+var _thrown_from := Vector2(640, 600)
+var _offer_left := 0.0
+var _nudges := 0
+var _pushing := false
+var _push_thud_in := 0.0
+var _tug_caller: Creature
+var _tug_call_in := 0.0
+var _hinted := {}
 var _chasers: Array = []
 var _leapt: Array = []
 var _caught_in_air := false
@@ -53,6 +79,8 @@ var _eater: Creature
 var _told_full := false
 var _tug: Creature
 var _tug_time := 0.0
+var _tug_creak_in := 0.0
+var _munch_in := 0.0
 ## Where the finger holding something is, in world space - set by every drag event, so tug of
 ## war follows the finger rather than wherever a mouse cursor happens to be.
 var _finger := Vector2.ZERO
@@ -94,6 +122,7 @@ func _ready() -> void:
 		c.position = Vector2(randf_range(300, 980), randf_range(500, 610))
 		world.add_child(c)
 		c.setup(pet)
+		c.audible = true
 		c.emote.connect(_on_emote)
 		creatures.append(c)
 		biggest = minf(biggest, ZOOM.get(pet.get("size", "medium"), 1.0))
@@ -145,7 +174,8 @@ func _greet() -> void:
 			missed = true
 		if Places.liking(c.pet["place"], home["place"]) >= 1.0 and randf() < 0.5:
 			c.say("star")
-	_show_hint("They missed you!" if missed else "Rub a pet to pet it. Tap a pet to see how it's doing.")
+	_show_hint("They missed you!" if missed else
+		"Rub a pet to pet it - keep rubbing its tummy for a belly rub! Tap a pet to see how it's doing.")
 
 
 # --- HUD -------------------------------------------------------------------------------------
@@ -198,7 +228,10 @@ func _build_hud() -> void:
 	_panel.visible = false
 	_panel.on_close = func(): _panel.visible = false
 	_panel.on_take_off = _take_off_clothes
-	root.add_child(_panel)
+	_panel.on_fix = func(p: Dictionary): _leave_with(p, func(): game.go_fix(p["id"], home["id"]))
+	_panel.on_voice = func(p: Dictionary): _leave_with(p, func(): game.go_voice(p["id"], home["id"]))
+	_panel.on_move = func(p: Dictionary): _leave_with(p, func(): game.go_move(p["id"], home["id"]))
+	_panel.on_let_go = func(p: Dictionary): _leave_with(p, func(): game.go_let_go(p["id"], home["id"]))
 
 	var bar := PanelContainer.new()
 	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -221,6 +254,7 @@ func _build_hud() -> void:
 	_drawer = HBoxContainer.new()
 	_drawer.add_theme_constant_override("separation", 8)
 	scroll.add_child(_drawer)
+	root.add_child(_panel)  # after the bar, so the card is always on top of it
 	_fill_drawer()
 
 
@@ -304,30 +338,90 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var at := get_global_mouse_position()
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if not event.pressed:
-			_petting = null
+		if event.pressed:
+			_press(at)
+		else:
+			_release()
+	elif event is InputEventMouseMotion:
+		_drag(at)
+
+
+## A finger comes down: on furniture (decorating), a toy, a pet, or the ground.
+func _press(at: Vector2) -> void:
+	if tab == "furniture":
+		var f := _furniture_at(at)
+		if f != null:
+			_select_furniture(f)
+			_held = f
+			_held_kind = "move"
+			Sounds.play("pickup")
 			return
-		if tab == "furniture":
-			var f := _furniture_at(at)
-			if f != null:
-				_select_furniture(f)
-				_held = f
-				_held_kind = "move"
-				return
-			_select_furniture(null)
-		var c := _creature_at(at)
-		if c != null:
-			_petting = c
-			_pet_last = at
-			_pet_dist = 0.0
-			_show_panel(c)
-		elif at.y > Places.HORIZON and _fetch == "":
-			var who := _focus_creature()
-			if who != null and who != _eater and who != _tug:
-				who.go_to(at, func(): who.say("note"))
-	elif event is InputEventMouseMotion and _petting != null:
-		stroke_pet(_petting, at.distance_to(_pet_last))
+		_select_furniture(null)
+	if _toy_at(at):
+		if toy_state == "offer" and toy.play() == "tug":
+			take_toy(at)  # it is holding out the other end: grab it and pull, straight away
+			return
+		# A tap squeaks or bounces it; a drag (or a hold) picks it up.
+		_toy_press = true
+		_toy_press_at = at
+		_toy_press_time = _now()
+		return
+	var c := _creature_at(at)
+	if c != null:
+		_petting = c
 		_pet_last = at
+		_pet_last_time = _now()
+		_pet_press_time = _now()
+		_pet_dist = 0.0
+		_pet_moved = 0.0
+		_pet_hearts = 0
+	elif at.y > Places.HORIZON and toy_state not in ["chase", "return"]:
+		var who := _focus_creature()
+		if who != null and who != _eater and who != _tug and who != _toy_pet:
+			who.go_to(at, func(): who.say("note"))
+
+
+func _drag(at: Vector2) -> void:
+	if _toy_press:
+		if at.distance_to(_toy_press_at) > 12.0:
+			_toy_press = false
+			take_toy(at)
+		return
+	if _petting == null:
+		return
+	var d := at.distance_to(_pet_last)
+	var dt := maxf(_now() - _pet_last_time, 0.008)
+	_pet_moved += d
+	if _pet_moved > 14.0:
+		stroke_pet(_petting, d, at, d / dt)
+	_pet_last = at
+	_pet_last_time = _now()
+
+
+func _release() -> void:
+	if _toy_press:
+		_toy_press = false
+		tap_toy()
+		return
+	if _petting == null:
+		return
+	var c := _petting
+	_petting = null
+	c.touch_at = Vector2.INF
+	if _pet_moved < 14.0 and _now() - _pet_press_time < 0.45:
+		boop(c)
+	elif c.action() == "belly":
+		c.extend_action(0.8)  # a moment more on its back, then it rolls the right way up
+
+
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
+
+## Saves everyone (the pet is about to be loaded fresh by another screen), then goes.
+func _leave_with(_pet: Dictionary, go: Callable) -> void:
+	_save_all()
+	go.call()
 
 
 func _creature_at(at: Vector2) -> Creature:
@@ -344,20 +438,65 @@ func _furniture_at(at: Vector2) -> Furniture:
 	return null
 
 
-## A rub of `distance` pixels across a pet. Every so far of rubbing is a heart.
-func stroke_pet(c: Creature, distance: float) -> void:
-	if c == _fetcher or c == _eater or c == _tug:
+## Is the finger on the toy? One in a pet's mouth needs a closer touch - near it, you are petting.
+func _toy_at(at: Vector2) -> bool:
+	if toy == null or not is_instance_valid(toy) or toy.held or _tug != null:
+		return false
+	var in_mouth := toy.carrier != null and toy_state != "offer"
+	return toy.hit(at, in_mouth)
+
+
+# --- Petting ---------------------------------------------------------------------------------
+
+## A tap on a pet: it looks up and says hello, and its card opens.
+func boop(c: Creature) -> void:
+	_show_panel(c)
+	if c == _eater or c == _tug or (c == _toy_pet and toy_state != ""):
 		return
+	if c.action() == "sleep":
+		c.say("zzz")
+		return
+	c.interrupt()
+	c.perform("look", 0.9)
+	c.leap(c.height_px * 0.12, 0.3)
+	c.say("hello")
+
+
+## A rub of `distance` pixels across a pet, the finger at `at` moving at `speed` px/s. Where you
+## rub matters: its head and it shuts its eyes and leans into your finger; its body and it
+## wiggles - keep going and it rolls over for a belly rub. Every so far of rubbing is a heart.
+func stroke_pet(c: Creature, distance: float, at := Vector2.INF, speed := 0.0) -> void:
+	# Busy eating, tugging or playing with a toy, it still loves it - it just carries on.
+	var busy := c == _eater or c == _tug or (c == _toy_pet and toy_state != "")
+	var zone := c.touch_zone(at) if at != Vector2.INF else "body"
+	if not busy:
+		if c.action() != "belly":
+			var want := "petted" if zone == "head" else "wiggle"
+			if c.action() != want:
+				c.perform(want, 0.6)
+		c.extend_action(0.5)
+		c.touch_at = at
 	_pet_dist += distance
-	if c.action() != "petted":
-		c.perform("petted", 0.6)
-	c.extend_action(0.5)
-	if _pet_dist > 140.0:
-		_pet_dist = 0.0
+	if _pet_dist <= 140.0:
+		return
+	_pet_dist = 0.0
+	_pet_hearts += 1
+	var belly := c.action() == "belly"
+	# Every heart shows; every other one it says so, so a long rub is not a wall of noise.
+	if _pet_hearts % 2 == 1:
 		c.say("heart")
-		_love(c, 1)
-		_train(c, "charm", 0.35)
-		PetStore.change_need(c.pet, "fun", 0.015)
+	else:
+		_on_emote("heart", c.top_global())
+	if speed > 1100.0 and randf() < 0.5:
+		c.say("note")  # a tickle: it giggles
+	_love(c, 1)
+	_train(c, "charm", 0.5 if belly else 0.35)
+	PetStore.change_need(c.pet, "fun", 0.015)
+	if _pet_hearts == 4 and zone == "body" and not belly and not busy:
+		c.perform("belly", 1.5)
+		if not _hinted.has("belly"):
+			_hinted["belly"] = true
+			_show_hint("A belly rub! Keep rubbing!")
 
 
 # --- Dragging things out of the drawers ------------------------------------------------------
@@ -378,14 +517,15 @@ func _grab(id: String) -> void:
 		"toy":
 			if toy != null and is_instance_valid(toy):
 				_end_tug(false)
-				if _fetcher != null:
-					_fetcher.interrupt()
+				_reset_toy_play()
 				toy.queue_free()
-			_fetch = ""
-			_fetcher = null
 			toy = _new_item(item)
 			_held = toy
 			_held_kind = "toy"
+			var play := toy.play()
+			if not _hinted.has(play):
+				_hinted[play] = true
+				_show_hint(Words.PLAY_HINT.get(play, ""))
 		"furniture":
 			var f := _spawn_furniture({"item": id, "pos": [640, 600], "scale": 1.0, "flip": false})
 			_held = f
@@ -432,8 +572,11 @@ func _move_held(at: Vector2) -> void:
 			_samples.append([Time.get_ticks_msec() / 1000.0, at])
 			if _samples.size() > 6:
 				_samples.pop_front()
-			if _held_kind == "toy" and it.has_word("stretchy"):
+			if _held_kind == "toy" and it.play() == "tug":
 				_try_start_tug(it, at)
+				if _tug == null and _tug_call_in <= 0.0:
+					_tug_call_in = 0.4
+					_call_for_tug(at)
 		"furniture", "move":
 			_held.position = Vector2(at.x, clampf(at.y + 20.0, GROUND.position.y - 30.0, GROUND.end.y))
 		"clothing":
@@ -455,15 +598,22 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 				_fill_drawer()
 		"toy":
 			(held as PlaceItem).held = false
+			if _tug_caller != null:
+				_tug_caller.stop()
+				_tug_caller = null
 			if _tug != null:
 				_end_tug(true)
 				return
+			# The flick: how fast the finger was going as it let go. A finger that stopped
+			# before letting go puts the toy down.
 			var v := Vector2.ZERO
 			if _samples.size() >= 2:
 				var a: Array = _samples[0]
 				var b: Array = _samples[_samples.size() - 1]
 				var dt: float = maxf(b[0] - a[0], 0.016)
-				v = (b[1] - a[1]) / dt
+				if _now() - float(b[0]) < 0.12:
+					v = (b[1] - a[1]) / dt
+			_toy_dropped_on = _creature_at(at)
 			throw_toy(v)
 		"furniture":
 			var f := held as Furniture
@@ -474,6 +624,7 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 			f.entry["pos"] = PetBuilder.arr(f.position)
 			home["items"].append(f.entry)
 			game.profile.save()
+			Sounds.play_varied("place", 1.0, 0.05)
 			_select_furniture(f)
 			if game.profile.count_today("decorate", 3):
 				game.reward(1, "Nice decorating!")
@@ -484,6 +635,7 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 				return
 			f.entry["pos"] = PetBuilder.arr(f.position)
 			game.profile.save()
+			Sounds.play_varied("place", 1.1, 0.05, -3.0)
 		"clothing":
 			held.queue_free()
 			var c := _creature_at(at)
@@ -494,6 +646,7 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 ## Puts a piece of clothing on a pet.
 func dress(c: Creature, item: Dictionary) -> void:
 	Wardrobe.put_on(c.pet, item)
+	Sounds.play("dress")
 	c.rebuild()
 	c.perform("celebrate", 1.2)
 	c.say("star")
@@ -560,6 +713,7 @@ func _remove_selected() -> void:
 
 
 func _remove_furniture(f: Furniture) -> void:
+	Sounds.play("pickup", 0.85)
 	home["items"].erase(f.entry)
 	furniture.erase(f)
 	if _selected == f:
@@ -578,26 +732,48 @@ func _drop_daily_snacks() -> void:
 			var snack := _new_item(Items.get_item("kit_apple"))
 			snack.position = f.position + Vector2(randf_range(-60, 60), 30)
 			snack.z = f.height_px * 0.6
+			Sounds.play("pickup", 1.3, -4.0)
 			food = snack
 			game.profile.save()
 			return
 
 
-# --- Fetch -----------------------------------------------------------------------------------
+# --- Toys ------------------------------------------------------------------------------------
+# A toy is played with the way its words say (Words.toy_play). Every toy flies by its words
+# (PlaceItem); what happens when it lands, or is held out, is its play:
+#   fetch   flung: everyone chases, the catcher brings it back to where it was thrown from and
+#           holds it out - take it and throw again. Put down: a pet brings it to you.
+#   tug     held out: the nearest pet comes for the other end. Flung: fetched, and held out
+#           with the end towards you - grab it to pull.
+#   cuddle  a pet hugs it, then naps with it on something cozy.
+#   chew    a pet lies down with it for a long chew.
+#   squeak  tap it - squeak! - and a pet pounces on it and bats it about. Flung: chased, then
+#           squeaked to bits in the catcher's mouth.
+#   puzzle  a pet noses it about until the treat falls out.
+#   push    a pet leans into it and shoves it along.
 
-## Sends the toy off with a flick velocity in screen pixels/second. Everyone with the energy
-## for it gives chase.
+## Sends the toy off with a flick velocity in screen pixels/second. A slow one is a put-down.
 func throw_toy(v: Vector2) -> void:
+	_reset_toy_play()
 	v = v.limit_length(1600.0) * toy.throw_scale()
 	toy.vel = Vector2(v.x, v.y * 0.25)
 	toy.vz = clampf(-v.y * 0.55, 0.0, 1000.0) + 120.0
-	_fetch = "chase"
-	_fetcher = null
-	_caught_in_air = false
-	_chasers.clear()
-	_leapt.clear()
+	_thrown_from = _finger
+	_toy_fresh = true
+	if v.length() < 220.0:
+		return  # put down: when it lands, _toy_landed decides who comes for it
+	if toy.has_word("floaty"):
+		toy.vz = maxf(toy.vz, 320.0)  # a disc sails, even flung flat
+	Sounds.play_varied("throw", 0.8 + clampf(v.length() / 1600.0, 0.0, 1.0) * 0.5, 0.05)
+	if toy.play() in ["fetch", "tug", "squeak"]:
+		_start_chase()
+
+
+func _start_chase() -> void:
+	toy_state = "chase"
+	_toy_fresh = false
 	for c in creatures:
-		if c == _eater or c.action() == "sleep" or float(c.pet["needs"]["energy"]) < 0.3:
+		if not _free_for_toy(c):
 			continue
 		c.interrupt()
 		c.rest_z = 0.0
@@ -605,59 +781,153 @@ func throw_toy(v: Vector2) -> void:
 		c.say("note")
 	if _chasers.is_empty():
 		_show_hint("Everyone's too sleepy to play. Let them rest on something cozy!")
-		_fetch = ""
+		toy_state = ""
 
 
-func _update_fetch() -> void:
-	if toy == null or not is_instance_valid(toy) or toy.held:
+## Whatever was going on with the toy stops: the kid has picked it up, or thrown it again.
+func _reset_toy_play() -> void:
+	if _toy_pet != null and toy_state != "":
+		_toy_pet.straining = false
+		_toy_pet.interrupt()
+		if _pushing:
+			_toy_pet.set_display_height(_toy_pet.fixed_height)  # back to its own walking speed
+	for c: Creature in _chasers:
+		c.stop()
+	if toy != null and is_instance_valid(toy) and toy.carrier != null:
+		toy.carrier = null
+	toy_state = ""
+	_toy_pet = null
+	_chasers.clear()
+	_leapt.clear()
+	_caught_in_air = false
+	_nudges = 0
+	_pushing = false
+
+
+func _free_for_toy(c: Creature) -> bool:
+	return c != _eater and c != _tug and c.action() != "sleep" and float(c.pet["needs"]["energy"]) >= 0.3
+
+
+func _nearest_free(at: Vector2) -> Creature:
+	var best: Creature = null
+	for c in creatures:
+		if _free_for_toy(c) and (best == null or c.position.distance_to(at) < best.position.distance_to(at)):
+			best = c
+	return best
+
+
+## The spot a pet stands on to get its mouth to the toy, coming from the side it is on.
+func _beside_toy(c: Creature, gap := 0.0) -> Vector2:
+	var side := signf(toy.position.x - c.position.x)
+	if side == 0.0:
+		side = c.facing
+	return toy.position - Vector2(side * (c.mouth_reach() + gap), -2.0)
+
+
+## Still this pet's turn with the toy? (The kid may have picked it up, or thrown another.)
+func _still_mine(c: Creature) -> bool:
+	return toy != null and is_instance_valid(toy) and not toy.held and _toy_pet == c and toy_state == "busy"
+
+
+func _carry(c: Creature) -> void:
+	toy.global_position = c.mouth_global() + Vector2(0, toy.radius * 0.9 * toy.scale.y)
+	toy.z = 0.0
+
+
+func _update_toy(delta: float) -> void:
+	_tug_call_in -= delta
+	if _toy_press and _now() - _toy_press_time > 0.3:
+		_toy_press = false
+		take_toy(_toy_press_at)  # held still on it: picked up
 		return
-	match _fetch:
+	if toy == null or not is_instance_valid(toy) or toy.held or _tug != null:
+		return
+	match toy_state:
 		"chase":
-			for c: Creature in _chasers:
-				var side := signf(toy.position.x - c.position.x)
-				if side == 0.0:
-					side = c.facing
-				var aim := toy.position - Vector2(side * c.mouth_reach(), -2.0)
-				c.go_to(aim, Callable(), true, toy.z > c.height_px * 0.6)
-				# A bouncing or floating toy gets jumped for - that is what trains agility.
-				var near := absf(toy.position.x - c.position.x) < c.height_px * 0.8
-				if near and not _leapt.has(c) and toy.z > c.height_px * 0.25 and toy.z < c.height_px * 1.6:
-					_leapt.append(c)
-					c.leap(minf(toy.z * 0.9, c.height_px * 0.9), 0.55)
-				var reach := maxf(toy.radius, 26.0) + c.height_px * 0.25
-				var mouth := c.mouth_global()
-				if mouth.distance_to(toy.global_position + Vector2(0, -toy.z)) < reach \
-						and toy.z < c.height_px * 0.9 + c.z:
-					_caught_in_air = toy.z > 20.0
-					_fetcher = c
-					toy.pick_up(c)
-					_fetch = "return"
-					var back := Vector2(clampf(c.position.x, 200.0, 1080.0), GROUND.end.y - 4.0)
-					c.go_to(back, _on_fetched, true)
-					for other in _chasers:
-						if other != c:
-							other.stop()
-							_train(other, "speed", 0.3)
-					break
+			_update_chase()
 		"return":
-			if _fetcher != null:
-				toy.global_position = _fetcher.mouth_global() + Vector2(0, toy.radius * 0.9 * toy.scale.y)
-				toy.z = 0.0
+			_carry(_toy_pet)
+		"offer":
+			_carry(_toy_pet)
+			_offer_left -= delta
+			if _offer_left <= 0.0:
+				_offer_done()
+		"busy":
+			if _pushing:
+				var c := _toy_pet
+				toy.slide_to(c.position + Vector2(c.facing * (c.mouth_reach() * 0.6 + toy.radius * toy.scale.x), 2.0))
+				_push_thud_in -= delta
+				if _push_thud_in <= 0.0:
+					_push_thud_in = 0.7
+					Sounds.play_varied("thud", 0.8, 0.08, -8.0)
+			elif toy.carrier == _toy_pet:
+				_carry(_toy_pet)
+		"":
+			if _toy_fresh and toy.landed():
+				_toy_landed()
+
+
+func _update_chase() -> void:
+	for c: Creature in _chasers:
+		var side := signf(toy.position.x - c.position.x)
+		if side == 0.0:
+			side = c.facing
+		var aim := toy.position - Vector2(side * c.mouth_reach(), -2.0)
+		c.go_to(aim, Callable(), true, toy.z > c.height_px * 0.6)
+		# A bouncing or floating toy gets jumped for - that is what trains agility.
+		var near := absf(toy.position.x - c.position.x) < c.height_px * 0.8
+		if near and not _leapt.has(c) and toy.z > c.height_px * 0.25 and toy.z < c.height_px * 1.6:
+			_leapt.append(c)
+			c.leap(minf(toy.z * 0.9, c.height_px * 0.9), 0.55)
+		var reach := maxf(toy.radius, 26.0) + c.height_px * 0.25
+		var mouth := c.mouth_global()
+		var in_reach := mouth.distance_to(toy.global_position + Vector2(0, -toy.z)) < reach \
+			and toy.z < c.height_px * 0.9 + c.z
+		# Lying still on the grass, it just stoops for it - no drawn neck is long enough to reach.
+		var at_it := toy.z < 8.0 and c.position.distance_to(aim.clamp(c.bounds.position, c.bounds.end)) < 14.0
+		if in_reach or at_it:
+			_catch(c)
+			return
+
+
+func _catch(c: Creature) -> void:
+	_caught_in_air = toy.z > 20.0
+	_toy_pet = c
+	toy.pick_up(c)
+	Sounds.play_varied("catch", c._size_pitch(), 0.06)
+	if not Voice.play_thing(toy.item) and toy.has_word("squeaky"):
+		Sounds.play_varied("squeak", 1.0, 0.08)
+	for other: Creature in _chasers:
+		if other != c:
+			other.stop()
+			_train(other, "speed", 0.3)
+	_chasers.clear()
+	if toy.play() == "squeak":
+		toy_state = "busy"
+		_squeak_chew(c)
+		return
+	toy_state = "return"
+	c.go_to(_hand_spot(c), _on_fetched, true)
+
+
+## Where a pet brings a toy back to: the front of the place, where the finger let it go.
+func _hand_spot(c: Creature) -> Vector2:
+	var x := clampf(_thrown_from.x, 200.0, 1080.0)
+	if absf(x - c.position.x) < 40.0:
+		x = c.position.x
+	return Vector2(x, GROUND.end.y - 4.0)
 
 
 func _on_fetched() -> void:
-	var c := _fetcher
-	if c == null or toy == null or not is_instance_valid(toy):
-		_fetch = ""
+	var c := _toy_pet
+	if c == null or toy == null or not is_instance_valid(toy) or toy_state != "return":
 		return
-	_fetch = "after"
-	var shiny := 2.0 if toy.item.get("shine", "") != "" else 1.0
+	var shiny := _shiny()
 	_train(c, "speed", 0.8 * shiny)
 	if _caught_in_air:
 		_train(c, "agility", 1.0 * shiny)
 		_on_emote("star", c.top_global())
-	for w in toy.item.get("words", []):
-		_train(c, Words.stat_of("toy", w), 1.0 * shiny)
+	_train_words(c, 1.0 * shiny)
 	PetStore.change_need(c.pet, "fun", 0.12)
 	PetStore.change_need(c.pet, "energy", -0.04)
 	_love(c, 1)
@@ -665,45 +935,389 @@ func _on_fetched() -> void:
 	game.profile.today()["fetch"] = n
 	if n % 5 == 0 and n <= 25:
 		game.reward(2, "%d fetches today!" % n)
+	_offer(c)
 
-	# What happens next depends on the toy's words.
-	var cozy := _furniture_with("cozy")
-	if toy.has_word("soft") and cozy != null:
-		c.go_to(cozy.position + Vector2(0, 3), func():
-			c.rest_z = cozy.perch_height()
-			c.perform("sleep", 5.0, func():
-				_train(c, "charm", 1.0)
-				PetStore.change_need(c.pet, "energy", 0.2)
-				_let_go_of_toy(c)))
-	elif toy.has_word("chewy"):
-		c.perform("chew", 4.0, func():
-			_train(c, "stamina", 1.2 * shiny)
-			_let_go_of_toy(c))
-	elif toy.has_word("puzzly"):
-		c.perform("sniff", 2.5, func():
-			_on_emote("crumb", c.mouth_global())
-			_on_emote("star", c.top_global())
-			PetStore.change_need(c.pet, "food", 0.1)
-			_train(c, "smarts", 1.5 * shiny)
-			_let_go_of_toy(c))
+
+## Back with it, it holds the toy out: take it to throw again - or, a rope, grab the end.
+func _offer(c: Creature) -> void:
+	toy_state = "offer"
+	_offer_left = 5.0
+	c.face_toward(640.0)
+	c.perform("look", 5.0)
+	c.say("note")
+	var key := "offer_" + toy.play()
+	if not _hinted.has(key):
+		_hinted[key] = true
+		_show_hint("Grab the end and pull!" if toy.play() == "tug" else "Take it and throw it again!")
+
+
+## Nobody took it: it drops it - and a chewy one gets chewed.
+func _offer_done() -> void:
+	var c := _toy_pet
+	if toy.has_word("chewy"):
+		toy_state = "busy"
+		_chew(c)
 	else:
 		_let_go_of_toy(c)
-		c.perform("celebrate", 1.3)
-		c.say("star")
 
 
 func _let_go_of_toy(c: Creature) -> void:
 	if toy != null and is_instance_valid(toy) and toy.carrier == c:
 		toy.drop_at(c.position + Vector2(c.facing * c.mouth_reach(), 6.0), 20.0)
 	c.rest_z = 0.0
-	_fetch = ""
-	_fetcher = null
+	c.straining = false
+	if c == _toy_pet:
+		toy_state = ""
+		_toy_pet = null
 	_panel.refresh()
 
 
-func _on_bounce(item: PlaceItem) -> void:
+## The finger picks the toy up - off the ground, out of a pet's mouth, or (a rope it is holding
+## out) by the other end, which starts tug of war.
+func take_toy(at: Vector2) -> void:
+	if toy == null or not is_instance_valid(toy):
+		return
+	var had: Creature = _toy_pet if toy_state != "" else null
+	var offered := toy_state == "offer"
+	if offered and toy.play() == "tug":
+		toy_state = ""
+		_toy_pet = null
+		_held = toy
+		_held_kind = "toy"
+		_held_item = toy.item
+		_samples.clear()
+		_start_tug(had, at)
+		return
+	_reset_toy_play()
+	toy.end_stretch()
+	_held = toy
+	_held_kind = "toy"
+	_held_item = toy.item
+	_samples.clear()
+	toy.held = true
+	Sounds.play("pickup")
+	_move_held(at)
+	if had != null:
+		had.say("heart" if offered else "question")
+
+
+## A tap on a toy lying about: it hops - and a squeaky one squeaks, and a pet pounces on it.
+func tap_toy() -> void:
+	if toy == null or not is_instance_valid(toy) or toy.held or toy.carrier != null:
+		return
+	_look_at_toy()
+	if toy.has_word("squeaky"):
+		_squeak_toy()
+		toy.hop(130.0)
+		if not (toy_state == "busy" and _toy_pet != null):
+			_send_pouncer()
+	else:
+		toy.hop(220.0)
+
+
+func _look_at_toy() -> void:
+	for c in creatures:
+		if c.is_busy() or c == _toy_pet:
+			continue
+		c.face_toward(toy.position.x)
+		c.perform("look", 0.8)
+
+
+func _squeak_toy() -> void:
+	if toy == null or not is_instance_valid(toy):
+		return
+	_on_emote("note", toy.global_position + Vector2(0, -toy.z - toy.radius * 2.0))
+	if not Voice.play_thing(toy.item):
+		Sounds.play_varied("squeak", 1.0, 0.1)
+
+
+## A toy put down (or flung) lands, and someone comes for it - by its play.
+func _toy_landed() -> void:
+	_toy_fresh = false
+	var play := toy.play()
+	if play == "squeak":
+		_look_at_toy()
+		return
+	var c := _toy_dropped_on if _toy_dropped_on != null and _free_for_toy(_toy_dropped_on) \
+		else _nearest_free(toy.position)
+	_toy_dropped_on = null
+	if c == null:
+		_show_hint("Everyone's too sleepy to play. Let them rest on something cozy!")
+		return
+	toy_state = "busy"
+	_toy_pet = c
+	c.interrupt()
+	c.rest_z = 0.0
+	match play:
+		"fetch", "tug":
+			c.go_to(_beside_toy(c), _bring_it.bind(c))
+		"cuddle":
+			c.go_to(_beside_toy(c), _cuddle.bind(c))
+		"chew":
+			c.go_to(_beside_toy(c), _start_chew.bind(c), true)
+		"puzzle":
+			_nudge(c)
+		"push":
+			_start_push(c)
+
+
+## A fetch toy or a rope put down: a pet picks it up and brings it to you.
+func _bring_it(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	toy.pick_up(c)
+	Sounds.play_varied("catch", c._size_pitch(), 0.06, -4.0)
+	toy_state = "return"
+	_thrown_from = Vector2(640.0, 0.0)
+	c.go_to(_hand_spot(c), _offer.bind(c))
+
+
+func _cuddle(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	c.face_toward(toy.position.x)
+	toy.pick_up(c)
+	c.say("heart")
+	for i in 3:
+		get_tree().create_timer(1.1 + i * 1.1).timeout.connect(_heart_on.bind(c))
+	c.perform("cuddle", 4.0, _cuddled.bind(c))
+
+
+func _heart_on(c: Creature) -> void:
+	if c.action() == "cuddle":
+		_on_emote("heart", c.top_global())
+
+
+func _cuddled(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	_train_words(c, 1.0 * _shiny())
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.08)
+	game.reward_daily("toy_play", 5, 1, "%s loves a cuddle!" % c.pet["name"])
+	var cozy := _furniture_with("cozy")
+	if cozy == null:
+		_let_go_of_toy(c)
+		c.say("heart")
+		return
+	# Off to bed with it.
+	c.go_to(cozy.position + Vector2(0, 3), _nap_with_toy.bind(c, cozy))
+
+
+func _nap_with_toy(c: Creature, cozy: Furniture) -> void:
+	if not _still_mine(c) or not is_instance_valid(cozy):
+		return
+	c.rest_z = cozy.perch_height()
+	c.perform("sleep", 5.0, _napped.bind(c))
+
+
+func _napped(c: Creature) -> void:
+	_train(c, "stamina", 0.6)
+	PetStore.change_need(c.pet, "energy", 0.2)
+	if _still_mine(c):
+		_let_go_of_toy(c)
+	c.rest_z = 0.0
+
+
+func _start_chew(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	c.face_toward(toy.position.x)
+	toy.pick_up(c)
+	_chew(c)
+
+
+func _chew(c: Creature) -> void:
+	_sfx_times("chew", 6, 0.75, c._size_pitch())
+	c.perform("chew", 4.5, _chewed.bind(c))
+
+
+func _chewed(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	_train_words(c, 1.2 * _shiny())
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.08)
+	game.reward_daily("toy_play", 5, 1, "%s had a good chew!" % c.pet["name"])
+	_let_go_of_toy(c)
+
+
+## Caught a flung squeaky toy: it squeaks it and squeaks it.
+func _squeak_chew(c: Creature) -> void:
+	for i in 4:
+		get_tree().create_timer(0.3 + i * 0.55).timeout.connect(_squeak_toy)
+	c.perform("chew", 2.4, _squeaked.bind(c))
+
+
+func _squeaked(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	var shiny := _shiny()
+	_train_words(c, 1.0 * shiny)
+	if _caught_in_air:
+		_train(c, "agility", 1.0 * shiny)
+		_on_emote("star", c.top_global())
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.1)
+	_let_go_of_toy(c)
+	c.perform("celebrate", 1.0)
+
+
+## Squeak! The nearest pet that wants to play runs over to pounce on it.
+func _send_pouncer() -> void:
+	var c := _nearest_free(toy.position)
+	if c == null:
+		return
+	toy_state = "busy"
+	_toy_pet = c
+	c.interrupt()
+	c.rest_z = 0.0
+	c.say("note")
+	c.go_to(_beside_toy(c, toy.radius * 0.6), _pounce.bind(c), true)
+
+
+func _pounce(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	c.face_toward(toy.position.x)
+	c.leap(c.height_px * 0.35, 0.45)
+	get_tree().create_timer(0.4).timeout.connect(_pounced.bind(c))
+
+
+func _pounced(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	_squeak_toy()
+	toy.hop(160.0, Vector2(c.facing * randf_range(160.0, 260.0), randf_range(-50.0, 50.0)))  # batted away
+	var shiny := _shiny()
+	_train(c, "agility", 0.8 * shiny)
+	_train_words(c, 0.6 * shiny)
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.06)
+	game.reward_daily("toy_play", 5, 1, "%s pounced!" % c.pet["name"])
+	c.perform("hop", 0.6)
+	toy_state = ""
+	_toy_pet = null
+
+
+## A treat ball: nose it, it rolls; nose it again... the third time the treat falls out.
+func _nudge(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	c.go_to(_beside_toy(c, toy.radius * 0.5), _nudge_it.bind(c))
+
+
+func _nudge_it(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	c.face_toward(toy.position.x)
+	c.perform("sniff", 0.7, _nudged.bind(c))
+
+
+func _nudged(c: Creature) -> void:
+	if not _still_mine(c):
+		return
+	_nudges += 1
+	toy.hop(90.0, Vector2(c.facing * randf_range(170.0, 240.0), randf_range(-50.0, 50.0)))
+	Sounds.play_varied("bounce", 1.25, 0.08, -6.0)
+	if _nudges < 3:
+		if randf() < 0.5:
+			c.say("question")
+		get_tree().create_timer(1.0).timeout.connect(_nudge.bind(c))
+		return
+	# Out it pops!
+	var shiny := _shiny()
+	for i in 2:
+		_on_emote("crumb", toy.global_position + Vector2(randf_range(-20, 20), -toy.z - 20.0))
+	_on_emote("star", c.top_global())
+	_sfx_times("munch", 3, 0.35, c._size_pitch())
+	c.perform("eat", 1.4)
+	PetStore.change_need(c.pet, "food", 0.1)
+	_train(c, "smarts", 0.5 * shiny)
+	_train_words(c, 1.0 * shiny)
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.1)
+	game.reward_daily("toy_play", 5, 1, "%s got the treat out!" % c.pet["name"])
+	toy_state = ""
+	_toy_pet = null
+
+
+## Something heavy: it goes round behind it and leans in, shoving it towards the middle.
+func _start_push(c: Creature) -> void:
+	var dir := signf(640.0 - toy.position.x)
+	if dir == 0.0:
+		dir = 1.0
+	var behind := toy.position - Vector2(dir * (c.mouth_reach() * 0.6 + toy.radius * toy.scale.x + 6.0), -2.0)
+	c.go_to(behind, _push_it.bind(c, dir))
+
+
+func _push_it(c: Creature, dir: float) -> void:
+	if not _still_mine(c):
+		return
+	c.facing = dir
+	c.straining = true
+	c.walk_speed *= 0.4
+	_pushing = true
+	_push_thud_in = 0.0
+	var to := clampf(toy.position.x + dir * 260.0, GROUND.position.x + 60.0, GROUND.end.x - 60.0)
+	c.go_to(Vector2(to - dir * (c.mouth_reach() * 0.6 + toy.radius * toy.scale.x), c.position.y), _pushed.bind(c))
+	c.say("note")
+
+
+func _pushed(c: Creature) -> void:
+	_pushing = false
+	c.straining = false
+	c.set_display_height(c.fixed_height)  # back to its own walking speed
+	if not _still_mine(c):
+		return
+	var shiny := _shiny()
+	_train(c, "strength", 1.0 * shiny)
+	_train_words(c, 1.0 * shiny)
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.08)
+	PetStore.change_need(c.pet, "energy", -0.03)
+	game.reward_daily("toy_play", 5, 1, "%s is so strong!" % c.pet["name"])
+	c.perform("celebrate", 1.0)
+	c.say("star")
+	toy_state = ""
+	_toy_pet = null
+
+
+func _shiny() -> float:
+	return 2.0 if toy != null and is_instance_valid(toy) and toy.item.get("shine", "") != "" else 1.0
+
+
+## Playing with a toy trains whatever its words train (a chewy toy stamina, a bouncy one agility).
+func _train_words(c: Creature, amount: float) -> void:
+	for w in toy.item.get("words", []):
+		_train(c, Words.stat_of("toy", w), amount)
+
+
+## A thing hitting the ground: its own sound if the kid gave it one, else what its words say.
+func _on_bounce(speed: float, item: PlaceItem) -> void:
+	var loud := clampf(speed / 900.0, 0.2, 1.0)
+	var vol := linear_to_db(loud)
+	if item.is_food:
+		Sounds.play_varied("thud", 1.5, 0.08, vol - 6.0)
+		return
 	if item.has_word("squeaky"):
 		_on_emote("note", item.global_position + Vector2(0, -item.z - 30.0))
+	if Voice.play_thing(item.item):
+		return
+	if item.has_word("squeaky"):
+		Sounds.play_varied("squeak", 1.0, 0.08, vol)
+	elif item.has_word("heavy"):
+		Sounds.play_varied("thud", 1.0, 0.06, vol)
+	elif item.has_word("soft"):
+		Sounds.play_varied("thud", 1.6, 0.06, vol - 8.0)  # a soft flump
+	else:
+		Sounds.play_varied("bounce", 0.8 + 0.5 * loud, 0.05, vol)
+
+
+## The same effect a few times, `gap` seconds apart - chewing, bouncing on a trampoline.
+func _sfx_times(id: String, count: int, gap: float, pitch := 1.0, vol := 0.0) -> void:
+	for i in count:
+		get_tree().create_timer(i * gap).timeout.connect(Sounds.play_varied.bind(id, pitch, 0.06, vol))
 
 
 # --- Tug of war ------------------------------------------------------------------------------
@@ -714,15 +1328,46 @@ func _try_start_tug(it: PlaceItem, at: Vector2) -> void:
 		if c == _eater or c.action() == "sleep":
 			continue
 		if c.mouth_global().distance_to(at) < maxf(60.0, c.height_px * 0.3):
-			_tug = c
-			_tug_time = 0.0
-			c.interrupt()
-			c.perform("tug", 999.0)
-			it.held = false
-			it.pick_up(c)
-			it.stretch_to = at
-			_show_hint("Tug of war! Pull, pull!")
+			_start_tug(c, at)
 			return
+
+
+## Holding out a stretchy toy: the nearest pet that wants to play comes for the other end -
+## the kid does not have to find its mouth.
+func _call_for_tug(at: Vector2) -> void:
+	var c := _tug_caller if _tug_caller != null else _nearest_free(at)
+	if c == null:
+		return
+	_tug_caller = c
+	var side := signf(c.position.x - at.x)
+	if side == 0.0:
+		side = 1.0
+	# Stand so its mouth comes to the finger: its mouth is this far above and in front of its feet.
+	var up := c.global_position.y - c.mouth_global().y
+	c.go_to(Vector2(at.x + side * c.mouth_reach(), at.y + up), _tug_arrived.bind(c), true)
+
+
+func _tug_arrived(c: Creature) -> void:
+	if _tug != null or _held_kind != "toy" or _held != toy or c != _tug_caller:
+		return
+	c.face_toward(_finger.x)
+	# As close as it can get - if the finger is up in the sky, near enough is near enough.
+	if c.mouth_global().distance_to(_finger) < maxf(c.height_px * 1.2, 110.0):
+		_start_tug(c, _finger)
+
+
+func _start_tug(c: Creature, at: Vector2) -> void:
+	_tug = c
+	_tug_caller = null
+	Sounds.play("tug")
+	_tug_time = 0.0
+	c.interrupt()
+	c.perform("tug", 999.0)
+	toy.held = false
+	toy.pick_up(c)
+	toy.stretch_to = at
+	_finger = at
+	_show_hint("Tug of war! Pull, pull!")
 
 
 func _update_tug(delta: float) -> void:
@@ -741,8 +1386,13 @@ func _update_tug(delta: float) -> void:
 	c.position = c.position.clamp(GROUND.position, GROUND.end)
 	if absf(span.x) > 4.0:
 		c.facing = -signf(span.x)
-	var shiny := 2.0 if toy.item.get("shine", "") != "" else 1.0
-	_train(c, "strength", 0.6 * delta * clampf(tension / 80.0, 0.0, 1.5) * shiny)
+	_train(c, "strength", 0.6 * delta * clampf(tension / 80.0, 0.0, 1.5) * _shiny())
+	_tug_creak_in -= delta
+	if tension > 40.0 and _tug_creak_in <= 0.0:
+		_tug_creak_in = randf_range(0.45, 0.7)
+		Sounds.play_varied("tug", 1.0, 0.1, linear_to_db(clampf(tension / 160.0, 0.3, 1.0)))
+		if randf() < 0.3:
+			Voice.speak(c.pet, "tug", c)
 	if span.length() > 520.0:
 		_end_tug(true)
 
@@ -777,12 +1427,16 @@ func _update_food(delta: float) -> void:
 			food.sprite.scale *= 1.0 - delta * 0.3
 			if randf() < delta * 2.5:
 				_on_emote("crumb", _eater.mouth_global())
+			_munch_in -= delta
+			if _munch_in <= 0.0:
+				_munch_in = randf_range(0.3, 0.42)
+				Sounds.play_varied("munch", _eater._size_pitch(), 0.1)
 		return
-	if not food.landed() or _fetch != "":
+	if not food.landed() or toy_state in ["chase", "return"]:
 		return
 	var hungriest: Creature = null
 	for c in creatures:
-		if c == _tug or c.action() == "sleep":
+		if c == _tug or c.action() == "sleep" or (c == _toy_pet and toy_state != ""):
 			continue
 		if float(c.pet["needs"]["food"]) > 0.95:
 			continue
@@ -809,6 +1463,7 @@ func _arrive_at_food() -> void:
 	_eater.face_toward(food.position.x)
 	# It picks the food up to munch it - no drawn neck is long enough to reach the ground.
 	food.pick_up(_eater)
+	_munch_in = 0.0
 	_eater.perform("eat", 2.4, _ate)
 
 
@@ -899,11 +1554,13 @@ func _use_furniture(c: Creature, f: Furniture, word: String) -> void:
 			c.perform("sleep", 4.0, func(): PetStore.change_need(c.pet, "energy", 0.2))
 		"bouncy":
 			c.rest_z = f.perch_height()
+			_sfx_times("trampoline", 6, 0.63, c._size_pitch())
 			c.perform("bounce", 3.5, func():
 				_train(c, "agility", 1.4)
 				PetStore.change_need(c.pet, "fun", 0.06)
 				c.rest_z = 0.0)
 		"climbable":
+			Sounds.play_varied("hop", c._size_pitch())
 			c.rest_z = f.perch_height()
 			c.perform("look", 4.0, func():
 				_train(c, "strength", 0.9)
@@ -915,17 +1572,26 @@ func _use_furniture(c: Creature, f: Furniture, word: String) -> void:
 				_train(c, "speed", 0.9)
 				PetStore.change_need(c.pet, "fun", 0.08)
 				c.say("note")
-			c.perform("look", 1.0, func(): c.go_to(f.position + Vector2(f.height_px * 0.7, 12), landed, true))
+			var whee := func():
+				Sounds.play_varied("slide", 1.0, 0.05)
+				c.go_to(f.position + Vector2(f.height_px * 0.7, 12), landed, true)
+			c.perform("look", 1.0, whee)
 		"musical":
+			if str(f.item.get("id", "")).contains("piano"):
+				_sfx_times("piano", 3, 1.2)
+			else:
+				_sfx_times("drum", 7, 0.5)
 			c.perform("dance", 3.5, func():
 				_train(c, "charm", 1.3)
 				PetStore.change_need(c.pet, "fun", 0.05))
 		"splashy":
+			_sfx_times("splash", 3, 0.9, 1.0, -3.0)
 			c.perform("splash", 3.0, func():
 				_train(c, "stamina", 1.1)
 				PetStore.change_need(c.pet, "clean", 0.3)
 				PetStore.change_need(c.pet, "fun", 0.08))
 		"scratchy":
+			_sfx_times("scratch", 3, 0.8)
 			c.perform("scratch", 2.5, func(): _train(c, "strength", 1.1))
 		"hidey":
 			c.perform("hide", 5.0, func():
@@ -942,6 +1608,7 @@ func _train(c: Creature, stat: String, amount: float) -> void:
 		return
 	var levels := Stats.train(c.pet, stat, amount)
 	if levels > 0:
+		Sounds.play("level_up")
 		var lvl := Stats.level(Stats.value(c.pet, stat))
 		c.say("star")
 		game.reward(3 * levels, "%s's %s is level %d!" % [c.pet["name"], Stats.label(stat), lvl])
@@ -954,6 +1621,7 @@ func _love(c: Creature, n: int) -> void:
 	c.pet["love"] = int(c.pet.get("love", 0)) + n
 	var after := Stats.trust(c.pet)
 	if after > before:
+		Sounds.play("trust_up")
 		for i in after:
 			_on_emote("heart", c.top_global() + Vector2((i - after / 2.0) * 30.0, -10))
 		game.reward(5 * after, "%s trusts you more! (%d hearts)" % [c.pet["name"], after])
@@ -962,19 +1630,21 @@ func _love(c: Creature, n: int) -> void:
 # --- Every frame -----------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	_update_fetch()
+	_update_toy(delta)
 	_update_tug(delta)
 	_update_food(delta)
-	if _fetch == "return" and toy != null and is_instance_valid(toy) and toy.has_word("squeaky"):
+	if toy_state == "return" and toy != null and is_instance_valid(toy) and toy.has_word("squeaky"):
 		_squeak_in -= delta
 		if _squeak_in <= 0.0:
 			_squeak_in = 0.7
 			_on_emote("note", toy.global_position + Vector2(0, -30))
+			if not Voice.play_thing(toy.item):
+				Sounds.play_varied("squeak", 1.0, 0.1, -4.0)
 	_ai_in -= delta
 	if _ai_in <= 0.0:
 		_ai_in = 1.2
 		for c in creatures:
-			if c.is_busy() or c == _fetcher or c == _eater or c == _tug or (_chasers.has(c) and _fetch == "chase"):
+			if c.is_busy() or c == _toy_pet or c == _eater or c == _tug or c == _tug_caller or _chasers.has(c):
 				continue
 			if randf() < 0.22:
 				_play_with_furniture(c)
@@ -996,6 +1666,10 @@ func _on_emote(kind: String, at: Vector2) -> void:
 	e.kind = kind
 	e.position = at
 	add_child(e)
+
+
+func save_now() -> void:
+	_save_all()
 
 
 func _save_all() -> void:
@@ -1023,6 +1697,15 @@ func fling_toy(id: String, from: Vector2, velocity: Vector2) -> void:
 	_held_kind = ""
 	toy.held = false
 	throw_toy(velocity)
+
+
+## Puts a toy down gently at `at` - on a pet, if one is there.
+func put_toy(id: String, at: Vector2) -> void:
+	_grab(id)
+	_samples.clear()
+	_move_held(at)
+	_samples.clear()
+	_drop_held(at, Vector2(640, 300))
 
 
 func place_furniture(id: String, at: Vector2) -> void:

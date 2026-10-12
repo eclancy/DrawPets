@@ -74,6 +74,8 @@ const KIT := {
 	"kit_duck": {"category": "toy", "name": "Squeaky Duck", "words": ["squeaky"]},
 	"kit_teddy": {"category": "toy", "name": "Teddy", "words": ["soft"]},
 	"kit_puzzle_ball": {"category": "toy", "name": "Treat Ball", "words": ["puzzly", "rolly"]},
+	"kit_chew_bone": {"category": "toy", "name": "Chew Bone", "words": ["chewy"]},
+	"kit_log": {"category": "toy", "name": "Big Log", "words": ["heavy", "rolly"]},
 	"kit_apple": {"category": "food", "name": "Apple", "words": ["juicy", "healthy"]},
 	"kit_bone": {"category": "food", "name": "Bone", "words": ["meaty", "chewy"]},
 	"kit_fish": {"category": "food", "name": "Fish", "words": ["fishy"]},
@@ -126,12 +128,14 @@ const SHOP := {
 	"back_cape": {"category": "clothing", "name": "Hero Cape", "words": ["brave"], "price": 25, "wear": "back"},
 	"back_backpack": {"category": "clothing", "name": "Backpack", "words": ["sporty"], "price": 15, "wear": "back"},
 	"back_wings": {"category": "clothing", "name": "Fairy Wings", "words": ["silly", "fancy"], "price": 30, "wear": "back", "shine": "glitter"},
-	"marker_gold": {"category": "supply", "name": "Gold Marker", "words": [], "price": 20, "uses": 1, "shine": "gold",
-		"note": "Draw one thing in shining gold"},
-	"marker_rainbow": {"category": "supply", "name": "Rainbow Marker", "words": [], "price": 25, "uses": 1, "shine": "rainbow",
-		"note": "Draw one thing in shimmering rainbow"},
-	"marker_glitter": {"category": "supply", "name": "Glitter Marker", "words": [], "price": 20, "uses": 1, "shine": "glitter",
-		"note": "Draw one thing in sparkly glitter"},
+	# One marker lasts a whole drawing - every part of a new pet, all of a fix-up, or one toy -
+	# and is used up when it is finished. So they cost a lot.
+	"marker_gold": {"category": "supply", "name": "Gold Marker", "words": [], "price": 120, "uses": 1, "shine": "gold",
+		"note": "Draw a whole pet (or one thing) in shining gold"},
+	"marker_rainbow": {"category": "supply", "name": "Rainbow Marker", "words": [], "price": 150, "uses": 1, "shine": "rainbow",
+		"note": "Draw a whole pet (or one thing) in shimmering rainbow"},
+	"marker_glitter": {"category": "supply", "name": "Glitter Marker", "words": [], "price": 120, "uses": 1, "shine": "glitter",
+		"note": "Draw a whole pet (or one thing) in sparkly glitter"},
 }
 
 ## The marker each shine mode comes from, and the colour it lays down on the page.
@@ -154,7 +158,7 @@ static func art_group(id: String) -> String:
 	for prefix in ["hat_", "glasses_", "neck_", "back_", "icon_", "marker_", "trick_"]:
 		if id.begins_with(prefix):
 			return "wear"
-	for prefix in ["tool_", "edit_", "part_", "size_", "ui_"]:
+	for prefix in ["tool_", "edit_", "part_", "size_", "ui_", "snd_"]:
 		if id.begins_with(prefix):
 			return "ui"
 	if id.begins_with("house_") or id.begins_with("deco_"):
@@ -189,6 +193,7 @@ static func get_item(id: String) -> Dictionary:
 		item["_tex"] = ImageTexture.create_from_image(img)
 		if item.get("shine", "") != "" and FileAccess.file_exists(dir + "/shine.png"):
 			item["_shine"] = Image.load_from_file(dir + "/shine.png")
+		item["_recording"] = Voice.load_recording(dir + "/sound.f32")
 	_cache[id] = item
 	return item
 
@@ -238,7 +243,8 @@ static func available(profile: Profile, category: String) -> Array:
 
 ## Saves a kid's drawing as a new item and returns it.
 static func save_drawn(category: String, image: Image, pivot: Vector2, words: Array,
-		shine := "", shine_mask: Image = null, extra := {}) -> Dictionary:
+		shine := "", shine_mask: Image = null, extra := {},
+		recording := PackedFloat32Array()) -> Dictionary:
 	var id := "item_" + PetStore.new_id().substr(4)
 	var dir := DRAWN_ROOT + "/" + id
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -249,6 +255,7 @@ static func save_drawn(category: String, image: Image, pivot: Vector2, words: Ar
 	data.merge(extra, true)
 	if shine != "" and shine_mask != null:
 		shine_mask.save_png(dir + "/shine.png")
+	Voice.save_recording(dir + "/sound.f32", recording)
 	var f := FileAccess.open(dir + "/item.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify(data, "\t"))
 	f.close()

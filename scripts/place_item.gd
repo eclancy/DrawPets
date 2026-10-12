@@ -5,9 +5,11 @@ extends Node2D
 ##
 ## How it flies comes from the words the kid gave it, never from how it was drawn: "bouncy"
 ## bounces high, "floaty" glides, "rolly" rolls on, "heavy" barely leaves the hand, "spinny"
-## spins. A "stretchy" toy stretches between a pet's mouth and a finger in tug of war.
+## spins. A "stretchy" toy stretches between a pet's mouth and a finger in tug of war. How the
+## pets PLAY with it comes from its words too (Words.toy_play): see PlaceScreen's Toys.
 
-signal bounced
+## Hit the ground going down at `speed` px/s - the louder the bounce sound.
+signal bounced(speed: float)
 
 var item: Dictionary
 var is_food := false
@@ -78,6 +80,36 @@ func has_word(w: String) -> bool:
 	return item.get("words", []).has(w)
 
 
+## How pets play with it: fetch, tug, cuddle, chew, squeak, puzzle or push. "" for food.
+func play() -> String:
+	return "" if is_food else Words.toy_play(item.get("words", []))
+
+
+## True when a global point is on the drawing. `snug` is for a toy in a mouth, where a touch a
+## little off it should pet the pet instead.
+func hit(point: Vector2, snug := false) -> bool:
+	var reach := radius * scale.x * (0.6 if snug else 1.05) + (0.0 if snug else 10.0)
+	return sprite.global_position.distance_to(point) < reach
+
+
+## A little hop where it lies - tapped by a finger, or nosed and batted by a pet.
+func hop(up: float, push := Vector2.ZERO) -> void:
+	if held or carrier != null:
+		return
+	vz = up
+	z = maxf(z, 1.0)
+	vel += push
+
+
+## Shoved along the ground to `at` by a pet leaning into it; a rolly thing rolls as it goes.
+func slide_to(at: Vector2) -> void:
+	var dx := at.x - position.x
+	position = at.clamp(bounds.position, bounds.end)
+	vel = Vector2.ZERO
+	if _roll:
+		sprite.rotation += dx / maxf(radius, 1.0)
+
+
 ## Heavy toys go a short way however hard they are flung.
 func throw_scale() -> float:
 	return 0.45 if has_word("heavy") else 1.0
@@ -120,9 +152,10 @@ func _process(delta: float) -> void:
 	if z <= 0.0:
 		z = 0.0
 		if vz < -140.0:
+			var hit := -vz
 			vz = -vz * _bounce
 			vel *= 0.85
-			bounced.emit()
+			bounced.emit(hit)
 		else:
 			vz = 0.0
 	if z <= 0.0 and vz == 0.0:

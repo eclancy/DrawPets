@@ -50,6 +50,8 @@ const ASSETS := {
 	"kit_duck": {"pivot": "center", "look": "yellow rubber squeaky duck"},
 	"kit_teddy": {"pivot": "center", "look": "small soft brown teddy bear"},
 	"kit_puzzle_ball": {"pivot": "center", "look": "green ball with holes and a treat peeking out"},
+	"kit_chew_bone": {"pivot": "center", "look": "pale blue rubber chew bone with little bumps"},
+	"kit_log": {"pivot": "center", "look": "short heavy log on its side, a pale cut end with rings"},
 	# Toys - shop, shiny at runtime.
 	"shiny_ball": {"pivot": "center", "look": "ball with a star on it (gold)"},
 	"golden_bone": {"pivot": "center", "look": "chew bone (gold)"},
@@ -172,6 +174,10 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_teddy(c)
 		"kit_puzzle_ball":
 			_puzzle_ball(c)
+		"kit_chew_bone":
+			_chew_bone(c)
+		"kit_log":
+			_heavy_log(c)
 		"shiny_ball":
 			_shiny_ball(c)
 		"golden_bone":
@@ -1683,6 +1689,47 @@ static func _golden_bone(c: CanvasItem) -> void:
 	var n := t.orthogonal()
 	_mline(c, _pv([a + t * 50 + n * 14, b - t * 50 + n * 14]), Color(1, 1, 1, 0.85), 8.0, 3703)
 	_twinkle(c, Vector2(140, 170), 24.0, Color("#d8b44e"), 3704)
+
+
+## Marker: a pale blue rubber chew bone, knobbly with little bumps - a toy, not a snack.
+static func _chew_bone(c: CanvasItem) -> void:
+	var a := Vector2(140, 330)
+	var b := Vector2(372, 182)
+	var bone := _bone_shape(a, b, 30.0, 38.0)
+	var blue := Color("#9fcdf0")
+	_mark(c, bone, blue, 4901, 7.0)
+	_shade(c, bone, blue, 4902, Vector2(-14, -22), 0.16)
+	var t := (b - a).normalized()
+	var n := t.orthogonal()
+	for i in 5:
+		var p := a.lerp(b, 0.25 + i * 0.125) + n * (9.0 if i % 2 == 0 else -11.0)
+		_mfill(c, _circle(p, 7.0, 12), blue.darkened(0.2), 4903 + i)
+	_mline(c, _pv([a + t * 54 + n * 17, b - t * 54 + n * 17]), Color(1, 1, 1, 0.8), 7.0, 4910)
+
+
+## Pencil: a short, heavy log lying on its side - bark lines, a pale cut end with rings, and a
+## twig nub with a leaf so it reads as a log and not a tube.
+static func _heavy_log(c: CanvasItem) -> void:
+	var bark := Color("#a87b52")
+	var body := Crayon.rounded_rect(Rect2(92, 178, 304, 168), 30)
+	_pen(c, body, bark, 4951, 5.5)
+	_shade(c, body, bark, 4952, Vector2(0, -26), 0.18)
+	for i in 4:
+		var y := 208.0 + i * 37.0
+		_pline(c, _pv([Vector2(118, y), Vector2(200, y + Crayon.noise(4953, i) * 6.0), Vector2(300, y - 4.0),
+			Vector2(366, y + 3.0)]), bark.darkened(0.32), 3.5, 4954 + i)
+	var wood := Color("#efd5a9")
+	var face := Crayon.ellipse(Vector2(396, 262), Vector2(54, 86), 32)
+	_pen(c, face, wood, 4960, 5.0)
+	for k in 2:
+		var r := 0.64 - k * 0.3
+		Crayon.pencil_line(c, Crayon.ellipse(Vector2(396, 262), Vector2(54.0 * r, 86.0 * r), 24),
+			Color("#c99e72"), 3.0, 4961 + k)
+	_pen(c, Crayon.ellipse(Vector2(396, 262), Vector2(7, 11), 10), Color("#b98a5e"), 4965, 2.5)
+	var nub := _band(_pv([Vector2(196, 186), Vector2(186, 140)]), 9.0)
+	_pen(c, nub, bark, 4966, 4.0)
+	var green := Color("#8ccd6e")
+	_pen(c, _leaf(Vector2(206, 118), 70, 34, -0.6), green, 4967, 4.0)
 
 
 ## A bone: a bar from a to b with two round knobs at each end.

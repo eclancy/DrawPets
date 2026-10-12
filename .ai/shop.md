@@ -17,6 +17,7 @@ with a toast that says what it was for; a kid should always know what they did t
 | its favourite food | 2 | once a day |
 | every 5th fetch | 2 | up to 25 fetches a day |
 | winning tug of war at home | 1 | 5 a day |
+| playing with a toy its own way (a cuddle, a chew, a pounce, a treat out, a push) | 1 | 5 a day, all together |
 | drawing something new (toy, food, furniture, clothes) | 2 | 5 a day |
 | decorating | 1 | 3 a day |
 | a stat goes up a level | 3 per level | - |
@@ -37,7 +38,7 @@ furniture or hat they like for free; the shop sells what drawing cannot give the
 | **Adopt** | **40 pets** in four groups - Meadow & Forest, Fliers, Water & Oddballs, Dinos & Monsters (35 tiny ... 110 giant) | creatures the kid did not draw; tap one to MEET it first: it bounces up to say hello, with its size, personality, favourite place, favourite food and toy, and stats |
 | Shiny Toys | Shiny Ball, Golden Bone, Glitter Disc, Rainbow Rope, Crystal Squeaker, Star Plush, Puzzle Cube, Rocket Ball (25-40) | they **shine and sparkle**, and train their stat **twice as fast** |
 | Clothes | 10 hats, 4 glasses, bow tie, scarf, bandana, cape, backpack, fairy wings (10-50; the crown and wings shine) | dressing up, and Style Show points for matching the theme |
-| Markers & Treats | Gold, Rainbow and Glitter Markers (20-25, one drawing each); Star Snack (15, one use) | a marker draws ONE thing that shines forever; a Star Snack makes every stat train faster for ten minutes |
+| Markers & Treats | Gold, Rainbow and Glitter Markers (120-150, one drawing each); Star Snack (15, one use) | a marker lasts a whole drawing - every part of a new pet, all of one fix-up, or one toy - and is used up when it is finished (or not at all if the drawing is thrown away); what it drew shines forever. A Star Snack makes every stat train faster for ten minutes |
 | Furniture | Throne, Rainbow Slide, Hot Tub, Treehouse, Piano, Castle Bed (45-70) | fancy things with several words at once |
 | Places | Cloud Kingdom 90, Candy Land 100, The Moon 120, Castle 150 | a pet can dream of these from day one; buying one lets a home be built there |
 | Room to Grow | a new home plot (60, 120, 200, 300), an extra room in a home (30, 50, 80, 120) | more pets - see below |

@@ -127,6 +127,7 @@ func _adopt_card(id: String) -> Button:
 	c.position = Vector2(114, 168)
 	b.add_child(c)
 	c.setup(pet, 124.0)
+	c.fit_in(Vector2(204, 130))
 	var name := UI.label(pet["name"], 22)
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -184,7 +185,9 @@ func meet(id: String) -> void:
 	c.position = Vector2(210, 470)
 	stage.add_child(c)
 	c.setup(pet, 260.0)
+	c.fit_in(Vector2(370, 300))  # room to hop and greet without leaving the frame
 	c.perform("greet", 2.0)
+	c.say("hello")
 
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -306,6 +309,7 @@ func _place_card(id: String) -> PanelContainer:
 		var buy := func():
 			if game.profile.spend(price):
 				game.profile.unlock_place(id)
+				Sounds.play("buy")
 				game.toast("%s is yours! Build a home there for your next pet." % Places.display_name(id), "icon_home")
 				show_tab(tab)
 		col.add_child(_buy_button(price, buy, ""))
@@ -336,6 +340,7 @@ func _room_cards() -> void:
 		var buy := func():
 			if game.profile.spend(price):
 				game.profile.data["home_slots"] = game.profile.home_slots() + 1
+				Sounds.play("buy")
 				game.profile.save()
 				game.toast("A new plot! Your next pet can build a home there.", "icon_home")
 				show_tab(tab)
@@ -363,6 +368,7 @@ func _room_cards() -> void:
 			var buy := func():
 				if game.profile.spend(rp):
 					h["rooms"] = int(h["rooms"]) + 1
+					Sounds.play("buy")
 					game.profile.save()
 					game.toast("%s has room for one more!" % Places.display_name(h["place"]), "icon_home")
 					show_tab(tab)
@@ -415,5 +421,6 @@ func _buy_item(id: String, price: int) -> void:
 	if not game.profile.spend(price):
 		return
 	game.profile.give(id)
+	Sounds.play("shiny" if Items.SHOP[id].get("shine", "") != "" else "buy")
 	game.toast("Bought the %s!" % Items.SHOP[id]["name"], "icon_shop")
 	show_tab(tab)
