@@ -115,9 +115,12 @@ func tap() -> void:
 		_heave = 1.0
 		_ring.flash = 1.0
 		_say("HEAVE!")
+		Sounds.play("heave")
+		Voice.speak(screen.pet, "tug", _player)
 	else:
 		_heave = maxf(_heave, 0.25)
 		_say("heave...")
+		Sounds.play_varied("tug", 1.0, 0.1, -4.0)
 
 
 func _say(text: String) -> void:
@@ -130,6 +133,10 @@ func _process(delta: float) -> void:
 	_msg.modulate.a = maxf(0.0, _msg.modulate.a - delta * 1.4)
 	_ring.value = (sin(maxf(_t, 0.0) * TAU / 1.1 - PI / 2.0) + 1.0) / 2.0
 	_place_rope()
+	if _t < 0.0 and int(ceil(-_t)) != int(ceil(-(_t - delta))):
+		Sounds.play("count_tick")
+	if _t >= 0.0 and _t - delta < 0.0 and not _over:
+		Sounds.play("count_go")
 	if _t < 0.0 or _over:
 		if _t < 0.0:
 			_msg.text = "Ready..." if _t < -0.5 else "PULL!"
@@ -174,9 +181,13 @@ func _end_round(won: bool) -> void:
 		_wins += 1
 		_player.perform("celebrate", 1.5)
 		_say("You win round %d!" % (_round + 1))
+		Sounds.play("cheer")
+		_player.say("star")
 	else:
 		_rival.perform("celebrate", 1.5)
 		_say("%s wins!" % screen.rivals[_round]["name"])
+		Sounds.play("ui_nope")
+		_rival.say("star")
 	await get_tree().create_timer(1.8).timeout
 	if won and _round < 2:
 		_round += 1

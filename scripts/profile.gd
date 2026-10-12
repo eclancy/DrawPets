@@ -23,6 +23,9 @@ const HOME_TRUST := [2, 3, 3, 4]
 const ROOM_PRICES := [30, 50, 80, 120]
 const ROOM_TRUST := [1, 2, 3, 3]
 
+## Volumes 0..1, and the microphone - off until a kid (or a grown-up) turns it on.
+const DEFAULT_SETTINGS := {"music": 0.8, "sfx": 1.0, "voice": 1.0, "ambience": 0.8, "mic": false}
+
 var data := {}
 
 
@@ -32,11 +35,19 @@ static func load_or_new() -> Profile:
 	var parsed = JSON.parse_string(text) if text != "" else null
 	p.data = parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 	for key in ["stars", "home_slots", "homes", "owned", "items", "places", "results", "daily",
-			"once"]:
+			"once", "settings"]:
 		if not p.data.has(key):
 			p.data[key] = {"stars": 0, "home_slots": START_HOMES, "homes": [], "owned": {},
-				"items": [], "places": [], "results": {}, "daily": {}, "once": {}}[key]
+				"items": [], "places": [], "results": {}, "daily": {}, "once": {},
+				"settings": DEFAULT_SETTINGS.duplicate()}[key]
+	for k in DEFAULT_SETTINGS:
+		if not p.data["settings"].has(k):
+			p.data["settings"][k] = DEFAULT_SETTINGS[k]
 	return p
+
+
+func settings() -> Dictionary:
+	return data["settings"]
 
 
 func save() -> void:

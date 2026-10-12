@@ -30,8 +30,7 @@ func _ready() -> void:
 
 func _swap(c: Control) -> void:
 	if _content != null:
-		remove_child(_content)
-		_content.queue_free()
+		UI.retire(_content)
 	_content = c
 	add_child(UI.full_rect(c))
 

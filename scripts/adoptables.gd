@@ -56,6 +56,32 @@ const INFO := {
 	"mo": ["adopt_d", "medium", "castle", ["silly", "cuddly"], "kit_pizza", "kit_teddy"],
 }
 
+## Each one's voice - a recipe like a kid would make (Voice): base, then nudges.
+const VOICES := {
+	"pip": {"base": "squeak", "pitch": 3.0}, "bramble": {"base": "oink", "pitch": 4.0, "speed": 1.3},
+	"moss": {"base": "moo", "pitch": 2.0, "speed": 0.8}, "clover": {"base": "baa", "pitch": 4.0},
+	"tank": {"base": "honk", "pitch": -5.0}, "waffles": {"base": "bark", "pitch": 2.0, "wobble": 0.2},
+	"sprocket": {"base": "bark", "pitch": 5.0, "speed": 1.3},
+	"pudding": {"base": "oink", "pitch": 0.0}, "boulder": {"base": "moo", "pitch": -4.0, "speed": 0.8},
+	"dottie": {"base": "bark", "pitch": 7.0, "speed": 1.5},
+	"skye": {"base": "hoot", "pitch": -6.0, "speed": 0.6, "echo": 0.6, "wobble": 0.3},
+	"hoot": {"base": "hoot", "pitch": 0.0}, "zephyr": {"base": "trill", "pitch": 3.0, "speed": 1.4},
+	"blaze": {"base": "roar", "pitch": 4.0, "speed": 1.2}, "petal": {"base": "meow", "pitch": 4.0, "wobble": 0.2},
+	"comet": {"base": "chirp", "pitch": 2.0, "echo": 0.4, "bend": 0.5}, "pelly": {"base": "quack", "pitch": -3.0},
+	"gizmo": {"base": "squeak", "pitch": 6.0, "speed": 1.4}, "twinkle": {"base": "chirp", "pitch": 5.0, "wobble": 0.3},
+	"ptera": {"base": "honk", "pitch": 2.0, "bend": -0.4},
+	"bubbles": {"base": "gurgle", "pitch": 3.0, "echo": 0.3}, "squidge": {"base": "gurgle", "pitch": -2.0, "wobble": 0.4},
+	"shelly": {"base": "beep", "pitch": 4.0, "speed": 1.5}, "finnegan": {"base": "bark", "pitch": -1.0, "wobble": 0.3},
+	"puddles": {"base": "ribbit", "pitch": 0.0}, "coral": {"base": "trill", "pitch": 5.0, "speed": 0.8},
+	"gloop": {"base": "gurgle", "pitch": -5.0, "speed": 0.8}, "sir_snail": {"base": "hoot", "pitch": 3.0, "speed": 0.6},
+	"nessie": {"base": "moo", "pitch": 3.0, "echo": 0.5, "wobble": 0.3}, "axel": {"base": "squeak", "pitch": -2.0, "wobble": 0.4},
+	"rumble": {"base": "roar", "pitch": -3.0}, "trixie": {"base": "trumpet", "pitch": -5.0},
+	"marshmallow": {"base": "purr", "pitch": 2.0}, "sparkle": {"base": "baa", "pitch": 6.0, "echo": 0.3, "wobble": 0.3},
+	"bolt": {"base": "beep", "pitch": 0.0, "robot": 0.5}, "cactus_jack": {"base": "honk", "pitch": 3.0, "bend": 0.5},
+	"gummy": {"base": "boing", "pitch": 2.0}, "ember": {"base": "roar", "pitch": 8.0, "speed": 1.4},
+	"crystal": {"base": "hoot", "pitch": -5.0, "echo": 0.5, "robot": 0.2}, "mo": {"base": "roar", "pitch": 1.0, "wobble": 0.5},
+}
+
 static var _rosters := {}
 static var _built := {}
 
@@ -99,6 +125,7 @@ static func build(id: String) -> Dictionary:
 		pet["toy"] = {"item": info[5]}
 		pet["needs"] = {"food": 0.8, "fun": 0.8, "clean": 1.0, "energy": 1.0}
 		pet["adopted_from"] = id
+		pet["voice"] = VOICES.get(id, Voice.default_for(pet)).duplicate()
 		Stats.ensure(pet)
 		_built[id] = pet
 	var base: Dictionary = _built[id]

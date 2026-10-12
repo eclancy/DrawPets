@@ -26,6 +26,7 @@ var on_done := Callable()
 var _current: Control
 var _drawing := {}
 var _words := []
+var _sound_target := {}
 
 
 func _ready() -> void:
@@ -50,8 +51,7 @@ func _markers() -> Dictionary:
 
 func _show(screen: Control) -> void:
 	if _current != null:
-		remove_child(_current)
-		_current.queue_free()
+		UI.retire(_current)
 	_current = screen
 	add_child(UI.full_rect(screen))
 
@@ -71,6 +71,9 @@ func _drawn(result: Dictionary) -> void:
 
 func _worded(words: Array) -> void:
 	_words = words
+	if category == "toy":
+		_sound_step()
+		return
 	if category != "clothing":
 		_save({})
 		return
@@ -79,6 +82,21 @@ func _worded(words: Array) -> void:
 	s.picture = ImageTexture.create_from_image(_drawing["image"])
 	s.options = WEAR
 	s.on_choose = func(where: String): _save({"wear": where})
+	_show(s)
+
+
+## A toy can have its own sound - what it does when it bounces, squeaks or is caught.
+func _sound_step() -> void:
+	var img: Image = _drawing["image"]
+	_sound_target = {"id": "new_toy", "_img": img, "_tex": ImageTexture.create_from_image(img),
+		"sound": {"base": "squeak" if _words.has("squeaky") else "boing"}}
+	var s := VoiceMakerScreen.new()
+	s.game = game
+	s.target = _sound_target
+	s.key = "sound"
+	s.title_text = "What sound does it make?"
+	s.on_done = func(): _save({"sound": _sound_target["sound"]})
+	s.on_skip = func(): _save({})
 	_show(s)
 
 
@@ -94,9 +112,12 @@ func _save(extra: Dictionary) -> void:
 		pivot = Vector2(size.x / 2.0, 0.0)
 	var shine: Dictionary = _drawing.get("shine", {})
 	var mode: String = shine.get("mode", "")
-	if mode != "":
-		game.profile.use_up(Items.MARKERS[mode][0])
-	var item := Items.save_drawn(category, img, pivot, _words, mode, shine.get("mask"), extra)
+	var used: String = _drawing.get("used_marker", "")
+	if used != "":
+		game.profile.use_up(Items.MARKERS[used][0])
+	var recording: PackedFloat32Array = _sound_target.get("_recording", PackedFloat32Array()) if extra.has("sound") \
+		else PackedFloat32Array()
+	var item := Items.save_drawn(category, img, pivot, _words, mode, shine.get("mask"), extra, recording)
 	game.profile.add_drawn_item(item["id"])
 	game.reward_daily("drew", 5, 2, "You drew something new!")
 	on_done.call(item)

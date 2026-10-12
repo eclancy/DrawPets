@@ -143,6 +143,7 @@ func _results(scores: Array) -> void:
 
 
 func _podium(scores: Array, place: int) -> void:
+	Sounds.play("fanfare" if place == 1 else "ribbon")
 	if _mini != null:
 		_mini.queue_free()
 		_mini = null
@@ -181,6 +182,7 @@ func _podium(scores: Array, place: int) -> void:
 		c.setup(e["pet"], 130.0 - i * 10.0)
 		if i == 0:
 			c.perform("celebrate", 99.0)
+			c.say("star")
 		else:
 			c.perform("greet", 99.0)
 		var ribbon := UI.icon("icon_ribbon_%d" % (i + 1), 56, "none")
@@ -224,6 +226,7 @@ static func racer(p: Dictionary) -> Creature:
 	c.confine = false
 	c.depth_scale = false
 	c.driven = true
+	c.audible = true
 	var f: float = Creature.SIZES.get(p.get("size", "medium"), 1.0)
 	c.setup(p, clampf(Creature.STANDARD_HEIGHT * f, 90.0, 170.0))
 	return c

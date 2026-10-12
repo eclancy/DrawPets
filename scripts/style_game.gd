@@ -98,6 +98,7 @@ func _build_hud() -> void:
 func wear(item: Dictionary) -> void:
 	Wardrobe.put_on(screen.pet, item)
 	_pet.rebuild()
+	Sounds.play("dress")
 	_pet.say("star")
 	PetStore.save_pet(screen.pet)
 
@@ -124,6 +125,7 @@ func tap() -> void:
 	_pose_points += points
 	_msg.text = "Perfect pose!" if points >= 10.0 else ("Nice!" if points >= 6.0 else "Oops - out of the light!")
 	_pet.perform("celebrate", 0.6)
+	Sounds.play("camera")
 	_pet.say("star" if points >= 6.0 else "question")
 
 
@@ -149,6 +151,7 @@ func _score() -> void:
 	match_points = minf(match_points, 20.0)
 	var total := Stats.value(screen.pet, "charm") * 0.45 + match_points + _pose_points
 	_msg.text = "The judges say... %d points!" % int(total)
+	Sounds.play("cheer")
 	var scores := [{"who": "player", "score": total}]
 	for i in screen.rivals.size():
 		var charm := Stats.value(screen.rivals[i]["pet"], "charm")

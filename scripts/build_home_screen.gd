@@ -22,8 +22,7 @@ func _ready() -> void:
 
 func _swap(c: Control) -> void:
 	if _content != null:
-		remove_child(_content)
-		_content.queue_free()
+		UI.retire(_content)
 	_content = c
 	add_child(UI.full_rect(c))
 
@@ -126,5 +125,6 @@ func press_build() -> void:
 	if n == "":
 		n = Homes.info(_chosen)["name"]
 	var h := game.profile.build_home(_chosen, n)
+	Sounds.play("build")
 	game.reward(5, "You built %s!" % n)
 	on_done.call(h)

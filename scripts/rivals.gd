@@ -11,6 +11,11 @@ extends RefCounted
 const SIZES := {"biscuit": "medium", "zippy": "small", "puffles": "small", "captain_fins": "medium",
 	"duchess": "medium", "rocky": "big", "noodle": "medium", "mango": "small"}
 
+const VOICES := {"biscuit": {"base": "bark", "pitch": 1.0}, "zippy": {"base": "trill", "pitch": 2.0, "speed": 1.4},
+	"puffles": {"base": "squeak", "pitch": 1.0, "wobble": 0.4}, "captain_fins": {"base": "gurgle", "pitch": -1.0},
+	"duchess": {"base": "chirp", "pitch": -1.0, "wobble": 0.2}, "rocky": {"base": "roar", "pitch": -6.0, "speed": 0.8},
+	"noodle": {"base": "boing", "pitch": 3.0}, "mango": {"base": "meow", "pitch": 0.0}}
+
 static var _built := {}
 
 
@@ -40,6 +45,7 @@ static func _assemble(id: String) -> Dictionary:
 	pet["id"] = "rival_" + id
 	pet["size"] = SIZES.get(id, "medium")
 	pet["needs"] = {"food": 1.0, "fun": 1.0, "clean": 1.0, "energy": 1.0}
+	pet["voice"] = VOICES.get(id, {"base": "bark"}).duplicate()
 	return pet
 
 

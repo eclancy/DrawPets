@@ -18,8 +18,7 @@ func _ready() -> void:
 
 func _list() -> void:
 	if _content != null:
-		remove_child(_content)
-		_content.queue_free()
+		UI.retire(_content)
 	_content = Control.new()
 	add_child(UI.full_rect(_content))
 	_content.add_child(UI.paper_background())
@@ -79,7 +78,6 @@ func _draw_new() -> void:
 		else:
 			on_done.call(item["id"])
 	if _content != null:
-		remove_child(_content)
-		_content.queue_free()
+		UI.retire(_content)
 	_content = maker
 	add_child(UI.full_rect(maker))

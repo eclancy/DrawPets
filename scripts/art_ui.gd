@@ -65,6 +65,52 @@ const ASSETS := {
 	"ui_sign": {"pivot": "center", "look": "a blank wooden name sign on a post"},
 	"ui_plus": {"pivot": "center", "look": "a big friendly plus sign"},
 	"ui_minus": {"pivot": "center", "look": "a big friendly minus sign"},
+	# Looking after a pet.
+	"ui_fix": {"pivot": "center", "look": "a crayon and a sticking plaster (band-aid) crossed - fixing up a pet"},
+	"ui_let_go": {"pivot": "center", "look": "an open garden gate with a little heart floating out of it - letting a pet go off to live in the wild"},
+	"ui_move_home": {"pivot": "center", "look": "a little house with a curved arrow swooping into its door"},
+	"ui_settings": {"pivot": "center", "look": "a friendly gear / cog"},
+	# Sound buttons.
+	"snd_play": {"pivot": "center", "look": "a big play triangle inside a circle"},
+	"snd_record": {"pivot": "center", "look": "an old round microphone on a little stand, with a red record dot"},
+	"snd_stop": {"pivot": "center", "look": "a rounded stop square"},
+	"snd_dice": {"pivot": "center", "look": "a tumbling dice showing five dots - surprise me!"},
+	"snd_speaker": {"pivot": "center", "look": "a loudspeaker with three sound-wave arcs - sound effects volume"},
+	"snd_music": {"pivot": "center", "look": "two joined musical notes - music volume"},
+	"snd_voice": {"pivot": "center", "look": "a wide open cartoon mouth with little sound lines - pet voices volume"},
+	"snd_mic_off": {"pivot": "center", "look": "the same microphone with a soft diagonal line through it"},
+	# The ends of the sound sliders.
+	"snd_high": {"pivot": "center", "look": "a tiny bird singing high notes - higher"},
+	"snd_low": {"pivot": "center", "look": "a big friendly whale going ooo with low notes - deeper"},
+	"snd_fast": {"pivot": "center", "look": "a running rabbit with speed lines - faster"},
+	"snd_slow": {"pivot": "center", "look": "a turtle plodding along - slower"},
+	"snd_flat": {"pivot": "center", "look": "one calm straight horizontal line - no effect"},
+	"snd_wobble": {"pivot": "center", "look": "a big wavy squiggly line - wobbly"},
+	"snd_echo": {"pivot": "center", "look": "a mountain with three echo arcs coming off it - echo"},
+	"snd_bend_up": {"pivot": "center", "look": "an arrow swooping upward like a ski jump - pitch slides up"},
+	"snd_bend_down": {"pivot": "center", "look": "an arrow swooping downward like a slide - pitch slides down"},
+	"snd_robot": {"pivot": "center", "look": "a friendly square robot head with antenna - robot voice"},
+	"snd_backwards": {"pivot": "center", "look": "a rewind symbol: two triangles pointing LEFT"},
+	# Base sounds a pet (or a drawn toy) can start from - each a face or thing MAKING its sound,
+	# mouth open, with little sound lines.
+	"snd_bark": {"pivot": "center", "look": "a dog's face barking"},
+	"snd_meow": {"pivot": "center", "look": "a cat's face meowing"},
+	"snd_chirp": {"pivot": "center", "look": "a little chick / songbird chirping"},
+	"snd_squeak": {"pivot": "center", "look": "a mouse's face squeaking"},
+	"snd_moo": {"pivot": "center", "look": "a cow's face mooing"},
+	"snd_roar": {"pivot": "center", "look": "a friendly lion's face roaring, mane"},
+	"snd_hoot": {"pivot": "center", "look": "an owl's face hooting"},
+	"snd_ribbit": {"pivot": "center", "look": "a frog's face, throat puffed, ribbiting"},
+	"snd_quack": {"pivot": "center", "look": "a duck's face quacking"},
+	"snd_oink": {"pivot": "center", "look": "a pig's face oinking"},
+	"snd_baa": {"pivot": "center", "look": "a sheep's face baa-ing"},
+	"snd_trumpet": {"pivot": "center", "look": "an elephant raising its trunk and trumpeting"},
+	"snd_purr": {"pivot": "center", "look": "a curled-up sleepy cat purring, eyes shut, little zigzag purr lines"},
+	"snd_beep": {"pivot": "center", "look": "a little robot with a speech of beep lines"},
+	"snd_gurgle": {"pivot": "center", "look": "a slime blob gurgling with bubbles"},
+	"snd_boing": {"pivot": "center", "look": "a coiled spring bouncing"},
+	"snd_trill": {"pivot": "center", "look": "a little alien in a flying saucer warbling"},
+	"snd_honk": {"pivot": "center", "look": "a goose's face honking"},
 }
 
 ## Paper laid under every shape first, so each icon is opaque like a cut-out sticker.
@@ -72,6 +118,10 @@ const PAPER := Color("#fffdf8")
 const SHINE := Color(1, 1, 1, 0.62)
 ## Pupils and noses: the darkest thing in the set, a dark plum - never black (creatures own black).
 const PLUM := Color("#47365f")
+## The sound arcs every noisy picture shares, and the inside of every open mouth.
+const WAVE := Color("#9d8af4")
+const MAW := Color("#c8607e")
+const TONGUE := Color("#f79ab0")
 
 
 static func assets() -> Dictionary:
@@ -176,6 +226,88 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_plus(c)
 		"ui_minus":
 			_minus(c)
+		"ui_fix":
+			_fix(c)
+		"ui_let_go":
+			_let_go(c)
+		"ui_move_home":
+			_move_home(c)
+		"ui_settings":
+			_settings(c)
+		"snd_play":
+			_play(c)
+		"snd_record":
+			_record(c)
+		"snd_stop":
+			_stop(c)
+		"snd_dice":
+			_dice(c)
+		"snd_speaker":
+			_speaker(c)
+		"snd_music":
+			_music(c)
+		"snd_voice":
+			_voice(c)
+		"snd_mic_off":
+			_mic_off(c)
+		"snd_high":
+			_high(c)
+		"snd_low":
+			_low(c)
+		"snd_fast":
+			_fast(c)
+		"snd_slow":
+			_slow(c)
+		"snd_flat":
+			_flat(c)
+		"snd_wobble":
+			_wobble(c)
+		"snd_echo":
+			_echo(c)
+		"snd_bend_up":
+			_bend(c, true)
+		"snd_bend_down":
+			_bend(c, false)
+		"snd_robot":
+			_robot(c)
+		"snd_backwards":
+			_backwards(c)
+		"snd_bark":
+			_bark(c)
+		"snd_meow":
+			_meow(c)
+		"snd_chirp":
+			_chirp(c)
+		"snd_squeak":
+			_squeak(c)
+		"snd_moo":
+			_moo(c)
+		"snd_roar":
+			_roar(c)
+		"snd_hoot":
+			_hoot(c)
+		"snd_ribbit":
+			_ribbit(c)
+		"snd_quack":
+			_quack(c)
+		"snd_oink":
+			_oink(c)
+		"snd_baa":
+			_baa(c)
+		"snd_trumpet":
+			_trumpet(c)
+		"snd_purr":
+			_purr(c)
+		"snd_beep":
+			_beep(c)
+		"snd_gurgle":
+			_gurgle(c)
+		"snd_boing":
+			_boing(c)
+		"snd_trill":
+			_trill(c)
+		"snd_honk":
+			_honk(c)
 
 
 # --- Drawing tools -----------------------------------------------------------------------------
@@ -1129,6 +1261,905 @@ static func _minus(c: CanvasItem) -> void:
 	Crayon.line(c, Vector2(120, 232), Vector2(384, 232), SHINE, 13.0, 1602)
 
 
+# --- Looking after a pet -----------------------------------------------------------------------
+
+## Marker: a blue crayon and a peach sticking plaster crossed in an X - fixing up a pet.
+static func _fix(c: CanvasItem) -> void:
+	_crayon_stick(c, Vector2(256, 256), deg_to_rad(-45), Color("#79aeea"), 3000)
+	var skin := Color("#f5c08e")
+	var at := Vector2(256, 256)
+	var ang := deg_to_rad(45)
+	var o := Vector2.ZERO
+	_mark(c, _place(Crayon.rounded_rect(Rect2(-212, -66, 424, 132), 60), o, at, ang), skin, 3010, 11.0)
+	_pen(c, _place(Crayon.rounded_rect(Rect2(-68, -46, 136, 92), 20), o, at, ang), Color("#fbe3c6"), 3011, 7.0)
+	for i in 8:
+		var x := (118.0 + (i % 2) * 44.0) * (1.0 if i < 4 else -1.0)
+		var y := -22.0 + ((i / 2) % 2) * 44.0
+		c.draw_colored_polygon(Crayon.ellipse(_place1(Vector2(x, y), o, at, ang), Vector2(9, 9), 12), skin.darkened(0.3))
+	Crayon.line(c, _place1(Vector2(-184, -38), o, at, ang), _place1(Vector2(-96, -38), o, at, ang), SHINE, 11.0, 3012)
+
+
+## Marker: a garden gate swung wide open, a pink heart floating up and out through it.
+static func _let_go(c: CanvasItem) -> void:
+	var wood := Color("#e8b47a")
+	_mark(c, Crayon.rounded_rect(Rect2(26, 420, 460, 50), 24), Color("#9bd87a"), 3100, 10.0)
+	# The gate, swung away from us on the right post: its slats narrow towards the far edge.
+	var h_top := Vector2(346, 204)
+	var h_bot := Vector2(346, 426)
+	var f_top := Vector2(484, 240)
+	var f_bot := Vector2(484, 402)
+	for k in 2:
+		var v := 0.3 + k * 0.42
+		var a := h_top.lerp(h_bot, v)
+		var b := f_top.lerp(f_bot, v)
+		_mark(c, PackedVector2Array([a + Vector2(0, -16), b + Vector2(0, -12), b + Vector2(0, 12), a + Vector2(0, 16)]),
+			wood.darkened(0.1), 3101 + k, 9.0)
+	for i in 3:
+		var u0 := i / 3.0 + 0.05
+		var u1 := (i + 1) / 3.0 - 0.05
+		var t0 := h_top.lerp(f_top, u0)
+		var t1 := h_top.lerp(f_top, u1)
+		var peak := t0.lerp(t1, 0.5) + Vector2(0, -(t1.x - t0.x) * 0.7)
+		_mark(c, PackedVector2Array([t0, peak, t1, h_bot.lerp(f_bot, u1), h_bot.lerp(f_bot, u0)]), wood, 3103 + i, 9.0)
+	var brace_a := h_top.lerp(h_bot, 0.74).lerp(f_top.lerp(f_bot, 0.74), 0.06)
+	var brace_b := h_top.lerp(h_bot, 0.3).lerp(f_top.lerp(f_bot, 0.3), 0.94)
+	_mark(c, _capsule(brace_a, brace_b, 28), wood.darkened(0.1), 3106, 8.0)
+	for x in [56.0, 286.0]:
+		var post := _join([[Vector2(x, 444), Vector2(x, 190)], _arc(Vector2(x + 30, 190), Vector2(30, 30), PI, TAU, 10),
+			[Vector2(x + 60, 444)]])
+		_mark(c, post, wood.darkened(0.06), 3110 + int(x), 11.0)
+		_mark(c, Crayon.ellipse(Vector2(x + 30, 150), Vector2(26, 26), 18), wood.lightened(0.1), 3111 + int(x), 9.0)
+	var heart := _heart(Vector2(201, 206), 186.0)
+	_mark(c, heart, Color("#f26b84"), 3120, 12.0)
+	_shine(c, _arc(Vector2(164, 172), Vector2(30, 26), PI * 1.02, PI * 1.5, 8), 12.0, 3121)
+	for i in 2:
+		_mark(c, Crayon.ellipse(Vector2(196 - i * 8, 358 + i * 40), Vector2(13 - i * 3, 13 - i * 3), 12), Color("#f26b84"),
+			3122 + i, 6.0)
+
+
+## Marker: a little yellow house, and a purple arrow swooping round and in at its door.
+static func _move_home(c: CanvasItem) -> void:
+	var wall := Color("#ffd36b")
+	var roof := Color("#f27a6e")
+	_mark(c, Crayon.rounded_rect(Rect2(392, 100, 46, 110), 8), roof.darkened(0.08), 3200, 9.0)
+	_mark(c, Crayon.rounded_rect(Rect2(198, 226, 260, 228), 12), wall, 3201, 12.0)
+	_mark(c, _round_poly(PackedVector2Array([Vector2(156, 262), Vector2(328, 86), Vector2(500, 262)]), 18.0), roof, 3202, 12.0)
+	var door := _union([Crayon.rounded_rect(Rect2(290, 358, 80, 96), 6), Crayon.ellipse(Vector2(330, 362), Vector2(40, 40), 24)])
+	_mark(c, door, Color("#79aeea"), 3203, 10.0)
+	var win := Crayon.rounded_rect(Rect2(388, 300, 50, 50), 8)
+	_pen(c, win, Color("#cfe6fb"), 3204, 8.0)
+	Crayon.line(c, Vector2(413, 304), Vector2(413, 346), Color("#cfe6fb").darkened(0.45), 6.0, 3205)
+	Crayon.line(c, Vector2(392, 325), Vector2(434, 325), Color("#cfe6fb").darkened(0.45), 6.0, 3206)
+	var path := _cubic(Vector2(66, 96), Vector2(30, 340), Vector2(140, 412), Vector2(262, 408), 24)
+	var arrow := _union([_arrow(path, 50.0, 78.0, 124.0), Crayon.ellipse(path[0], Vector2(25, 25), 16)])
+	_mark(c, arrow, Color("#9d8af4"), 3207, 11.0)
+	_shine(c, _offset(path.slice(3, 15), -13.0), 9.0, 3208)
+
+
+## Marker: a friendly blue cog - fat round teeth and a pale hole in the middle.
+static func _settings(c: CanvasItem) -> void:
+	var blue := Color("#8fb4ea")
+	var at := Vector2(256, 256)
+	var parts := [Crayon.ellipse(at, Vector2(162, 162), 64)]
+	for k in 8:
+		var tooth := Crayon.rounded_rect(Rect2(-46, -214, 92, 104), 26)
+		parts.append(_shift(_turn(tooth, Vector2.ZERO, k * PI / 4.0), at))
+	_mark(c, _union(parts), blue, 3300, 12.0)
+	_shine(c, _arc(at, Vector2(124, 124), PI * 1.06, PI * 1.42, 10), 15.0, 3301)
+	var hole := Crayon.ellipse(at, Vector2(62, 62), 32)
+	_under(c, hole)
+	Crayon.pencil_fill(c, hole, Color("#eef3fc"), 3302)
+	Crayon.marker_line(c, hole, blue.darkened(0.5), 11.0, 3303)
+
+
+# --- Sound buttons -----------------------------------------------------------------------------
+
+## Marker: a green button with a big cream play triangle on it.
+static func _play(c: CanvasItem) -> void:
+	var green := Color("#5fc87a")
+	var at := Vector2(256, 256)
+	_mark(c, Crayon.ellipse(at, Vector2(206, 206), 72), green, 3400, 12.0)
+	_shine(c, _arc(at, Vector2(172, 172), PI * 1.06, PI * 1.4, 12), 16.0, 3401)
+	var tri := _round_poly(PackedVector2Array([Vector2(198, 140), Vector2(384, 256), Vector2(198, 372)]), 26.0)
+	_under(c, tri)
+	Crayon.pencil_fill(c, tri, Color("#fffaf0"), 3402)
+	Crayon.marker_line(c, tri, green.darkened(0.5), 11.0, 3403)
+
+
+## Marker: an old round microphone on its stand, and a red record dot beside it.
+static func _record(c: CanvasItem) -> void:
+	_mic(c, Vector2(222, 236), 3600)
+	var red := Color("#ef6262")
+	_mark(c, Crayon.ellipse(Vector2(410, 112), Vector2(62, 62), 32), red, 3620, 11.0)
+	_shine(c, _arc(Vector2(410, 112), Vector2(40, 40), PI * 1.08, PI * 1.44, 8), 11.0, 3621)
+
+
+## Marker: a big rounded coral stop square.
+static func _stop(c: CanvasItem) -> void:
+	var red := Color("#f0716e")
+	_mark(c, Crayon.rounded_rect(Rect2(88, 88, 336, 336), 64), red, 3500, 12.0)
+	Crayon.line(c, Vector2(128, 156), Vector2(128, 360), SHINE, 14.0, 3501)
+
+
+## Marker: a white dice tumbling over, five plum spots on its front, two swooshes behind it.
+static func _dice(c: CanvasItem) -> void:
+	var at := Vector2(286, 230)
+	var mid := Vector2(22, -22)
+	var ang := deg_to_rad(-14)
+	for i in 2:
+		var r := 262.0 + i * 44.0
+		_frame(c, _arc(at, Vector2(r, r), PI * (0.64 + i * 0.03), PI * (0.8 - i * 0.02), 10), Color("#aaa4ea"), 13.0,
+			3800 + i, false)
+	_block(c, Rect2(-140, -100, 240, 240), Vector2(84, -84), Color("#ebe6fb"), 3802, mid, at, ang)
+	var spots := [Vector2(-88, -48), Vector2(48, -48), Vector2(-20, 20), Vector2(-88, 88), Vector2(48, 88)]
+	for i in spots.size():
+		var q: Vector2 = spots[i]
+		var p := Crayon.ellipse(_place1(q, mid, at, ang), Vector2(26, 26), 20)
+		c.draw_colored_polygon(p, PLUM)
+		Crayon.marker_fill(c, p, PLUM.lightened(0.14), 3810 + i, 10.0)
+	var top := PackedVector2Array()
+	for i in 20:
+		var t := TAU * i / 20.0
+		top.append(_place1(Vector2(22, -142) + Vector2(cos(t) * 26.0 + sin(t) * 9.0, -sin(t) * 9.0), mid, at, ang))
+	c.draw_colored_polygon(top, PLUM)
+
+
+## Marker: a blue loudspeaker, three sound arcs coming off it.
+static func _speaker(c: CanvasItem) -> void:
+	var blue := Color("#79aeea")
+	var cone := PackedVector2Array([Vector2(150, 196), Vector2(264, 94), Vector2(264, 418), Vector2(150, 316)])
+	_mark(c, _round_poly(cone, 14.0), blue, 3900, 12.0)
+	_mark(c, Crayon.rounded_rect(Rect2(52, 184, 118, 144), 22), blue.darkened(0.08), 3901, 12.0)
+	Crayon.line(c, Vector2(78, 212), Vector2(78, 300), SHINE, 11.0, 3902)
+	_waves(c, Vector2(272, 256), 0.0, 3903, 3, 74.0, 60.0, 20.0, 0.62)
+
+
+## Marker: two pink musical notes joined by a beam.
+static func _music(c: CanvasItem) -> void:
+	var pink := Color("#e98cc4")
+	var h1 := Vector2(146, 384)
+	var h2 := Vector2(350, 344)
+	# In touching order - a union that meets a part it does not touch keeps only the bigger piece.
+	var parts := [_turn(Crayon.ellipse(h1, Vector2(80, 60), 32), h1, -0.38), _capsule(h1 + Vector2(64, -12), h1 + Vector2(64, -270), 40),
+		PackedVector2Array([Vector2(194, 92), Vector2(438, 50), Vector2(438, 120), Vector2(194, 162)]),
+		_capsule(h2 + Vector2(64, -12), h2 + Vector2(64, -270), 40), _turn(Crayon.ellipse(h2, Vector2(80, 60), 32), h2, -0.38)]
+	_mark(c, _round_poly(_union(parts), 6.0), pink, 4000, 12.0)
+	for h in [Vector2(146, 384), Vector2(350, 344)]:
+		var at: Vector2 = h
+		_shine(c, _arc(at, Vector2(52, 36), PI * 1.0, PI * 1.4, 8), 11.0, 4001 + int(at.x))
+
+
+## Marker: a wide open cartoon mouth - teeth, tongue, coral lips - with sound arcs either side.
+static func _voice(c: CanvasItem) -> void:
+	var lip := Color("#f07a8c")
+	var mouth := _join([_cubic(Vector2(118, 176), Vector2(196, 214), Vector2(316, 214), Vector2(394, 176), 16),
+		_cubic(Vector2(394, 176), Vector2(390, 404), Vector2(122, 404), Vector2(118, 176), 20)])
+	_under(c, mouth)
+	Crayon.marker_fill(c, mouth, MAW, 4100)
+	var top := _cubic(Vector2(100, 166), Vector2(196, 206), Vector2(316, 206), Vector2(412, 166), 16)
+	for piece in Geometry2D.intersect_polygons(_join([top, _offset(_reverse(top), 36.0)]), mouth):
+		_under(c, piece)
+		Crayon.pencil_fill(c, piece, Color("#fffaf2"), 4101)
+		Crayon.pencil_line(c, piece, Color("#c4a4c4"), 6.0, 4102)
+	for piece in Geometry2D.intersect_polygons(Crayon.ellipse(Vector2(256, 360), Vector2(104, 66), 32), mouth):
+		_under(c, piece)
+		Crayon.marker_fill(c, piece, TONGUE, 4103)
+		Crayon.marker_line(c, piece, TONGUE.darkened(0.45), 8.0, 4104)
+	_frame(c, mouth, lip, 18.0, 4105)
+	_waves(c, Vector2(398, 270), 0.0, 4106, 2, 50.0, 40.0)
+	_waves(c, Vector2(114, 270), PI, 4108, 2, 50.0, 40.0)
+
+
+## Marker: the microphone with a soft coral line through it - no recording.
+static func _mic_off(c: CanvasItem) -> void:
+	_mic(c, Vector2(256, 236), 3700)
+	var a := Vector2(102, 92)
+	var b := Vector2(410, 420)
+	_under(c, _capsule(a, b, 88))
+	_mark(c, _capsule(a, b, 54), Color("#f0716e"), 3720, 11.0)
+
+
+## An old round microphone on a little stand, centred on `at`: a grille head in a holder, stem, base.
+static func _mic(c: CanvasItem, at: Vector2, seed: int) -> void:
+	var metal := Color("#bdb8dc")
+	var dark := metal.darkened(0.5)
+	_mark(c, Crayon.rounded_rect(Rect2(at.x - 104, at.y + 172, 208, 48), 22), metal.darkened(0.06), seed, 11.0)
+	_mark(c, Crayon.rounded_rect(Rect2(at.x - 20, at.y + 96, 40, 90), 10), metal.darkened(0.12), seed + 1, 10.0)
+	_frame(c, _arc(at + Vector2(0, -24), Vector2(122, 128), 0.0, PI, 24), metal.darkened(0.04), 18.0, seed + 2, false)
+	var head := Crayon.ellipse(at + Vector2(0, -64), Vector2(98, 122), 48)
+	_under(c, head)
+	Crayon.marker_fill(c, head, metal.lightened(0.25), seed + 3)
+	var inner: PackedVector2Array = Geometry2D.offset_polygon(head, -20.0)[0]
+	for i in 5:
+		var y := at.y - 156.0 + i * 46.0
+		for piece in Geometry2D.intersect_polyline_with_polygon(
+				PackedVector2Array([Vector2(at.x - 130, y), Vector2(at.x + 130, y)]), inner):
+			Crayon.marker_line(c, piece, dark.lightened(0.25), 7.0, seed + 4 + i, false)
+	for piece in Geometry2D.intersect_polyline_with_polygon(
+			PackedVector2Array([Vector2(at.x, at.y - 200), Vector2(at.x, at.y + 80)]), inner):
+		Crayon.marker_line(c, piece, dark.lightened(0.25), 7.0, seed + 10, false)
+	Crayon.marker_line(c, head, dark, 12.0, seed + 11)
+	_shine(c, _arc(at + Vector2(0, -64), Vector2(70, 94), PI * 1.1, PI * 1.38, 8), 13.0, seed + 12)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		_mark(c, Crayon.ellipse(at + Vector2(sx * 122, -24), Vector2(18, 18), 14), metal.darkened(0.04), seed + 13 + k, 7.0)
+
+
+# --- Ends of the sound sliders -----------------------------------------------------------------
+
+## Marker: a tiny pink bird singing, beak wide open, two little notes climbing up high.
+static func _high(c: CanvasItem) -> void:
+	var pink := Color("#f48fb8")
+	var orange := Color("#f7a04a")
+	var at := Vector2(158, 350)
+	_note(c, Vector2(302, 214), 0.58, WAVE, 4201)
+	_note(c, Vector2(402, 148), 0.7, WAVE, 4202)
+	_mark(c, _leaf(PackedVector2Array([at + Vector2(-84, -4), at + Vector2(-150, -82)]), 64.0), pink.darkened(0.08), 4203, 10.0)
+	for k in 2:
+		var foot := at + Vector2(-30 + k * 50, 92)
+		_frame(c, PackedVector2Array([foot, foot + Vector2(-2, 30), foot + Vector2(22, 34)]), orange, 7.0, 4204 + k, false)
+	var body := Crayon.ellipse(at, Vector2(126, 108), 44)
+	_mark(c, body, pink, 4206, 12.0)
+	for piece in Geometry2D.intersect_polygons(Crayon.ellipse(at + Vector2(24, 44), Vector2(78, 52), 28), body):
+		Crayon.pencil_fill(c, piece, Color("#fde3ee"), 4207)
+	_mark(c, _leaf(PackedVector2Array([at + Vector2(-78, -14), at + Vector2(30, 34)]), 66.0), pink.darkened(0.06), 4208, 9.0)
+	_pupil(c, at + Vector2(54, -38), 16.0)
+	Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(72, 2), Vector2(16, 11), 14), Color("#f490a8"), 4209)
+	_beak(c, at + Vector2(104, -34), -0.38, 78.0, 50.0, 0.62, orange, 4210)
+
+
+## Marker: a big friendly blue whale going "ooo", fat notes sinking low beneath it.
+static func _low(c: CanvasItem) -> void:
+	var blue := Color("#79aeea")
+	var at := Vector2(222, 196)
+	var tail := _cubic(at + Vector2(150, 16), at + Vector2(206, 6), at + Vector2(218, -50), at + Vector2(220, -104), 14)
+	var tip := tail[tail.size() - 1]
+	_mark(c, _leaf(PackedVector2Array([tip + Vector2(6, 10), tip + Vector2(-62, -46)]), 54.0), blue.darkened(0.06), 4300, 10.0)
+	_mark(c, _leaf(PackedVector2Array([tip + Vector2(-6, 10), tip + Vector2(54, -58)]), 54.0), blue.darkened(0.06), 4301, 10.0)
+	var body := _union([Crayon.ellipse(at, Vector2(196, 114), 56), _band(tail, 100.0, 40.0)])
+	_under(c, body)
+	Crayon.marker_fill(c, body, blue, 4302)
+	for piece in Geometry2D.intersect_polygons(Crayon.ellipse(at + Vector2(-16, 92), Vector2(176, 62), 40), body):
+		Crayon.pencil_fill(c, piece, Color("#dcecfb"), 4303)
+	for k in 3:
+		var y := at.y + 56.0 + k * 18.0
+		Crayon.pencil_line(c, PackedVector2Array([Vector2(at.x - 120 + k * 16, y), Vector2(at.x + 60 - k * 20, y + 4)]),
+			blue.darkened(0.3), 5.0, 4304 + k, false)
+	_shine(c, _arc(at, Vector2(150, 82), PI * 1.2, PI * 1.5, 10), 14.0, 4307)
+	Crayon.marker_line(c, body, blue.darkened(0.5), 12.0, 4308)
+	_pupil(c, at + Vector2(-110, -22), 16.0)
+	Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(-104, 22), Vector2(20, 12), 14), Color("#f4a0b8"), 4309)
+	var mouth := Crayon.ellipse(at + Vector2(-166, 30), Vector2(20, 24), 20)
+	_under(c, mouth)
+	Crayon.marker_fill(c, mouth, MAW, 4310, 10.0)
+	Crayon.marker_line(c, mouth, blue.darkened(0.5), 8.0, 4311)
+	for k in 3:
+		var p := Vector2(150 + k * 26, 66 - k * 6)
+		_mark(c, Crayon.ellipse(p, Vector2(15 - k * 3, 15 - k * 3), 12), Color("#a9d4f5"), 4312 + k, 6.0)
+	_note(c, Vector2(146, 440), 0.72, WAVE, 4320)
+	_note(c, Vector2(292, 466), 0.72, WAVE, 4321)
+
+
+## Marker: a peach rabbit mid-leap to the right, ears streaming back, speed lines behind it.
+static func _fast(c: CanvasItem) -> void:
+	var fur := Color("#efc49c")
+	var pink := Color("#f6aec4")
+	for i in 3:
+		var y := 222.0 + i * 66.0
+		var x0 := 24.0 + absf(i - 1) * 26.0
+		_frame(c, PackedVector2Array([Vector2(x0, y), Vector2(x0 + 92.0 - absf(i - 1) * 20.0, y)]), Color("#9fc6ee"), 14.0,
+			4400 + i, false)
+	var ear_far := _leaf(PackedVector2Array([Vector2(404, 168), Vector2(316, 42)]), 58.0)
+	_mark(c, ear_far, fur.darkened(0.06), 4403, 10.0)
+	_mark(c, _union([_capsule(Vector2(250, 330), Vector2(190, 392), 72), _capsule(Vector2(190, 392), Vector2(112, 402), 48)]),
+		fur.darkened(0.06), 4404, 11.0)
+	_mark(c, _capsule(Vector2(356, 330), Vector2(412, 394), 40), fur.darkened(0.06), 4405, 10.0)
+	_mark(c, _turn(Crayon.ellipse(Vector2(288, 288), Vector2(128, 84), 44), Vector2(288, 288), -0.2), fur, 4406, 12.0)
+	_pen(c, Crayon.blob(Vector2(168, 262), Vector2(38, 36), 4407, 12, 0.12), Color("#fff6ea"), 4408, 8.0)
+	_mark(c, _capsule(Vector2(372, 318), Vector2(452, 362), 42), fur, 4409, 10.0)
+	Crayon.line(c, Vector2(214, 250), Vector2(330, 222), SHINE, 12.0, 4410)
+	_mark(c, Crayon.ellipse(Vector2(402, 212), Vector2(70, 60), 32), fur, 4411, 12.0)
+	var ear := _leaf(PackedVector2Array([Vector2(380, 172), Vector2(262, 70)]), 62.0)
+	_mark(c, ear, fur, 4412, 11.0)
+	_pen(c, _scale(ear, Vector2(340, 136), Vector2(0.62, 0.5)), pink, 4413, 0.0)
+	_pupil(c, Vector2(424, 196), 15.0)
+	_mark(c, Crayon.ellipse(Vector2(468, 214), Vector2(12, 10), 12), Color("#f490b0"), 4414, 6.0)
+	Crayon.pencil_fill(c, Crayon.ellipse(Vector2(430, 238), Vector2(16, 10), 14), pink, 4415)
+
+
+## Marker: a green turtle plodding right - a domed patterned shell, stubby legs, a smiley head.
+static func _slow(c: CanvasItem) -> void:
+	var shell := Color("#7cc77a")
+	var skin := Color("#c9e08c")
+	_mark(c, _leaf(PackedVector2Array([Vector2(104, 352), Vector2(36, 380)]), 36.0), skin, 4500, 8.0)
+	for x in [112.0, 296.0]:
+		_mark(c, Crayon.rounded_rect(Rect2(x, 330, 64, 100), 26), skin.darkened(0.1), 4501 + int(x), 10.0)
+	_mark(c, _union([_capsule(Vector2(356, 334), Vector2(420, 276), 72), Crayon.ellipse(Vector2(436, 260), Vector2(58, 52), 28)]),
+		skin, 4503, 11.0)
+	var dome := _arc(Vector2(250, 352), Vector2(178, 200), PI, TAU, 40)
+	_under(c, dome)
+	Crayon.marker_fill(c, dome, shell, 4504)
+	var hex := PackedVector2Array()
+	for k in 6:
+		hex.append(Vector2(250, 266) + Vector2.from_angle(k * PI / 3.0) * 58.0)
+	for k in 6:
+		var p: Vector2 = hex[k]
+		for piece in Geometry2D.intersect_polyline_with_polygon(PackedVector2Array([p, p + (p - Vector2(250, 266)) * 3.0]), dome):
+			Crayon.marker_line(c, piece, shell.darkened(0.38), 8.0, 4505 + k, false)
+	Crayon.marker_fill(c, hex, shell.lightened(0.2), 4512, 14.0)
+	Crayon.marker_line(c, hex, shell.darkened(0.38), 8.0, 4513)
+	_shine(c, _arc(Vector2(250, 352), Vector2(146, 166), PI * 1.12, PI * 1.36, 10), 14.0, 4514)
+	Crayon.marker_line(c, dome, shell.darkened(0.5), 12.0, 4515)
+	_mark(c, Crayon.rounded_rect(Rect2(58, 334, 384, 42), 21), shell.darkened(0.1), 4516, 11.0)
+	for x in [150.0, 334.0]:
+		_mark(c, Crayon.rounded_rect(Rect2(x, 356, 66, 86), 26), skin, 4517 + int(x), 10.0)
+	_pupil(c, Vector2(450, 248), 14.0)
+	Crayon.marker_line(c, _arc(Vector2(446, 270), Vector2(26, 16), 0.3, PI * 0.7, 8), skin.darkened(0.5), 6.0, 4520, false)
+
+
+## Marker: one calm, straight teal line - no effect.
+static func _flat(c: CanvasItem) -> void:
+	_frame(c, PackedVector2Array([Vector2(84, 256), Vector2(256, 256), Vector2(428, 256)]), Color("#4fb6dc"), 54.0, 4600, false)
+	Crayon.line(c, Vector2(96, 244), Vector2(400, 244), SHINE, 10.0, 4601)
+
+
+## Marker: the same teal line gone big and wavy - wobbly.
+static func _wobble(c: CanvasItem) -> void:
+	var path := PackedVector2Array()
+	for i in 97:
+		var t := i / 96.0
+		path.append(Vector2(lerpf(84, 428, t), 256.0 - sin(t * TAU * 2.0) * 112.0))
+	_frame(c, path, Color("#4fb6dc"), 54.0, 4700, false)
+	_shine(c, _offset(path.slice(3, 20), 12.0), 10.0, 4701)
+
+
+## Marker: a lavender mountain with a snowy peak, three echo arcs fading away off its side.
+static func _echo(c: CanvasItem) -> void:
+	var lav := Color("#a8b2ea")
+	var hill := _round_poly(PackedVector2Array([Vector2(28, 452), Vector2(206, 92), Vector2(384, 452)]), 20.0)
+	_mark(c, hill, lav, 4800, 12.0)
+	var cap := PackedVector2Array([Vector2(90, 246), Vector2(136, 284), Vector2(172, 250), Vector2(208, 290), Vector2(244, 252),
+		Vector2(282, 284), Vector2(324, 242), Vector2(206, 30)])
+	for piece in Geometry2D.intersect_polygons(cap, hill):
+		_under(c, piece)
+		Crayon.pencil_fill(c, piece, Color("#f6f8ff"), 4801)
+		Crayon.marker_line(c, piece, lav.darkened(0.45), 8.0, 4802)
+	Crayon.marker_line(c, hill, lav.darkened(0.5), 12.0, 4803)
+	Crayon.line(c, Vector2(186, 160), Vector2(110, 380), SHINE, 12.0, 4804)
+	for i in 3:
+		var r := 74.0 + i * 54.0
+		var col := WAVE.lightened(0.22 * i)
+		_frame(c, _arc(Vector2(262, 214), Vector2(r, r), -0.62, 0.62, 16), col, 16.0 - i * 2.0, 4805 + i, false)
+
+
+## Marker: a fat orange arrow running along flat, then swooping up (or down) at the end.
+static func _bend(c: CanvasItem, up: bool) -> void:
+	var path := _cubic(Vector2(58, 398), Vector2(290, 402), Vector2(372, 330), Vector2(398, 172), 28)
+	if not up:
+		path = _flip_y(path, 256.0)
+	var arrow := _union([_arrow(path, 72.0, 110.0, 196.0), Crayon.ellipse(path[0], Vector2(36, 36), 20)])
+	_mark(c, arrow, Color("#f7a04a"), 4900 if up else 5000, 12.0)
+	_shine(c, _offset(path.slice(2, 17), -18.0 if up else 18.0), 11.0, 4901 if up else 5001)
+
+
+## Marker: a friendly square robot head - round eyes, a grille mouth, bolts for ears, an antenna.
+static func _robot(c: CanvasItem) -> void:
+	var metal := Color("#a9b4e0")
+	_frame(c, PackedVector2Array([Vector2(256, 176), Vector2(256, 98)]), metal.darkened(0.1), 14.0, 5100, false)
+	_mark(c, Crayon.ellipse(Vector2(256, 80), Vector2(30, 30), 20), Color("#f48fb8"), 5101, 9.0)
+	for x in [74.0, 394.0]:
+		_mark(c, Crayon.rounded_rect(Rect2(x, 262, 44, 104), 16), metal.darkened(0.1), 5102 + int(x), 10.0)
+	_mark(c, Crayon.rounded_rect(Rect2(104, 168, 304, 278), 48), metal, 5103, 12.0)
+	Crayon.line(c, Vector2(128, 210), Vector2(128, 400), SHINE, 13.0, 5104)
+	_pen(c, Crayon.rounded_rect(Rect2(142, 206, 228, 206), 34), Color("#e6eafa"), 5105, 8.0)
+	for x in [204.0, 308.0]:
+		_pen(c, Crayon.ellipse(Vector2(x, 280), Vector2(40, 40), 24), Color("#fffaf2"), 5106 + int(x), 8.0)
+		_pupil(c, Vector2(x + 6, 284), 21.0)
+	var grille := Crayon.rounded_rect(Rect2(190, 346, 132, 42), 14)
+	_mark(c, grille, Color("#f7a8b8"), 5107, 8.0)
+	for k in 3:
+		var x := 223.0 + k * 33.0
+		Crayon.marker_line(c, PackedVector2Array([Vector2(x, 352), Vector2(x, 382)]), Color("#f7a8b8").darkened(0.45), 6.0,
+			5108 + k, false)
+
+
+## Marker: rewind - two blue triangles pointing LEFT.
+static func _backwards(c: CanvasItem) -> void:
+	var blue := Color("#6aaeee")
+	var back := _round_poly(PackedVector2Array([Vector2(234, 256), Vector2(450, 112), Vector2(450, 400)]), 24.0)
+	var front := _round_poly(PackedVector2Array([Vector2(46, 256), Vector2(262, 112), Vector2(262, 400)]), 24.0)
+	_mark(c, back, blue, 5200, 12.0)
+	_mark(c, front, blue.lightened(0.06), 5201, 12.0)
+	Crayon.line(c, Vector2(116, 232), Vector2(236, 152), SHINE, 12.0, 5202)
+	Crayon.line(c, Vector2(304, 232), Vector2(424, 152), SHINE, 12.0, 5203)
+
+
+# --- Base sounds -------------------------------------------------------------------------------
+# Each one a face or thing MAKING its noise: mouth open, and the same three purple sound arcs
+# (`_waves`) coming off it, so the whole set reads as "sounds" at a glance.
+
+## Marker: a cream puppy face barking - floppy brown ears, a big plum nose, mouth wide open.
+static func _bark(c: CanvasItem) -> void:
+	var tan := Color("#ecc38e")
+	var brown := Color("#c98f5e")
+	var at := Vector2(194, 250)
+	_waves(c, Vector2(338, 356), 0.1, 5300)
+	_mark(c, Crayon.ellipse(at, Vector2(136, 126), 48), tan, 5301, 12.0)
+	_shine(c, _arc(at, Vector2(104, 96), PI * 1.12, PI * 1.38, 10), 14.0, 5302)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		var e := at + Vector2(sx * 118, -4)
+		_mark(c, _turn(Crayon.ellipse(e, Vector2(46, 96), 28), e, -sx * 0.32), brown, 5303 + k, 11.0)
+	_pen(c, Crayon.ellipse(at + Vector2(0, 70), Vector2(86, 64), 32), Color("#fff3dc"), 5305, 8.0)
+	_maw(c, _d_mouth(at + Vector2(0, 76), 44.0, 62.0), tan.darkened(0.5), 5306)
+	var nose := Crayon.ellipse(at + Vector2(0, 42), Vector2(36, 26), 24)
+	_under(c, nose)
+	Crayon.marker_fill(c, nose, PLUM.lightened(0.3), 5307, 12.0)
+	Crayon.marker_line(c, nose, PLUM, 7.0, 5308)
+	c.draw_colored_polygon(Crayon.ellipse(at + Vector2(-12, 34), Vector2(11, 6), 12), Color(1, 1, 1, 0.7))
+	_pupil(c, at + Vector2(-50, -26), 17.0)
+	_pupil(c, at + Vector2(50, -26), 17.0)
+
+
+## Marker: a ginger cat face meowing - pointy ears, stripes, whiskers, a small round open mouth.
+static func _meow(c: CanvasItem) -> void:
+	var ginger := Color("#f6a862")
+	var dark := ginger.darkened(0.34)
+	var at := Vector2(198, 288)
+	_waves(c, Vector2(348, 206), -0.5, 5400)
+	var ear := PackedVector2Array([at + Vector2(-146, -30), at + Vector2(-122, -200), at + Vector2(-30, -112)])
+	_mark(c, _union([Crayon.ellipse(at, Vector2(150, 122), 48), ear, _mirror(ear, at.x)]), ginger, 5401, 12.0)
+	var inner := PackedVector2Array([at + Vector2(-118, -84), at + Vector2(-110, -164), at + Vector2(-58, -114)])
+	_pen(c, inner, Color("#f7b0c4"), 5402, 0.0)
+	_pen(c, _mirror(inner, at.x), Color("#f7b0c4"), 5403, 0.0)
+	for k in 3:
+		var x := -26.0 + k * 26.0
+		Crayon.marker_line(c, PackedVector2Array([at + Vector2(x, -118), at + Vector2(x, -84)]), dark, 8.0, 5404 + k, false)
+	_shine(c, _arc(at, Vector2(118, 92), PI * 1.1, PI * 1.32, 10), 13.0, 5407)
+	_pupil(c, at + Vector2(-60, -12), 19.0)
+	_pupil(c, at + Vector2(60, -12), 19.0)
+	_mark(c, PackedVector2Array([at + Vector2(-20, 22), at + Vector2(20, 22), at + Vector2(0, 42)]), Color("#f490b0"), 5408, 6.0)
+	_maw(c, Crayon.ellipse(at + Vector2(0, 78), Vector2(30, 32), 24), dark, 5409, 8.0)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		_whiskers(c, at + Vector2(sx * 72, 42), sx, 116.0, dark, 5410 + k * 2)
+
+
+## Marker: a round blue songbird chirping - beak open, a crest, a little wing and tail.
+static func _chirp(c: CanvasItem) -> void:
+	var blue := Color("#7fb6ee")
+	var orange := Color("#f7a04a")
+	var at := Vector2(190, 282)
+	_waves(c, Vector2(380, 248), -0.1, 5500)
+	for k in 2:
+		_mark(c, _leaf(PackedVector2Array([at + Vector2(-90, 10), at + Vector2(-184, -62 + k * 58)]), 58.0), blue.darkened(0.1),
+			5501 + k, 10.0)
+	for k in 2:
+		var foot := at + Vector2(-40 + k * 60, 112)
+		_frame(c, PackedVector2Array([foot, foot + Vector2(-4, 34), foot + Vector2(22, 38)]), orange, 8.0, 5503 + k, false)
+	for k in 3:
+		var base := at + Vector2(-16 + k * 18, -112)
+		_mark(c, _leaf(PackedVector2Array([base, base + Vector2(-30 + k * 30, -60 + absf(k - 1) * 10.0)]), 30.0),
+			blue.darkened(0.04), 5505 + k, 8.0)
+	var body := Crayon.ellipse(at, Vector2(140, 126), 48)
+	_mark(c, body, blue, 5508, 12.0)
+	for piece in Geometry2D.intersect_polygons(Crayon.ellipse(at + Vector2(36, 56), Vector2(92, 70), 32), body):
+		Crayon.pencil_fill(c, piece, Color("#e6f1fc"), 5509)
+	_shine(c, _arc(at, Vector2(108, 94), PI * 1.12, PI * 1.36, 10), 14.0, 5510)
+	_mark(c, _leaf(PackedVector2Array([at + Vector2(-92, -8), at + Vector2(30, 52)]), 76.0), blue.darkened(0.06), 5511, 10.0)
+	_pupil(c, at + Vector2(62, -42), 18.0)
+	Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(76, 2), Vector2(18, 12), 14), Color("#f4a0b8"), 5512)
+	_beak(c, at + Vector2(124, -24), -0.1, 86.0, 56.0, 0.56, orange, 5513)
+
+
+## Marker: a lavender mouse face squeaking - big round pink ears, buck teeth, whiskers.
+static func _squeak(c: CanvasItem) -> void:
+	var grey := Color("#c3bce0")
+	var pink := Color("#f6aec4")
+	var at := Vector2(200, 296)
+	_waves(c, Vector2(340, 312), 0.0, 5600)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		var e := at + Vector2(sx * 112, -124)
+		_mark(c, Crayon.ellipse(e, Vector2(86, 84), 32), grey.lightened(0.06), 5601 + k, 11.0)
+		_pen(c, Crayon.ellipse(e + Vector2(sx * 4, 6), Vector2(54, 52), 24), pink, 5603 + k, 0.0)
+	var head := _union([Crayon.ellipse(at, Vector2(124, 108), 44), Crayon.ellipse(at + Vector2(0, 46), Vector2(86, 76), 32)])
+	_mark(c, head, grey, 5605, 12.0)
+	_shine(c, _arc(at, Vector2(96, 84), PI * 1.12, PI * 1.36, 10), 13.0, 5606)
+	_pupil(c, at + Vector2(-48, -18), 18.0)
+	_pupil(c, at + Vector2(48, -18), 18.0)
+	for k in 2:
+		Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(-80 + k * 160, 30), Vector2(20, 13), 14), pink, 5607 + k)
+	_maw(c, _d_mouth(at + Vector2(0, 76), 30.0, 42.0), grey.darkened(0.5), 5609, 8.0)
+	for k in 2:
+		var tooth := Crayon.rounded_rect(Rect2(at.x - 16 + k * 17, at.y + 76, 15, 20), 4)
+		_under(c, tooth)
+		Crayon.pencil_fill(c, tooth, Color("#fffaf2"), 5610 + k)
+		Crayon.pencil_line(c, tooth, grey.darkened(0.45), 5.0, 5612 + k)
+	_mark(c, Crayon.ellipse(at + Vector2(0, 52), Vector2(20, 16), 16), Color("#f490b0"), 5614, 6.0)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		_whiskers(c, at + Vector2(sx * 62, 58), sx, 92.0, grey.darkened(0.4), 5615 + k * 2)
+
+
+## Marker: a cream cow face mooing - brown patches, little horns, ears out sideways, a big pink muzzle.
+static func _moo(c: CanvasItem) -> void:
+	var cream := Color("#fbf1de")
+	var patch := Color("#c99a72")
+	var pink := Color("#f7b0bc")
+	var at := Vector2(200, 238)
+	_waves(c, Vector2(344, 340), 0.05, 5700)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		var horn := _cubic(at + Vector2(sx * 56, -100), at + Vector2(sx * 70, -142), at + Vector2(sx * 100, -160),
+			at + Vector2(sx * 122, -152), 10)
+		_mark(c, _band(horn, 40.0, 10.0), Color("#f3dfb4"), 5701 + k, 9.0)
+		var ear := _leaf(PackedVector2Array([at + Vector2(sx * 90, -66), at + Vector2(sx * 190, -40)]), 64.0)
+		_mark(c, ear, cream, 5703 + k, 10.0)
+		_pen(c, _scale(ear, at + Vector2(sx * 140, -53), Vector2(0.6, 0.45)), pink, 5705 + k, 0.0)
+	var head := Crayon.ellipse(at, Vector2(114, 126), 44)
+	_under(c, head)
+	Crayon.marker_fill(c, head, cream, 5707)
+	for piece in Geometry2D.intersect_polygons(Crayon.blob(at + Vector2(-74, -74), Vector2(70, 56), 5708, 14, 0.12), head):
+		Crayon.marker_fill(c, piece, patch, 5709, 16.0)
+	for piece in Geometry2D.intersect_polygons(Crayon.blob(at + Vector2(62, -20), Vector2(44, 36), 5710, 14, 0.12), head):
+		Crayon.marker_fill(c, piece, patch, 5711, 16.0)
+	Crayon.marker_line(c, head, patch.darkened(0.4), 12.0, 5712)
+	_pupil(c, at + Vector2(-46, -26), 17.0)
+	_pupil(c, at + Vector2(46, -26), 17.0)
+	var muzzle := Crayon.ellipse(at + Vector2(0, 98), Vector2(118, 72), 40)
+	_mark(c, muzzle, pink, 5713, 11.0)
+	for k in 2:
+		var n := Crayon.ellipse(at + Vector2(-50 + k * 100, 80), Vector2(15, 11), 14)
+		c.draw_colored_polygon(n, pink.darkened(0.32))
+	_maw(c, _d_mouth(at + Vector2(0, 112), 42.0, 44.0), pink.darkened(0.5), 5714, 8.0)
+
+
+## Marker: a friendly lion roaring - a scalloped orange mane, round ears, mouth wide with two fangs.
+static func _roar(c: CanvasItem) -> void:
+	var mane_col := Color("#ef9650")
+	var gold := Color("#ffd36b")
+	var at := Vector2(200, 258)
+	_waves(c, Vector2(352, 306), 0.05, 5800)
+	var mane := PackedVector2Array()
+	for i in 112:
+		var a := TAU * i / 112.0
+		mane.append(at + Vector2(cos(a), sin(a)) * (150.0 + 26.0 * sqrt(absf(sin(a * 7.0)))))
+	_mark(c, mane, mane_col, 5801, 12.0)
+	for i in 14:
+		var d := Vector2.from_angle(TAU * i / 14.0 + PI / 14.0)
+		Crayon.marker_line(c, PackedVector2Array([at + d * 126.0, at + d * 152.0]), mane_col.darkened(0.3), 7.0, 5802 + i, false)
+	for k in 2:
+		var e := at + Vector2(-86 + k * 172, -92)
+		_mark(c, Crayon.ellipse(e, Vector2(36, 34), 20), gold, 5820 + k, 10.0)
+		Crayon.pencil_fill(c, Crayon.ellipse(e + Vector2(0, 4), Vector2(18, 16), 14), Color("#f7b0a8"), 5822 + k)
+	_mark(c, Crayon.ellipse(at + Vector2(0, 8), Vector2(116, 108), 44), gold, 5824, 12.0)
+	_shine(c, _arc(at + Vector2(0, 8), Vector2(88, 80), PI * 1.12, PI * 1.36, 10), 13.0, 5825)
+	_pen(c, _union([Crayon.ellipse(at + Vector2(-36, 46), Vector2(48, 36), 24), Crayon.ellipse(at + Vector2(36, 46), Vector2(48, 36), 24)]),
+		Color("#fff1d6"), 5826, 7.0)
+	_maw(c, _d_mouth(at + Vector2(0, 52), 50.0, 62.0), gold.darkened(0.5), 5827)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		var fang := PackedVector2Array([at + Vector2(sx * 40, 54), at + Vector2(sx * 22, 54), at + Vector2(sx * 32, 76)])
+		_under(c, fang)
+		Crayon.pencil_fill(c, fang, Color("#fffaf2"), 5828 + k)
+		Crayon.pencil_line(c, fang, Color("#c4a4c4"), 5.0, 5830 + k)
+	_mark(c, _round_poly(PackedVector2Array([at + Vector2(-26, 14), at + Vector2(26, 14), at + Vector2(0, 40)]), 6.0),
+		Color("#e98a7e"), 5832, 7.0)
+	_pupil(c, at + Vector2(-46, -30), 17.0)
+	_pupil(c, at + Vector2(46, -30), 17.0)
+
+
+## Marker: a brown owl hooting - ear tufts, huge round eyes, a little beak open.
+static func _hoot(c: CanvasItem) -> void:
+	var brown := Color("#c9a07c")
+	var at := Vector2(198, 276)
+	_waves(c, Vector2(340, 306), 0.05, 5900)
+	var tuft := PackedVector2Array([at + Vector2(-134, -84), at + Vector2(-126, -206), at + Vector2(-46, -142)])
+	_mark(c, _union([Crayon.ellipse(at, Vector2(138, 162), 48), tuft, _mirror(tuft, at.x)]), brown, 5901, 12.0)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		_mark(c, _leaf(PackedVector2Array([at + Vector2(sx * 112, -20), at + Vector2(sx * 96, 142)]), 70.0), brown.darkened(0.08),
+			5902 + k, 10.0)
+	var belly := Crayon.ellipse(at + Vector2(0, 86), Vector2(80, 64), 28)
+	_pen(c, belly, Color("#fbecd6"), 5904, 7.0)
+	for k in 5:
+		var p := at + Vector2(-44 + (k % 3) * 44 + (22 if k > 2 else 0), 64 + (k / 3) * 40)
+		Crayon.marker_line(c, PackedVector2Array([p + Vector2(-14, -6), p + Vector2(0, 6), p + Vector2(14, -6)]), brown.darkened(0.3),
+			6.0, 5905 + k, false)
+	for k in 2:
+		var e := at + Vector2(-60 + k * 120, -48)
+		_pen(c, Crayon.ellipse(e, Vector2(62, 62), 32), Color("#fff6e6"), 5911 + k, 9.0)
+		_mark(c, Crayon.ellipse(e + Vector2(4, 4), Vector2(38, 38), 24), Color("#ffd75e"), 5913 + k, 7.0)
+		_pupil(c, e + Vector2(6, 6), 22.0)
+	var orange := Color("#f7a04a")
+	var gap := Crayon.ellipse(at + Vector2(0, 42), Vector2(18, 14), 16)
+	_under(c, gap)
+	Crayon.marker_fill(c, gap, MAW, 5915, 10.0)
+	_mark(c, _round_poly(PackedVector2Array([at + Vector2(-16, 48), at + Vector2(16, 48), at + Vector2(0, 70)]), 4.0), orange.darkened(0.06),
+		5916, 7.0)
+	_mark(c, _round_poly(PackedVector2Array([at + Vector2(-24, -2), at + Vector2(24, -2), at + Vector2(0, 38)]), 5.0), orange, 5917, 7.0)
+
+
+## Marker: a green frog face ribbiting - eyes up on top, a wide open mouth, throat puffed out.
+static func _ribbit(c: CanvasItem) -> void:
+	var green := Color("#8ccf6a")
+	var at := Vector2(204, 258)
+	_waves(c, Vector2(370, 290), 0.05, 6000)
+	var head := _union([Crayon.ellipse(at, Vector2(160, 104), 48), Crayon.ellipse(at + Vector2(-88, -84), Vector2(62, 60), 28),
+		Crayon.ellipse(at + Vector2(88, -84), Vector2(62, 60), 28)])
+	_mark(c, head, green, 6001, 12.0)
+	_shine(c, _arc(at, Vector2(128, 74), PI * 1.06, PI * 1.24, 8), 12.0, 6002)
+	for k in 2:
+		var e := at + Vector2(-88 + k * 176, -88)
+		_pen(c, Crayon.ellipse(e, Vector2(40, 40), 24), Color("#fffaf2"), 6003 + k, 8.0)
+		_pupil(c, e + Vector2(4, 4), 22.0)
+	_mark(c, Crayon.ellipse(at + Vector2(0, 118), Vector2(100, 66), 36), Color("#fbe3a6"), 6005, 11.0)
+	for k in 2:
+		Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(-124 + k * 248, 4), Vector2(22, 14), 14), Color("#f4a0b0"), 6006 + k)
+		c.draw_colored_polygon(Crayon.ellipse(at + Vector2(-18 + k * 36, -12), Vector2(7, 5), 10), green.darkened(0.5))
+	var mouth := _join([_cubic(at + Vector2(-112, 18), at + Vector2(-50, 36), at + Vector2(50, 36), at + Vector2(112, 18), 14),
+		_cubic(at + Vector2(112, 18), at + Vector2(80, 96), at + Vector2(-80, 96), at + Vector2(-112, 18), 16)])
+	_maw(c, mouth, green.darkened(0.5), 6008)
+
+
+## Marker: a yellow duck quacking - side on, its wide orange bill open.
+static func _quack(c: CanvasItem) -> void:
+	var yellow := Color("#ffd36b")
+	var orange := Color("#f7a04a")
+	_waves(c, Vector2(376, 212), -0.05, 6100)
+	var body := _union([Crayon.ellipse(Vector2(176, 370), Vector2(148, 88), 44),
+		PackedVector2Array([Vector2(56, 340), Vector2(30, 262), Vector2(120, 310)]),
+		Crayon.ellipse(Vector2(198, 196), Vector2(96, 92), 40), _capsule(Vector2(200, 240), Vector2(220, 320), 120)])
+	_mark(c, body, yellow, 6101, 12.0)
+	_shine(c, _arc(Vector2(198, 196), Vector2(70, 66), PI * 1.1, PI * 1.38, 10), 13.0, 6102)
+	_mark(c, _leaf(PackedVector2Array([Vector2(90, 350), Vector2(258, 344)]), 86.0), yellow.darkened(0.08), 6103, 10.0)
+	var gap := PackedVector2Array([Vector2(272, 196), Vector2(368, 188), Vector2(362, 236), Vector2(272, 222)])
+	_under(c, gap)
+	Crayon.marker_fill(c, gap, MAW, 6104, 12.0)
+	_mark(c, _round_poly(PackedVector2Array([Vector2(270, 214), Vector2(362, 234), Vector2(358, 258), Vector2(266, 240)]), 12.0),
+		orange.darkened(0.06), 6105, 9.0)
+	_mark(c, _round_poly(PackedVector2Array([Vector2(266, 168), Vector2(372, 164), Vector2(382, 192), Vector2(272, 208)]), 14.0),
+		orange, 6106, 9.0)
+	_pupil(c, Vector2(222, 166), 17.0)
+	Crayon.pencil_fill(c, Crayon.ellipse(Vector2(226, 216), Vector2(18, 12), 14), Color("#f7a0a8"), 6107)
+
+
+## Marker: a pink pig face oinking - flop ears, a big round snout, mouth open under it.
+static func _oink(c: CanvasItem) -> void:
+	var pink := Color("#f7aec0")
+	var at := Vector2(198, 270)
+	_waves(c, Vector2(352, 306), 0.05, 6200)
+	var ear := PackedVector2Array([at + Vector2(-140, -44), at + Vector2(-130, -178), at + Vector2(-38, -118)])
+	_mark(c, ear, pink.darkened(0.06), 6201, 11.0)
+	_mark(c, _mirror(ear, at.x), pink.darkened(0.06), 6202, 11.0)
+	_mark(c, Crayon.ellipse(at, Vector2(150, 130), 48), pink, 6203, 12.0)
+	_shine(c, _arc(at, Vector2(116, 98), PI * 1.12, PI * 1.36, 10), 14.0, 6204)
+	_pupil(c, at + Vector2(-58, -42), 17.0)
+	_pupil(c, at + Vector2(58, -42), 17.0)
+	for k in 2:
+		Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(-102 + k * 204, 26), Vector2(22, 14), 14), Color("#f590a8"), 6205 + k)
+	_mark(c, Crayon.ellipse(at + Vector2(0, 18), Vector2(74, 52), 32), pink.lightened(0.2), 6207, 11.0)
+	for k in 2:
+		var n := Crayon.ellipse(at + Vector2(-26 + k * 52, 18), Vector2(12, 19), 14)
+		c.draw_colored_polygon(n, pink.darkened(0.38))
+	_maw(c, _d_mouth(at + Vector2(0, 84), 36.0, 34.0), pink.darkened(0.5), 6208, 8.0)
+
+
+## Pencil and marker: a sheep baa-ing - a cream cloud of fleece round a lavender face.
+static func _baa(c: CanvasItem) -> void:
+	var wool := Color("#f7f0e4")
+	var face := Color("#b8acd8")
+	var at := Vector2(192, 256)
+	_waves(c, Vector2(356, 330), 0.05, 6300)
+	var puffs := [Crayon.ellipse(at, Vector2(130, 122), 40)]
+	for i in 12:
+		var a := TAU * i / 12.0
+		puffs.append(Crayon.ellipse(at + Vector2(cos(a) * 126.0, sin(a) * 116.0), Vector2(54, 54), 24))
+	var fleece := _union(puffs)
+	_under(c, fleece)
+	Crayon.pencil_fill(c, fleece, wool, 6301)
+	for i in 6:
+		var a := TAU * i / 6.0 + 0.4
+		var p := at + Vector2(cos(a) * 128.0, sin(a) * 118.0)
+		Crayon.pencil_line(c, _arc(p, Vector2(20, 18), a + 2.2, a + 4.6, 8), Color("#cbbfa8"), 6.0, 6302 + i, false)
+	Crayon.pencil_line(c, fleece, Color("#b4a48c"), 11.0, 6310)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		_mark(c, _leaf(PackedVector2Array([at + Vector2(sx * 58, 4), at + Vector2(sx * 150, 34)]), 52.0), face.darkened(0.06),
+			6311 + k, 10.0)
+	_mark(c, Crayon.ellipse(at + Vector2(0, 46), Vector2(74, 98), 36), face, 6313, 11.0)
+	var tuft := _union([Crayon.ellipse(at + Vector2(-36, -40), Vector2(36, 32), 18), Crayon.ellipse(at + Vector2(0, -54), Vector2(38, 34), 18),
+		Crayon.ellipse(at + Vector2(36, -40), Vector2(36, 32), 18)])
+	_pen(c, tuft, wool, 6314, 8.0)
+	for k in 2:
+		var e := at + Vector2(-32 + k * 64, 22)
+		_pen(c, Crayon.ellipse(e, Vector2(20, 22), 18), Color("#fffaf2"), 6315 + k, 6.0)
+		_pupil(c, e + Vector2(2, 3), 12.0)
+	_maw(c, _d_mouth(at + Vector2(0, 92), 30.0, 36.0), face.darkened(0.5), 6317, 8.0)
+
+
+## Marker: a blue-grey elephant trumpeting - big ear, trunk raised high, mouth open under it.
+static func _trumpet(c: CanvasItem) -> void:
+	var grey := Color("#aab5de")
+	var at := Vector2(200, 316)
+	_waves(c, Vector2(364, 156), -0.85, 6400)
+	var ear := Crayon.blob(at + Vector2(-86, -10), Vector2(98, 124), 6401, 18, 0.05)
+	_mark(c, ear, grey.lightened(0.1), 6402, 11.0)
+	Crayon.pencil_fill(c, Crayon.blob(at + Vector2(-92, -4), Vector2(60, 84), 6403, 16, 0.05), Color("#f4c6d6"), 6404)
+	var trunk := _cubic(at + Vector2(64, 40), at + Vector2(174, 40), at + Vector2(172, -76), at + Vector2(150, -134), 20)
+	var tip := trunk[trunk.size() - 1]
+	var head := _union([Crayon.ellipse(at, Vector2(118, 112), 44), _band(trunk, 86.0, 50.0),
+		_turn(Crayon.ellipse(tip, Vector2(36, 20), 20), tip, -0.3)])
+	_mark(c, head, grey, 6405, 12.0)
+	for i in 4:
+		var p := trunk[8 + i * 3]
+		var d := (trunk[9 + i * 3] - trunk[7 + i * 3]).normalized().orthogonal()
+		Crayon.line(c, p + d * 30.0, p - d * 14.0, grey.darkened(0.3), 5.0, 6406 + i, 1.0)
+	_shine(c, _arc(at, Vector2(86, 82), PI * 1.12, PI * 1.38, 10), 13.0, 6410)
+	_maw(c, Crayon.ellipse(at + Vector2(58, 92), Vector2(30, 24), 20), grey.darkened(0.5), 6411, 8.0)
+	_pen(c, _band(_cubic(at + Vector2(94, 66), at + Vector2(110, 90), at + Vector2(130, 98), at + Vector2(150, 94), 10), 26.0, 3.0),
+		Color("#fbf3dc"), 6412, 6.0)
+	_pupil(c, at + Vector2(30, -34), 16.0)
+	Crayon.pencil_fill(c, Crayon.ellipse(at + Vector2(2, 18), Vector2(20, 13), 14), Color("#f4a0b8"), 6413)
+
+
+## Marker: a ginger cat curled up asleep and purring - eyes shut, the set's sound arcs gone
+## rumbly (little zigzag purr lines).
+static func _purr(c: CanvasItem) -> void:
+	var ginger := Color("#f7b27a")
+	var dark := ginger.darkened(0.34)
+	var head_at := Vector2(290, 304)
+	for i in 3:
+		var r := 44.0 + 35.0 * i
+		var s := 0.6 * (1.0 - 0.06 * i)
+		var rumble := PackedVector2Array()
+		for k in 33:
+			var t := k / 32.0
+			rumble.append(Vector2(386, 276) + Vector2.from_angle(-0.4 + lerpf(-s, s, t)) * (r + sin(t * PI * (3.0 + i)) * 8.0))
+		_frame(c, rumble, WAVE, 13.0, 6501 + i, false)
+	_mark(c, Crayon.ellipse(Vector2(178, 350), Vector2(160, 98), 48), ginger, 6504, 12.0)
+	for k in 3:
+		var x := 96.0 + k * 48.0
+		Crayon.marker_line(c, PackedVector2Array([Vector2(x, 266), Vector2(x + 12, 302)]), dark, 8.0, 6505 + k, false)
+	_shine(c, _arc(Vector2(178, 350), Vector2(130, 74), PI * 1.12, PI * 1.32, 10), 13.0, 6508)
+	var tail := _cubic(Vector2(34, 362), Vector2(28, 448), Vector2(196, 464), Vector2(284, 436), 20)
+	_mark(c, _union([_band(tail, 50.0, 40.0), Crayon.ellipse(tail[tail.size() - 1], Vector2(20, 20), 14)]), ginger.lightened(0.04), 6509, 11.0)
+	var ear := PackedVector2Array([head_at + Vector2(-86, -26), head_at + Vector2(-80, -116), head_at + Vector2(-22, -72)])
+	_mark(c, _union([Crayon.ellipse(head_at, Vector2(96, 82), 40), ear, _mirror(ear, head_at.x)]), ginger, 6510, 12.0)
+	var inner := PackedVector2Array([head_at + Vector2(-70, -46), head_at + Vector2(-68, -96), head_at + Vector2(-36, -70)])
+	_pen(c, inner, Color("#f7b0c4"), 6511, 0.0)
+	_pen(c, _mirror(inner, head_at.x), Color("#f7b0c4"), 6512, 0.0)
+	for k in 2:
+		_shut(c, head_at + Vector2(-38 + k * 76, -6), 22.0, dark, 6513 + k)
+		Crayon.pencil_fill(c, Crayon.ellipse(head_at + Vector2(-60 + k * 120, 22), Vector2(18, 11), 14), Color("#f490a8"), 6515 + k)
+	_mark(c, PackedVector2Array([head_at + Vector2(-12, 14), head_at + Vector2(12, 14), head_at + Vector2(0, 26)]), Color("#f490b0"), 6517, 5.0)
+	Crayon.marker_line(c, _join([_arc(head_at + Vector2(-10, 30), Vector2(10, 10), 0.0, PI * 0.9, 6),
+		_arc(head_at + Vector2(10, 30), Vector2(10, 10), PI * 0.1, PI, 6)]), dark, 6.0, 6518, false)
+	for k in 2:
+		_mark(c, Crayon.ellipse(head_at + Vector2(-34 + k * 64, 84), Vector2(32, 20), 20), ginger.lightened(0.08), 6519 + k, 9.0)
+
+
+## Marker: a little mint robot beeping - screen face, antenna, a button tummy, little arms.
+static func _beep(c: CanvasItem) -> void:
+	var mint := Color("#7fd0c8")
+	_waves(c, Vector2(334, 190), -0.15, 6600)
+	_frame(c, PackedVector2Array([Vector2(200, 116), Vector2(200, 66)]), mint.darkened(0.15), 10.0, 6601, false)
+	_mark(c, Crayon.ellipse(Vector2(200, 54), Vector2(24, 24), 18), Color("#ffd75e"), 6602, 8.0)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		_mark(c, _capsule(Vector2(200 + sx * 92, 306), Vector2(200 + sx * 140, 376), 40), mint.darkened(0.08), 6603 + k, 10.0)
+		_mark(c, Crayon.rounded_rect(Rect2(200 + sx * 50 - 32, 410, 64, 46), 18), mint.darkened(0.14), 6605 + k, 10.0)
+	_mark(c, Crayon.rounded_rect(Rect2(178, 240, 44, 40), 8), mint.darkened(0.1), 6607, 9.0)
+	_mark(c, Crayon.rounded_rect(Rect2(98, 268, 204, 156), 34), mint, 6608, 12.0)
+	_pen(c, Crayon.rounded_rect(Rect2(138, 300, 124, 82), 16), Color("#e6f7f4"), 6609, 7.0)
+	_mark(c, Crayon.ellipse(Vector2(176, 341), Vector2(17, 17), 14), Color("#f48fb8"), 6610, 6.0)
+	_mark(c, Crayon.ellipse(Vector2(224, 341), Vector2(17, 17), 14), Color("#ffd75e"), 6611, 6.0)
+	_mark(c, Crayon.rounded_rect(Rect2(108, 104, 184, 150), 46), mint.lightened(0.1), 6612, 12.0)
+	Crayon.line(c, Vector2(124, 140), Vector2(124, 220), SHINE, 11.0, 6613)
+	_pen(c, Crayon.rounded_rect(Rect2(136, 130, 128, 100), 30), Color("#eefaf8"), 6614, 7.0)
+	_pupil(c, Vector2(174, 168), 16.0)
+	_pupil(c, Vector2(226, 168), 16.0)
+	_maw(c, Crayon.rounded_rect(Rect2(182, 194, 36, 28), 11), mint.darkened(0.5), 6615, 6.0)
+
+
+## Marker: a purple slime blob gurgling - goopy foot, googly eyes, open mouth, bubbles rising.
+static func _gurgle(c: CanvasItem) -> void:
+	var purple := Color("#b98ae6")
+	_waves(c, Vector2(354, 330), 0.05, 6700)
+	var blob := _arc(Vector2(204, 404), Vector2(148, 238), PI, TAU, 40)
+	blob.append(Vector2(370, 432))
+	blob.append(Vector2(390, 454))
+	for i in 13:
+		var t := i / 12.0
+		blob.append(Vector2(lerpf(378, 32, t), 456.0 + sin(t * PI * 4.0) * 6.0))
+	blob.append(Vector2(20, 450))
+	blob.append(Vector2(38, 430))
+	_mark(c, blob, purple, 6701, 12.0)
+	_shine(c, _arc(Vector2(204, 404), Vector2(112, 196), PI * 1.12, PI * 1.32, 12), 15.0, 6702)
+	for k in 2:
+		var e := Vector2(160 + k * 90, 290)
+		_pen(c, Crayon.ellipse(e, Vector2(32, 36), 24), Color("#fffaf2"), 6704 + k, 8.0)
+		_pupil(c, e + Vector2(4, 6), 18.0)
+	var mouth := _join([_cubic(Vector2(156, 360), Vector2(180, 350), Vector2(228, 370), Vector2(254, 358), 10),
+		_cubic(Vector2(254, 358), Vector2(258, 430), Vector2(152, 430), Vector2(156, 360), 14)])
+	_maw(c, mouth, purple.darkened(0.5), 6706, 8.0)
+	for b in [[Vector2(84, 128), 30.0], [Vector2(136, 66), 20.0], [Vector2(54, 50), 14.0], [Vector2(262, 112), 16.0]]:
+		var at: Vector2 = b[0]
+		var r: float = b[1]
+		_pen(c, Crayon.ellipse(at, Vector2(r, r), 20), Color("#f1e6fc"), 6707 + int(at.x), 7.0)
+		c.draw_colored_polygon(Crayon.ellipse(at + Vector2(-r * 0.35, -r * 0.35), Vector2(r * 0.28, r * 0.28), 12), Color(1, 1, 1, 0.9))
+
+
+## Marker: a coral coiled spring boinging up between two lavender plates.
+static func _boing(c: CanvasItem) -> void:
+	var red := Color("#f27a6e")
+	var metal := Color("#bdb8dc")
+	_waves(c, Vector2(332, 168), -0.15, 6800)
+	_pen(c, Crayon.ellipse(Vector2(200, 462), Vector2(126, 18), 28), Color("#ddd9f2"), 6801, 0.0)
+	_mark(c, Crayon.rounded_rect(Rect2(96, 412, 208, 40), 18), metal, 6804, 10.0)
+	var coil := PackedVector2Array()
+	for i in 181:
+		var t := i / 180.0
+		var a := t * 3.5 * TAU
+		coil.append(Vector2(200 + sin(a) * 92.0, lerpf(404, 168, t) + cos(a) * 22.0))
+	_frame(c, coil, red, 22.0, 6805, false)
+	_mark(c, Crayon.rounded_rect(Rect2(96, 126, 208, 44), 18), metal, 6806, 10.0)
+	Crayon.line(c, Vector2(116, 138), Vector2(284, 138), SHINE, 9.0, 6807)
+
+
+## Marker: a little green alien in a flying saucer, warbling - glass dome, a row of lights.
+static func _trill(c: CanvasItem) -> void:
+	var metal := Color("#b9b4e0")
+	var green := Color("#9ad97c")
+	_waves(c, Vector2(350, 196), -0.3, 6900)
+	var dome := _arc(Vector2(200, 316), Vector2(128, 176), PI, TAU, 36)
+	_under(c, dome)
+	Crayon.pencil_fill(c, dome, Color("#d8ecfb"), 6901)
+	for k in 2:
+		var sx := -1.0 if k == 0 else 1.0
+		var a := Vector2(200 + sx * 30, 184)
+		var b := Vector2(200 + sx * 54, 160)
+		Crayon.marker_line(c, PackedVector2Array([a, b]), green.darkened(0.4), 8.0, 6902 + k, false)
+		_mark(c, Crayon.ellipse(b, Vector2(15, 15), 12), Color("#f48fb8"), 6904 + k, 6.0)
+	_mark(c, Crayon.ellipse(Vector2(200, 230), Vector2(80, 68), 32), green, 6906, 11.0)
+	_pupil(c, Vector2(170, 218), 20.0)
+	_pupil(c, Vector2(230, 218), 20.0)
+	_maw(c, Crayon.ellipse(Vector2(200, 256), Vector2(19, 15), 18), green.darkened(0.5), 6907, 7.0)
+	Crayon.marker_line(c, dome, Color("#8fb4d8"), 11.0, 6908)
+	_shine(c, _arc(Vector2(200, 316), Vector2(100, 144), PI * 1.12, PI * 1.34, 10), 13.0, 6909)
+	_mark(c, Crayon.ellipse(Vector2(200, 368), Vector2(96, 30), 28), metal.darkened(0.1), 6910, 10.0)
+	_mark(c, Crayon.ellipse(Vector2(200, 328), Vector2(182, 52), 56), metal, 6911, 12.0)
+	for k in 5:
+		var a := PI * (0.2 + k * 0.15)
+		_mark(c, Crayon.ellipse(Vector2(200, 328) + Vector2(cos(a) * 144.0, sin(a) * 28.0), Vector2(14, 12), 12), Color("#ffd75e"),
+			6912 + k, 5.0)
+
+
+## Marker: a white goose honking - long neck, orange beak open, a grey wing.
+static func _honk(c: CanvasItem) -> void:
+	var white := Color("#ebe8f6")
+	var orange := Color("#f7a04a")
+	_waves(c, Vector2(382, 150), 0.0, 7000)
+	for k in 2:
+		var x := 150.0 + k * 70.0
+		_mark(c, _round_poly(PackedVector2Array([Vector2(x, 432), Vector2(x + 44, 462), Vector2(x - 30, 462)]), 6.0), orange, 7001 + k, 7.0)
+	var neck := _cubic(Vector2(256, 340), Vector2(304, 270), Vector2(236, 214), Vector2(270, 150), 16)
+	var goose := _union([Crayon.ellipse(Vector2(180, 372), Vector2(152, 84), 44),
+		PackedVector2Array([Vector2(48, 356), Vector2(20, 298), Vector2(104, 330)]), _band(neck, 74.0, 60.0),
+		Crayon.ellipse(Vector2(280, 142), Vector2(58, 50), 28)])
+	_mark(c, goose, white, 7003, 12.0)
+	_shine(c, _offset(neck.slice(4, 14), -20.0), 11.0, 7004)
+	var wing := _leaf(PackedVector2Array([Vector2(86, 350), Vector2(272, 352)]), 94.0)
+	_mark(c, wing, Color("#cfcbe6"), 7005, 10.0)
+	for k in 3:
+		var x := 150.0 + k * 40.0
+		Crayon.marker_line(c, PackedVector2Array([Vector2(x, 342), Vector2(x + 30, 366)]), Color("#cfcbe6").darkened(0.35), 6.0,
+			7006 + k, false)
+	_pupil(c, Vector2(292, 128), 15.0)
+	_beak(c, Vector2(316, 146), 0.05, 72.0, 48.0, 0.56, orange, 7010)
+
+
 # --- Drawing helpers ---------------------------------------------------------------------------
 
 static func _under(c: CanvasItem, poly: PackedVector2Array) -> void:
@@ -1189,6 +2220,99 @@ static func _block(c: CanvasItem, r: Rect2, k: Vector2, col: Color, seed: int, m
 	Crayon.marker_line(c, _place(PackedVector2Array([a, b, e]), mid, at, ang), line, 7.0, seed + 3, false)
 	Crayon.marker_line(c, _place(PackedVector2Array([b, b + k]), mid, at, ang), line, 7.0, seed + 4, false)
 	Crayon.marker_line(c, whole, line, 11.0, seed + 5)
+
+
+## Sound arcs fanning out from `at` towards angle `ang`: the one sign, across the whole set, that
+## something is making a noise. Same colour and weight everywhere.
+static func _waves(c: CanvasItem, at: Vector2, ang: float, seed: int, n := 3, r0 := 44.0, gap := 35.0,
+		w := 15.0, spread := 0.6) -> void:
+	for i in n:
+		var r := r0 + gap * i
+		var s := spread * (1.0 - 0.06 * i)
+		_frame(c, _arc(at, Vector2(r, r), ang - s, ang + s, 14), WAVE, w, seed + i, false)
+
+
+## An open mouth: rose inside, a pink tongue in the bottom of it, outlined in `line`.
+static func _maw(c: CanvasItem, mouth: PackedVector2Array, line: Color, seed: int, w := 9.0) -> void:
+	_under(c, mouth)
+	Crayon.marker_fill(c, mouth, MAW, seed, 14.0)
+	var r := Crayon.bounds(mouth)
+	var tongue := Crayon.ellipse(Vector2(r.get_center().x, r.end.y - r.size.y * 0.06), Vector2(r.size.x * 0.34, r.size.y * 0.38), 24)
+	for piece in Geometry2D.intersect_polygons(tongue, mouth):
+		Crayon.marker_fill(c, piece, TONGUE, seed + 1, 12.0)
+	Crayon.marker_line(c, mouth, line, w, seed + 2)
+
+
+## A D-shaped open mouth hanging from a flat top edge centred on `top`.
+static func _d_mouth(top: Vector2, half_w: float, depth: float) -> PackedVector2Array:
+	return _join([[top + Vector2(-half_w, 0), top + Vector2(half_w, 0)], _arc(top, Vector2(half_w, depth), 0.0, PI, 16)])
+
+
+## An open beak from `base` along angle `ang`: top and bottom halves parted by `gape` radians,
+## the inside of the mouth showing between them.
+static func _beak(c: CanvasItem, base: Vector2, ang: float, length: float, width: float, gape: float,
+		col: Color, seed: int) -> void:
+	var f := Vector2.from_angle(ang)
+	var up := f.orthogonal()
+	var top_tip := base + f.rotated(-gape * 0.5) * length
+	var bot_tip := base + f.rotated(gape * 0.5) * length * 0.84
+	var mouth := PackedVector2Array([base - f * 6.0, base.lerp(top_tip, 0.86), base.lerp(bot_tip, 0.86)])
+	_under(c, mouth)
+	Crayon.marker_fill(c, mouth, MAW, seed, 12.0)
+	_mark(c, PackedVector2Array([base + f * 2.0, bot_tip, base - up * width * 0.42]), col.darkened(0.06), seed + 1, 8.0)
+	_mark(c, PackedVector2Array([base + up * width * 0.5, top_tip, base + f * 2.0]), col, seed + 2, 8.0)
+
+
+## Two whiskers from `at`, out to the side `sx` (-1 left, 1 right).
+static func _whiskers(c: CanvasItem, at: Vector2, sx: float, length: float, col: Color, seed: int) -> void:
+	for k in 2:
+		var a := at + Vector2(0, k * 18.0)
+		Crayon.line(c, a, a + Vector2(sx * length, -16.0 + k * 36.0), col, 5.0, seed + k)
+
+
+## A shut, sleeping eye: a little smile-shaped curve.
+static func _shut(c: CanvasItem, at: Vector2, r: float, col: Color, seed: int) -> void:
+	Crayon.marker_line(c, _arc(at, Vector2(r, r * 0.7), PI * 0.12, PI * 0.88, 10), col, 9.0, seed, false)
+
+
+## One musical note (a quaver) with its head at `at`, `s` its size.
+static func _note(c: CanvasItem, at: Vector2, s: float, col: Color, seed: int) -> void:
+	var head := _turn(Crayon.ellipse(at, Vector2(46, 34) * s, 24), at, -0.38)
+	var top := at + Vector2(38, -170) * s
+	var stem := _capsule(at + Vector2(38, -6) * s, top, 26.0 * s)
+	var flag := _band(_cubic(top, top + Vector2(44, 18) * s, top + Vector2(76, 58) * s, top + Vector2(54, 112) * s, 12),
+		34.0 * s, 12.0 * s)
+	_mark(c, _union([head, stem, flag]), col, seed, 10.0)
+
+
+## A polygon with its corners rounded off by r (shrunk, then grown back round).
+static func _round_poly(poly: PackedVector2Array, r: float) -> PackedVector2Array:
+	var inner := Geometry2D.offset_polygon(poly, -r)
+	if inner.is_empty():
+		return poly
+	var outer := Geometry2D.offset_polygon(inner[0], r, Geometry2D.JOIN_ROUND)
+	if outer.is_empty():
+		return poly
+	return outer[0]
+
+
+## A fat wax crayon centred on `at`, its point towards -x turned by `ang` (tool_crayon, recoloured).
+static func _crayon_stick(c: CanvasItem, at: Vector2, ang: float, col: Color, seed: int) -> void:
+	var mid := Vector2(210, 0)
+	var tip := _union([PackedVector2Array([Vector2(10, -16), Vector2(84, -52), Vector2(84, 52), Vector2(10, 16)]),
+		Crayon.ellipse(Vector2(12, 0), Vector2(14, 18), 16)])
+	_mark(c, _place(tip, mid, at, ang), col.darkened(0.08), seed, 10.0)
+	_mark(c, _place(Crayon.rounded_rect(Rect2(76, -60, 330, 120), 22), mid, at, ang), col, seed + 1, 11.0)
+	var wrap := _place(Crayon.rounded_rect(Rect2(134, -62, 224, 124), 6), mid, at, ang)
+	_mark(c, wrap, col.lightened(0.5), seed + 2, 9.0)
+	for x in [162.0, 330.0]:
+		var stripe := _place(PackedVector2Array([Vector2(x - 10, -62), Vector2(x + 10, -62),
+			Vector2(x + 10, 62), Vector2(x - 10, 62)]), mid, at, ang)
+		for piece in Geometry2D.intersect_polygons(stripe, wrap):
+			Crayon.marker_fill(c, piece, col, seed + 3 + int(x), 12.0)
+	Crayon.marker_line(c, _place(PackedVector2Array([Vector2(186, 0), Vector2(306, 0)]), mid, at, ang),
+		col.darkened(0.15), 9.0, seed + 4, false)
+	Crayon.line(c, _place1(Vector2(90, -36), mid, at, ang), _place1(Vector2(390, -36), mid, at, ang), SHINE, 10.0, seed + 5)
 
 
 # --- Geometry helpers --------------------------------------------------------------------------
@@ -1446,6 +2570,13 @@ static func _mirror(poly: PackedVector2Array, cx: float) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	for p in poly:
 		out.append(Vector2(2.0 * cx - p.x, p.y))
+	return out
+
+
+static func _flip_y(poly: PackedVector2Array, cy: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p in poly:
+		out.append(Vector2(p.x, 2.0 * cy - p.y))
 	return out
 
 

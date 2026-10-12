@@ -50,6 +50,8 @@ func _ready() -> void:
 	for i in entrants.size():
 		var e: Dictionary = entrants[i]
 		var c := CompetitionScreen.racer(e["pet"])
+		if not (e["who"] is String):
+			c.step_volume_db = -9.0
 		var lane: float = LANES[lane_order[i]]
 		c.position = Vector2(80, lane)
 		c.z_index = int(lane) + 1
@@ -172,14 +174,17 @@ func tap() -> void:
 			if v >= 0.72 and v <= 0.92:
 				r["boost"] = 0.85
 				_say("ZOOM!")
+				Sounds.play("good")
 				_ring.flash = 1.0
 			else:
 				r["slow"] = 0.35
 				_say("Oops!")
+				Sounds.play("bad")
 		"hurdles":
 			var c: Creature = r["c"]
 			if not c.is_leaping():
 				var agility := _stat(r, "agility")
+				Sounds.play_varied("jump", 1.0, 0.05)
 				c.leap(52.0 + agility * 0.9, 0.5 + agility / 400.0)
 		"marathon":
 			var phase := fmod(_time, BEAT)
@@ -188,9 +193,11 @@ func tap() -> void:
 				r["boost"] = 0.3
 				_ring.flash = 1.0
 				_say("Nice!")
+				Sounds.play("good", 1.0, -4.0)
 			else:
 				r["energy"] = maxf(0.0, float(r["energy"]) - 0.05)
 				_say("Steady...")
+				Sounds.play("bad", 1.0, -3.0)
 
 
 func _say(text: String) -> void:
@@ -199,8 +206,16 @@ func _say(text: String) -> void:
 
 
 func _process(delta: float) -> void:
+	var before := _time
 	_time += delta
 	_msg.modulate.a = maxf(0.0, _msg.modulate.a - delta * 1.5)
+	# 3, 2, 1 ticks and the GO! chord; in the marathon the drum then keeps the beat to tap to.
+	if _time < 0.0 and int(ceil(-_time)) != int(ceil(-before)):
+		Sounds.play("count_tick")
+	if before < 0.0 and _time >= 0.0:
+		Sounds.play("count_go")
+	if mode == "marathon" and _time > 0.0 and not _done and int(_time / BEAT) != int(maxf(before, 0.0) / BEAT):
+		Sounds.play("drum_beat")
 	if _time < 0.0:
 		_count.text = str(int(ceil(-_time))) if _time < -0.2 else "GO!"
 		return
@@ -266,6 +281,7 @@ func _run(r: Dictionary, delta: float) -> void:
 		c.perform("celebrate", 2.0)
 		if is_player:
 			_say("Finished!")
+			Sounds.play("cheer")
 
 
 ## Jumping hurdles: the player jumps on a tap; rivals jump by themselves, a bit early or late
@@ -288,8 +304,10 @@ func _hurdle(r: Dictionary, is_player: bool) -> void:
 			r["slow"] = 0.6
 			if is_player:
 				_say("Bonk!")
+				Sounds.play("bad")
 		elif is_player:
 			_say("Over!")
+			Sounds.play("good", 1.0, -3.0)
 
 
 ## Where hurdle `i` is in this racer's lane (each lane's sits a little further on).

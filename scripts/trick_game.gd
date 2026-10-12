@@ -99,6 +99,7 @@ func _next_round() -> void:
 	var hold := 0.7 + Stats.value(screen.pet, "smarts") / 140.0
 	for t in _sequence:
 		_card.texture = Items.art_texture("trick_" + t)
+		Sounds.play_varied("card_flip", 1.0, 0.05)
 		_perform(t)
 		await get_tree().create_timer(hold).timeout
 		_card.texture = null
@@ -133,6 +134,7 @@ func press(trick: String) -> void:
 		_state = "done"
 		_set_buttons(false)
 		_msg.text = "Oops! That was %s." % _sequence[_answer]
+		Sounds.play("wrong")
 		_finish()
 		return
 	_answer += 1
@@ -140,8 +142,10 @@ func press(trick: String) -> void:
 		_state = "between"
 		_set_buttons(false)
 		_pet.say("star")
+		Sounds.play("correct")
 		if _round >= 5:
 			_msg.text = "A perfect show!"
+			Sounds.play("cheer")
 			_finish()
 		else:
 			_msg.text = "Yes! Next round..."
