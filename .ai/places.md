@@ -58,6 +58,21 @@ splash in splashy ones, dance to musical ones, shelter under shady things when t
 hot and by warm things when it is cold. Tasty things drop a snack once a day. Each activity
 trains a stat.
 
+## Day and night (built)
+
+The device clock sets the look (`Clock`) - there is no switch. Day; a warm pink-orange dusk from
+7 pm; a **pale-lavender night** from about 8:30 pm to 6 am, never dark (`art-direction.md`); a
+dawn till 7:30. At night outside places get crayon stars and a crescent moon (where the sun was,
+kept clear of the buttons) and summery places get fireflies instead of petals or leaves.
+
+The land and the things in it are multiplied by a lavender tint (`Clock.tint`); the sky is its
+own layer (`PlacePainter.SkyLayer`) so the moon and stars stay bright; **creatures are never
+tinted** - the kid's drawing wins every frame. Anything **glowy** (a word, for furniture and toys)
+lights up instead: untinted, with a soft pencil glow round it and a pool of light on the ground.
+The kit lamp, campfire, lantern, crystal lamp and candy lamp are glowy.
+
+`--hour=21.5` pretends it is that time, to see it; the demo forces midday, then has a night turn.
+
 ## The camera
 
 Zooms by the biggest pet in the home: a home of tiny pets gets a 1.5x close-up that follows
@@ -67,6 +82,6 @@ them, a giant one a 0.66x wide shot. The walking band stops above the drawer bar
 
 - **Visiting**: friends' homes, through ecec.dev (`sharing.md`).
 - **Outings**: take a pet to one of your other homes for the afternoon.
-- **Time and seasons** from the device clock: lavender nights, snow in December.
+- **Seasons** from the device clock: snow in December, leaves in October.
 - **Place effects**: the Moon's low gravity (higher hops, floating toys), mud in the swamp,
   a bubble helmet for non-swimmers under the sea.

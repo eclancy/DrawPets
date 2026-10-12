@@ -82,9 +82,9 @@ func animate(c: Creature, delta: float) -> void:
 		"nose":
 			sc = Vector2.ONE * (1.0 + c.sniff * 0.12 * sin(c.time * 26.0))
 		"leg":
-			rot = sin(gait) * 0.5 * c.stride + c.tuck * 0.45
+			rot = sin(gait) * 0.5 * c.stride + c.tuck * 0.45 + c.curl * 1.15
 		"arm":
-			rot = -sin(gait) * 0.4 * c.stride + c.wave * sin(c.time * 14.0 + side) * 0.7
+			rot = -sin(gait) * 0.4 * c.stride + c.wave * sin(c.time * 14.0 + side) * 0.7 + c.curl * 0.8
 		"wing":
 			var beat := sin(c.time * 17.0 + side * 0.4)
 			rot = -beat * 0.55 * c.flap + sin(t * 2.0) * 0.04

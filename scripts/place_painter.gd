@@ -9,32 +9,61 @@ extends Node2D
 
 ## Everything a zoomed-out camera can see, in world pixels.
 const WORLD := Rect2(-700, -420, 2680, 1560)
+## What hangs in the sky, drawn on the sky layer: hills hide them, and the night tint does not.
+const SKY_PROPS := ["sun", "cloud", "planet", "star"]
 
 var place_id := "meadow"
 var animate := true
+## Follows the device clock (Clock): a warm dusk, then a pale-lavender night with a moon and
+## stars, where lamps and glowy toys glow. Off for the little pictures of places on buttons.
+var by_clock := true
+## How much it is night, 0-1, as drawn.
+var night := 0.0
 var _place: Dictionary
 var _drift: Drift
+var _sky: SkyLayer
+var _clock_in := 0.0
 
 
 func _ready() -> void:
 	_place = Places.get_place(place_id)
-	if animate and _place.get("drift", "") != "":
+	night = Clock.night() if by_clock else 0.0
+	self_modulate = Clock.tint(night)
+	_sky = SkyLayer.new()
+	_sky.painter = self
+	_sky.show_behind_parent = true
+	add_child(_sky)
+	var kind: String = _place.get("drift", "")
+	# Fireflies come out on summery nights instead of petals and leaves.
+	if night >= 0.5 and kind in ["petals", "leaves", ""] and Places.tags(place_id).has("outside"):
+		kind = "fireflies"
+	if animate and kind != "":
 		_drift = Drift.new()
-		_drift.kind = _place["drift"]
+		_drift.kind = kind
 		add_child(_drift)
+	set_process(by_clock)
 
 
+func _process(delta: float) -> void:
+	_clock_in -= delta
+	if _clock_in > 0.0:
+		return
+	_clock_in = 5.0
+	var n := Clock.night()
+	if absf(n - night) > 0.005:
+		night = n
+		self_modulate = Clock.tint(night)
+		_sky.queue_redraw()
+
+
+## The land: everything below the sky, under the night tint (self_modulate).
 func _draw() -> void:
 	var p := _place
 	var horizon := Places.HORIZON
-	var sky_colors: Array = p["sky"]
-	Crayon.sky(self, Rect2(WORLD.position, Vector2(WORLD.size.x, horizon - WORLD.position.y + 60)),
-		sky_colors[0], sky_colors[1])
-
-	# Props that belong in the sky are drawn before the far layer so hills can hide them.
+	# Vines hang in front of the sky but behind the hills.
 	for prop in p["props"]:
-		if prop[0] in ["sun", "cloud", "planet", "star", "vine"]:
-			_prop(prop[0], Vector2(prop[1], prop[2]), prop[3], int(prop[1]) * 7 + int(prop[2]))
+		if prop[0] == "vine":
+			_prop(self, prop[0], Vector2(prop[1], prop[2]), prop[3], int(prop[1]) * 7 + int(prop[2]))
 
 	_far(p.get("far_shape", "hills"), p["far"], horizon)
 
@@ -50,8 +79,45 @@ func _draw() -> void:
 			c, 5.0, i * 31, 3.0)
 
 	for prop in p["props"]:
-		if prop[0] not in ["sun", "cloud", "planet", "star", "vine"]:
-			_prop(prop[0], Vector2(prop[1], prop[2]), prop[3], int(prop[1]) * 7 + int(prop[2]))
+		if prop[0] not in SKY_PROPS and prop[0] != "vine":
+			_prop(self, prop[0], Vector2(prop[1], prop[2]), prop[3], int(prop[1]) * 7 + int(prop[2]))
+
+
+## The sky, behind the land: day colours, or dusk, or a lavender night with a crayon moon and
+## stars (outside places only - a cave or the sea floor has no sky to see).
+func _draw_sky(ci: CanvasItem) -> void:
+	var p := _place
+	var horizon := Places.HORIZON
+	var colors := Clock.sky(p["sky"], night)
+	Crayon.sky(ci, Rect2(WORLD.position, Vector2(WORLD.size.x, horizon - WORLD.position.y + 60)),
+		colors[0], colors[1])
+	var moon_at := Vector2(1040, 110)
+	for prop in p["props"]:
+		if prop[0] not in SKY_PROPS:
+			continue
+		var at := Vector2(prop[1], prop[2])
+		if prop[0] == "sun":
+			moon_at = at if at.x < 900.0 else at - Vector2(190, -20)  # clear of the buttons
+			if night >= 0.5:
+				continue
+		_prop(ci, prop[0], at, prop[3], int(prop[1]) * 7 + int(prop[2]))
+	if night < 0.5 or not Places.tags(place_id).has("outside"):
+		return
+	var star_c := Color(Clock.GLOW, (night - 0.5) * 2.0)
+	for i in 26:
+		var at := Vector2(WORLD.position.x + 140.0 + i * 96.0 + Crayon.noise(61, i) * 40.0,
+			-60.0 + absf(Crayon.noise(67, i)) * 300.0)
+		if at.distance_to(moon_at) < 110.0:
+			continue
+		var r := 7.0 + absf(Crayon.noise(71, i)) * 7.0
+		Crayon.fill(ci, Crayon.star(at, r, i), star_c, i, 3.0, 1.0, 2.0)
+	# A crescent: a round moon with a bite taken out of it, coloured in yellow pencil.
+	Crayon.glow(ci, moon_at, 95.0, 1.0, 5)
+	var whole := Crayon.blob(moon_at, Vector2(48, 48), 7, 22, 0.03)
+	var bite := Crayon.blob(moon_at + Vector2(22, -14), Vector2(40, 40), 9, 22, 0.03)
+	for piece in Geometry2D.clip_polygons(whole, bite):
+		ci.draw_colored_polygon(piece, Color("#fff3c2"))
+		Crayon.fill(ci, piece, Color("#ffd86b"), 7, 7.0, 1.5, 4.0)
 
 
 func _far(shape: String, color: Color, horizon: float) -> void:
@@ -111,151 +177,151 @@ func _far(shape: String, color: Color, horizon: float) -> void:
 	Crayon.fill(self, pts, color, 99, 12.0, 0.0, 7.0)
 
 
-func _prop(kind: String, at: Vector2, s: float, seed: int) -> void:
+func _prop(ci: CanvasItem, kind: String, at: Vector2, s: float, seed: int) -> void:
 	match kind:
 		"sun":
-			Crayon.fill_blob(self, at, Vector2(55, 55) * s, Color("#ffd75e"), seed, 0.04)
+			Crayon.fill_blob(ci, at, Vector2(55, 55) * s, Color("#ffd75e"), seed, 0.04)
 			for i in 10:
 				var a := TAU * i / 10.0
-				Crayon.line(self, at + Vector2(cos(a), sin(a)) * 72.0 * s,
+				Crayon.line(ci, at + Vector2(cos(a), sin(a)) * 72.0 * s,
 					at + Vector2(cos(a), sin(a)) * 100.0 * s, Color("#ffcf4a"), 6.0, seed + i, 1.5)
 		"cloud":
 			for i in 4:
 				var o := Vector2((i - 1.5) * 50.0, -absf(Crayon.noise(seed, i)) * 25.0) * s
-				Crayon.fill_blob(self, at + o, Vector2(55, 38) * s, Color(1, 1, 1, 0.85), seed + i, 0.12)
+				Crayon.fill_blob(ci, at + o, Vector2(55, 38) * s, Color(1, 1, 1, 0.85), seed + i, 0.12)
 		"tree":
-			_trunk(at, Vector2(26, 130) * s, Color("#c9a27c"), seed)
-			Crayon.fill_blob(self, at + Vector2(0, -170) * s, Vector2(95, 80) * s, Color("#8cc977"), seed, 0.14)
+			_trunk(ci, at, Vector2(26, 130) * s, Color("#c9a27c"), seed)
+			Crayon.fill_blob(ci, at + Vector2(0, -170) * s, Vector2(95, 80) * s, Color("#8cc977"), seed, 0.14)
 		"pine":
-			_trunk(at, Vector2(20, 60) * s, Color("#c9a27c"), seed)
+			_trunk(ci, at, Vector2(20, 60) * s, Color("#c9a27c"), seed)
 			for i in 3:
 				var w := (90.0 - i * 22.0) * s
 				var y := at.y - (40.0 + i * 55.0) * s
-				Crayon.fill(self, PackedVector2Array([Vector2(at.x - w, y), Vector2(at.x + w, y),
+				Crayon.fill(ci, PackedVector2Array([Vector2(at.x - w, y), Vector2(at.x + w, y),
 					Vector2(at.x, y - 90.0 * s)]), Color("#7fbf8a"), seed + i, 8.0, 3.0, 5.0)
 		"bush":
-			Crayon.fill_blob(self, at + Vector2(0, -40) * s, Vector2(80, 50) * s, Color("#9ad083"), seed, 0.18)
+			Crayon.fill_blob(ci, at + Vector2(0, -40) * s, Vector2(80, 50) * s, Color("#9ad083"), seed, 0.18)
 		"flower":
-			Crayon.line(self, at, at + Vector2(0, -50) * s, Color("#8cc977"), 5.0 * s, seed, 1.5)
+			Crayon.line(ci, at, at + Vector2(0, -50) * s, Color("#8cc977"), 5.0 * s, seed, 1.5)
 			var head := at + Vector2(0, -55) * s
 			var petal: Color = [Color("#f7a6c8"), Color("#ffd166"), Color("#b9a4f2")][absi(seed) % 3]
 			for i in 5:
 				var a := TAU * i / 5.0
-				Crayon.fill_blob(self, head + Vector2(cos(a), sin(a)) * 13.0 * s, Vector2(10, 10) * s,
+				Crayon.fill_blob(ci, head + Vector2(cos(a), sin(a)) * 13.0 * s, Vector2(10, 10) * s,
 					petal, seed + i, 0.1)
-			Crayon.fill_blob(self, head, Vector2(8, 8) * s, Color("#ffcf4a"), seed, 0.05)
+			Crayon.fill_blob(ci, head, Vector2(8, 8) * s, Color("#ffcf4a"), seed, 0.05)
 		"rock":
-			Crayon.fill_blob(self, at + Vector2(0, -22) * s, Vector2(60, 30) * s, Color("#c4bfcf"), seed, 0.16)
+			Crayon.fill_blob(ci, at + Vector2(0, -22) * s, Vector2(60, 30) * s, Color("#c4bfcf"), seed, 0.16)
 		"cactus":
 			var c := Color("#93c98a")
-			_rounded(at + Vector2(-18, -150) * s, Vector2(36, 150) * s, c, seed)
-			_rounded(at + Vector2(-58, -110) * s, Vector2(26, 50) * s, c, seed + 1)
-			_rounded(at + Vector2(32, -125) * s, Vector2(26, 60) * s, c, seed + 2)
+			_rounded(ci, at + Vector2(-18, -150) * s, Vector2(36, 150) * s, c, seed)
+			_rounded(ci, at + Vector2(-58, -110) * s, Vector2(26, 50) * s, c, seed + 1)
+			_rounded(ci, at + Vector2(32, -125) * s, Vector2(26, 60) * s, c, seed + 2)
 		"palm":
 			var top := at + Vector2(30, -230) * s
-			Crayon.line(self, at, top, Color("#d8b48a"), 22.0 * s, seed, 8.0)
+			Crayon.line(ci, at, top, Color("#d8b48a"), 22.0 * s, seed, 8.0)
 			for i in 5:
 				var a := -PI * 0.95 + PI * 0.95 * i / 4.0
 				var tip := top + Vector2(cos(a) * 120.0, sin(a) * 50.0 + 45.0) * s
-				Crayon.fill(self, PackedVector2Array([top, top.lerp(tip, 0.5) + Vector2(0, -20) * s, tip,
+				Crayon.fill(ci, PackedVector2Array([top, top.lerp(tip, 0.5) + Vector2(0, -20) * s, tip,
 					top.lerp(tip, 0.5) + Vector2(0, 12) * s]), Color("#8fcf7f"), seed + i, 6.0, 2.0, 4.0)
 		"seaweed":
 			var pts := PackedVector2Array()
 			for i in 9:
 				pts.append(at + Vector2(sin(i * 0.9 + seed) * 14.0, -i * 28.0) * s)
-			draw_polyline(pts, Color("#86c79a"), 16.0 * s, true)
+			ci.draw_polyline(pts, Color("#86c79a"), 16.0 * s, true)
 		"coral":
 			var c := Color("#f6a7a0")
 			for i in 5:
 				var a := -PI / 2.0 + (i - 2) * 0.35
-				Crayon.line(self, at, at + Vector2(cos(a), sin(a)) * (60.0 + 25.0 * absf(Crayon.noise(seed, i))) * s,
+				Crayon.line(ci, at, at + Vector2(cos(a), sin(a)) * (60.0 + 25.0 * absf(Crayon.noise(seed, i))) * s,
 					c, 14.0 * s, seed + i, 4.0)
 		"shell":
 			for i in 5:
 				var a := PI + PI * i / 4.0
-				Crayon.line(self, at, at + Vector2(cos(a), sin(a)) * 22.0 * s, Color("#f3c6b5"), 9.0 * s,
+				Crayon.line(ci, at, at + Vector2(cos(a), sin(a)) * 22.0 * s, Color("#f3c6b5"), 9.0 * s,
 					seed + i, 1.0)
 		"mushroom":
-			_rounded(at + Vector2(-10, -40) * s, Vector2(20, 40) * s, Color("#f2e6d0"), seed)
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-42, -38) * s, at + Vector2(-30, -70) * s,
+			_rounded(ci, at + Vector2(-10, -40) * s, Vector2(20, 40) * s, Color("#f2e6d0"), seed)
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-42, -38) * s, at + Vector2(-30, -70) * s,
 				at + Vector2(0, -82) * s, at + Vector2(30, -70) * s, at + Vector2(42, -38) * s]),
 				Color("#f08a8a"), seed, 6.0, 2.0, 4.0)
 			for i in 3:
-				draw_circle(at + Vector2(-18 + i * 17, -58 - (i % 2) * 8) * s, 5.0 * s, Color(1, 1, 1, 0.9))
+				ci.draw_circle(at + Vector2(-18 + i * 17, -58 - (i % 2) * 8) * s, 5.0 * s, Color(1, 1, 1, 0.9))
 		"crystal":
 			for i in 3:
 				var o := Vector2((i - 1) * 34.0, 0) * s
 				var h := (90.0 + 50.0 * absf(Crayon.noise(seed, i))) * s
-				Crayon.fill(self, PackedVector2Array([at + o + Vector2(-16, 0) * s, at + o + Vector2(-12 * s, -h * 0.8),
+				Crayon.fill(ci, PackedVector2Array([at + o + Vector2(-16, 0) * s, at + o + Vector2(-12 * s, -h * 0.8),
 					at + o + Vector2(0, -h), at + o + Vector2(12 * s, -h * 0.8), at + o + Vector2(16, 0) * s]),
 					[Color("#b7a6f0"), Color("#9fdcf0"), Color("#f2b6e4")][i], seed + i, 6.0, 2.0, 4.0)
 		"peak":
 			var w := 260.0 * s
 			var h := 260.0 * s
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-w, 0), at + Vector2(0, -h), at + Vector2(w, 0)]),
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-w, 0), at + Vector2(0, -h), at + Vector2(w, 0)]),
 				Color("#c8d6ea"), seed, 12.0, 2.0, 7.0)
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-w * 0.32, -h * 0.68), at + Vector2(0, -h),
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-w * 0.32, -h * 0.68), at + Vector2(0, -h),
 				at + Vector2(w * 0.32, -h * 0.68), at + Vector2(w * 0.12, -h * 0.6),
 				at + Vector2(-w * 0.1, -h * 0.66)]), Color(1, 1, 1, 0.95), seed + 1, 6.0, 2.0, 5.0)
 		"volcano":
 			var w := 300.0 * s
 			var h := 240.0 * s
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w * 0.22, -h),
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w * 0.22, -h),
 				at + Vector2(w * 0.22, -h), at + Vector2(w, 0)]), Color("#d9a99a"), seed, 12.0, 2.0, 7.0)
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-w * 0.22, -h), at + Vector2(w * 0.22, -h),
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-w * 0.22, -h), at + Vector2(w * 0.22, -h),
 				at + Vector2(w * 0.12, -h * 0.75), at + Vector2(-w * 0.05, -h * 0.85)]),
 				Color("#ff9a52"), seed + 1, 6.0, 2.0, 5.0)
 			for i in 3:
-				Crayon.scribble(self, at + Vector2(i * 25.0, -h - 60.0 - i * 50.0) * Vector2(1, 1),
+				Crayon.scribble(ci, at + Vector2(i * 25.0, -h - 60.0 - i * 50.0) * Vector2(1, 1),
 					Vector2(90, 60) * s, Color(0.85, 0.8, 0.85, 0.7), seed + i, 6.0)
 		"rainbow":
 			var colors := [Color("#f7a1a1"), Color("#f9c98a"), Color("#f7e48a"), Color("#a9dd9a"),
 				Color("#9cc9ef"), Color("#c3a9ec")]
 			for i in colors.size():
-				draw_arc(at + Vector2(0, 40), (330.0 - i * 18.0) * s, PI, TAU, 64, colors[i], 18.0 * s, true)
+				ci.draw_arc(at + Vector2(0, 40), (330.0 - i * 18.0) * s, PI, TAU, 64, colors[i], 18.0 * s, true)
 		"puddle":
-			Crayon.fill_blob(self, at, Vector2(110, 26) * s, Color("#b9a98a"), seed, 0.12)
+			Crayon.fill_blob(ci, at, Vector2(110, 26) * s, Color("#b9a98a"), seed, 0.12)
 		"reed":
 			for i in 3:
 				var base := at + Vector2((i - 1) * 14.0, 0) * s
 				var tip := base + Vector2((i - 1) * 8.0, -120.0 - i * 15.0) * s
-				Crayon.line(self, base, tip, Color("#9bbf7a"), 5.0 * s, seed + i, 2.0)
-				_rounded(tip + Vector2(-7, 0) * s, Vector2(14, 34) * s, Color("#c9a27c"), seed + i)
+				Crayon.line(ci, base, tip, Color("#9bbf7a"), 5.0 * s, seed + i, 2.0)
+				_rounded(ci, tip + Vector2(-7, 0) * s, Vector2(14, 34) * s, Color("#c9a27c"), seed + i)
 		"crater":
-			Crayon.fill_blob(self, at, Vector2(90, 24) * s, Color("#d2cde2"), seed, 0.1)
-			Crayon.fill_blob(self, at + Vector2(0, 4) * s, Vector2(70, 15) * s, Color("#c7c1da"), seed + 1, 0.1)
+			Crayon.fill_blob(ci, at, Vector2(90, 24) * s, Color("#d2cde2"), seed, 0.1)
+			Crayon.fill_blob(ci, at + Vector2(0, 4) * s, Vector2(70, 15) * s, Color("#c7c1da"), seed + 1, 0.1)
 		"planet":
-			Crayon.fill_blob(self, at, Vector2(70, 70) * s, Color("#a6d4f2"), seed, 0.03)
-			Crayon.fill_blob(self, at + Vector2(-18, -10) * s, Vector2(28, 20) * s, Color("#a9dd9a"), seed + 1, 0.3)
-			Crayon.fill_blob(self, at + Vector2(25, 22) * s, Vector2(20, 14) * s, Color("#a9dd9a"), seed + 2, 0.3)
+			Crayon.fill_blob(ci, at, Vector2(70, 70) * s, Color("#a6d4f2"), seed, 0.03)
+			Crayon.fill_blob(ci, at + Vector2(-18, -10) * s, Vector2(28, 20) * s, Color("#a9dd9a"), seed + 1, 0.3)
+			Crayon.fill_blob(ci, at + Vector2(25, 22) * s, Vector2(20, 14) * s, Color("#a9dd9a"), seed + 2, 0.3)
 		"star":
-			Crayon.fill(self, Crayon.star(at, 18.0 * s, seed), Color("#fff3a8"), seed, 4.0, 1.0, 3.0)
+			Crayon.fill(ci, Crayon.star(at, 18.0 * s, seed), Color("#fff3a8"), seed, 4.0, 1.0, 3.0)
 		"tower":
 			var w := 70.0 * s
 			var h := 300.0 * s
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w, -h),
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w, -h),
 				at + Vector2(w, -h), at + Vector2(w, 0)]), Color("#d8d1e6"), seed, 10.0, 2.0, 6.0)
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-w * 1.25, -h), at + Vector2(0, -h - 150.0 * s),
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-w * 1.25, -h), at + Vector2(0, -h - 150.0 * s),
 				at + Vector2(w * 1.25, -h)]), Color("#b9a6e6"), seed + 1, 8.0, 2.0, 5.0)
-			Crayon.fill_blob(self, at + Vector2(0, -h * 0.6), Vector2(16, 26) * s, Color("#fff3c4"), seed + 2, 0.05)
-			Crayon.line(self, at + Vector2(0, -h - 150.0 * s), at + Vector2(0, -h - 200.0 * s),
+			Crayon.fill_blob(ci, at + Vector2(0, -h * 0.6), Vector2(16, 26) * s, Color("#fff3c4"), seed + 2, 0.05)
+			Crayon.line(ci, at + Vector2(0, -h - 150.0 * s), at + Vector2(0, -h - 200.0 * s),
 				Color("#c9a27c"), 4.0, seed, 0.5)
-			Crayon.fill(self, PackedVector2Array([at + Vector2(0, -h - 200.0 * s), at + Vector2(45, -h - 185.0 * s) ,
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(0, -h - 200.0 * s), at + Vector2(45, -h - 185.0 * s) ,
 				at + Vector2(0, -h - 170.0 * s)]), Color("#f08a8a"), seed + 3, 5.0, 1.0, 3.0)
 		"flag":
 			var colors := [Color("#f7a6c8"), Color("#9cc9ef"), Color("#ffd166"), Color("#a9dd9a")]
 			for i in 9:
 				var x0 := at.x - 420.0 * s + i * 95.0 * s
 				var y0 := at.y + sin(i * 0.7) * 16.0
-				Crayon.fill(self, PackedVector2Array([Vector2(x0, y0), Vector2(x0 + 70.0 * s, y0 + 4),
+				Crayon.fill(ci, PackedVector2Array([Vector2(x0, y0), Vector2(x0 + 70.0 * s, y0 + 4),
 					Vector2(x0 + 35.0 * s, y0 + 60.0 * s)]), colors[i % 4], seed + i, 5.0, 1.0, 3.0)
-			Crayon.line(self, at + Vector2(-430, 0) * s, at + Vector2(440, 10) * s, Color("#c9a27c"), 3.0, seed, 4.0)
+			Crayon.line(ci, at + Vector2(-430, 0) * s, at + Vector2(440, 10) * s, Color("#c9a27c"), 3.0, seed, 4.0)
 		"lollipop":
-			Crayon.line(self, at, at + Vector2(0, -170) * s, Color("#f5efe6"), 12.0 * s, seed, 1.0)
+			Crayon.line(ci, at, at + Vector2(0, -170) * s, Color("#f5efe6"), 12.0 * s, seed, 1.0)
 			var head := at + Vector2(0, -220) * s
-			Crayon.fill_blob(self, head, Vector2(62, 62) * s, Color("#f7a6c8"), seed, 0.04)
+			Crayon.fill_blob(ci, head, Vector2(62, 62) * s, Color("#f7a6c8"), seed, 0.04)
 			for i in 3:
-				draw_arc(head, (14.0 + i * 16.0) * s, 0.0, TAU * 0.85, 24, Color("#fff3f8"), 6.0 * s, true)
+				ci.draw_arc(head, (14.0 + i * 16.0) * s, 0.0, TAU * 0.85, 24, Color("#fff3f8"), 6.0 * s, true)
 		"candy_cane":
 			var pts := PackedVector2Array()
 			for i in 10:
@@ -263,30 +329,30 @@ func _prop(kind: String, at: Vector2, s: float, seed: int) -> void:
 			for i in 9:
 				var a := PI - PI * i / 8.0
 				pts.append(at + Vector2(30 + cos(a) * 30, -220 - sin(a) * 30) * s)
-			draw_polyline(pts, Color("#fff6f6"), 22.0 * s, true)
+			ci.draw_polyline(pts, Color("#fff6f6"), 22.0 * s, true)
 			for i in range(0, pts.size() - 1, 2):
-				draw_line(pts[i], pts[i + 1], Color("#f28a8a"), 22.0 * s, true)
+				ci.draw_line(pts[i], pts[i + 1], Color("#f28a8a"), 22.0 * s, true)
 		"gumdrop":
 			var c: Color = [Color("#a9dd9a"), Color("#f9c98a"), Color("#c3a9ec")][absi(seed) % 3]
-			Crayon.fill(self, PackedVector2Array([at + Vector2(-50, 0) * s, at + Vector2(-38, -50) * s,
+			Crayon.fill(ci, PackedVector2Array([at + Vector2(-50, 0) * s, at + Vector2(-38, -50) * s,
 				at + Vector2(0, -68) * s, at + Vector2(38, -50) * s, at + Vector2(50, 0) * s]), c, seed, 6.0, 2.0, 4.0)
 			for i in 5:
-				draw_circle(at + Vector2(-25 + i * 12, -30 - (i % 2) * 14) * s, 3.0 * s, Color(1, 1, 1, 0.8))
+				ci.draw_circle(at + Vector2(-25 + i * 12, -30 - (i % 2) * 14) * s, 3.0 * s, Color(1, 1, 1, 0.8))
 		"vine":
 			var pts := PackedVector2Array()
 			for i in 12:
 				pts.append(Vector2(at.x + sin(i * 0.8 + seed) * 12.0, WORLD.position.y + i * 60.0 * s))
-			draw_polyline(pts, Color("#8fc98a"), 9.0, true)
+			ci.draw_polyline(pts, Color("#8fc98a"), 9.0, true)
 			for i in range(2, 12, 2):
-				Crayon.fill_blob(self, pts[i] + Vector2(12, 0), Vector2(14, 8), Color("#9ad083"), seed + i, 0.2)
+				Crayon.fill_blob(ci, pts[i] + Vector2(12, 0), Vector2(14, 8), Color("#9ad083"), seed + i, 0.2)
 
 
-func _trunk(at: Vector2, size: Vector2, color: Color, seed: int) -> void:
-	Crayon.fill(self, PackedVector2Array([at + Vector2(-size.x * 0.5, 0), at + Vector2(-size.x * 0.35, -size.y),
+func _trunk(ci: CanvasItem, at: Vector2, size: Vector2, color: Color, seed: int) -> void:
+	Crayon.fill(ci, PackedVector2Array([at + Vector2(-size.x * 0.5, 0), at + Vector2(-size.x * 0.35, -size.y),
 		at + Vector2(size.x * 0.35, -size.y), at + Vector2(size.x * 0.5, 0)]), color, seed, 6.0, 2.0, 4.0)
 
 
-func _rounded(top_left: Vector2, size: Vector2, color: Color, seed: int) -> void:
+func _rounded(ci: CanvasItem, top_left: Vector2, size: Vector2, color: Color, seed: int) -> void:
 	var r := minf(size.x, size.y) * 0.5
 	var pts := PackedVector2Array()
 	for i in 9:
@@ -294,7 +360,15 @@ func _rounded(top_left: Vector2, size: Vector2, color: Color, seed: int) -> void
 		pts.append(top_left + Vector2(r, r) + Vector2(cos(a), sin(a)) * r)
 	pts.append(top_left + size)
 	pts.append(top_left + Vector2(0, size.y))
-	Crayon.fill(self, pts, color, seed, 6.0, 2.0, 4.0)
+	Crayon.fill(ci, pts, color, seed, 6.0, 2.0, 4.0)
+
+
+## The sky layer: drawn behind the land (show_behind_parent) and left out of its night tint.
+class SkyLayer extends Node2D:
+	var painter: PlacePainter
+
+	func _draw() -> void:
+		painter._draw_sky(self)
 
 
 ## Weather that drifts across a place: snow, bubbles, petals, leaves, embers, sparkles.

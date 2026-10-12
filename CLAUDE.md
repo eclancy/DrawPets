@@ -67,7 +67,8 @@ decision; do not restate it here.
   real save alone: `APPDATA=<an empty folder> "$GODOT_BIN" --path . -- --demo --quit` (Godot puts
   `user://` under `APPDATA`; the shots still go to `.shots/`).
 - `--screen=place|create|shop|calendar` boots straight into a screen; `--stars=N` adds stars;
-  `--shot=N` screenshots frame N; F12 grabs a frame.
+  `--shot=N` screenshots frame N; `--hour=21.5` pretends it is that time (night, dusk, morning);
+  F12 grabs a frame.
 - **`python tools/audio/build.py --all --sheet`** - regenerates every sound effect
   (`sfx/*.wav`), pet-voice base (`sfx/voices/*.f32`), place ambience (`sfx/ambience/*.wav`) and
   music loop (`music/*.wav`), and draws each as a spectrogram in `.shots/sound_*.png` - look at

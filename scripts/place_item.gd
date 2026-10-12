@@ -31,6 +31,7 @@ var _friction := 900.0
 var _glide := false
 var _roll := false
 var _spin := 0.0
+var _lit := -1.0
 
 
 func setup(it: Dictionary, display_size: float) -> void:
@@ -137,6 +138,10 @@ func _process(delta: float) -> void:
 	var d := clampf(inverse_lerp(bounds.position.y, bounds.end.y, position.y), 0.0, 1.0)
 	scale = Vector2.ONE * lerpf(0.82, 1.12, d)
 	z_index = 1 if carrier != null else 0
+	var n := Clock.night()
+	if n != _lit:
+		_lit = n
+		sprite.modulate = Color.WHITE if has_word("glowy") else Clock.tint(n)
 	if held or carrier != null:
 		_place_sprite()
 		return
@@ -198,6 +203,8 @@ func end_stretch() -> void:
 
 
 func _draw() -> void:
+	if has_word("glowy") and _lit > 0.01 and stretch_to == Vector2.INF:
+		Crayon.glow(self, sprite.position, radius * 1.7, _lit, 5)
 	if held or carrier != null:
 		return
 	var shrink := clampf(1.0 - z / 500.0, 0.3, 1.0)

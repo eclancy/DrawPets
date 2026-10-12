@@ -79,6 +79,16 @@ static func fill_blob(canvas: CanvasItem, center: Vector2, radius: Vector2, colo
 		clampf(spacing * 0.6, 2.5, 6.0))
 
 
+## Light from a lamp or a glowy toy at night: soft rings of pale yellow pencil, stronger to the
+## middle. `strength` 0-1 (Clock.night()).
+static func glow(canvas: CanvasItem, center: Vector2, radius: float, strength: float, seed: int) -> void:
+	if strength <= 0.01:
+		return
+	for i in 3:
+		var r := radius * (1.0 - i * 0.28)
+		fill_blob(canvas, center, Vector2(r, r), Color(Clock.GLOW, 0.14 * strength), seed + i, 0.08)
+
+
 ## A loose scribbled loop, for clouds and smoke.
 static func scribble(canvas: CanvasItem, center: Vector2, size: Vector2, color: Color,
 		seed: int, width := 8.0, loops := 9) -> void:

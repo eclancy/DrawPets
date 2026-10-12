@@ -12,6 +12,7 @@ var sprite: Sprite2D
 var height_px := 120.0
 var bounds := Rect2(40, 460, 1200, 240)
 var selected := false
+var _lit := -1.0
 
 
 func setup(it: Dictionary, e: Dictionary) -> void:
@@ -50,6 +51,19 @@ func perch_height() -> float:
 	return height_px * 0.62
 
 
+## Where a pet naps on it: on top of a bed or a cushion; on the doorstep of anything it would
+## hide in (a house, a tent), so it can still be seen.
+func nap_spot() -> Vector2:
+	if has_word("hidey"):
+		var w := absf(sprite.scale.x) * float(item["_img"].get_width())
+		return position + Vector2(randf_range(-0.18, 0.18) * w, 16)
+	return position + Vector2(randf_range(-0.22, 0.22) * height_px, 3)
+
+
+func nap_height() -> float:
+	return 0.0 if has_word("hidey") else perch_height()
+
+
 func hit(point: Vector2) -> bool:
 	var g := sprite.get_global_transform()
 	var img: Image = item["_img"]
@@ -64,13 +78,23 @@ func hit(point: Vector2) -> bool:
 func _process(_delta: float) -> void:
 	var d := clampf(inverse_lerp(bounds.position.y, bounds.end.y, position.y), 0.0, 1.0)
 	scale = Vector2.ONE * lerpf(0.82, 1.12, d)
+	# The night tint, as the place has it - except on something glowy, which lights up instead.
+	var n := Clock.night()
+	if n != _lit:
+		_lit = n
+		sprite.modulate = Color.WHITE if has_word("glowy") else Clock.tint(n)
+		queue_redraw()
 
 
 func _draw() -> void:
 	var w := absf(sprite.scale.x) * float(item["_img"].get_width()) * 0.45
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.22))
 	draw_circle(Vector2.ZERO, w, Color(0.32, 0.27, 0.5, 0.14))
+	if has_word("glowy") and _lit > 0.01:
+		Crayon.glow(self, Vector2.ZERO, w * 2.2, _lit, 11)  # a pool of light on the ground
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if has_word("glowy"):
+		Crayon.glow(self, Vector2(0, -height_px * 0.58), maxf(height_px * 0.7, w * 1.3), _lit, 3)
 	if selected:
 		var h := height_px
 		draw_rect(Rect2(-w, -h - 6, w * 2.0, h + 12), UI.ACCENT, false, 4.0)

@@ -14,6 +14,8 @@ var _n := 0
 
 func run() -> void:
 	game.profile.add_stars(400)
+	if not game.dev.has("hour"):
+		Clock.forced_hour = 12.0  # midday, whatever the real clock says - the night has its own turn
 	await _build_first_home()
 	var creator := await _draft_round_trip()
 	await _make_pet(creator)
@@ -363,6 +365,7 @@ func _play_at_home() -> void:
 	place.place_furniture("kit_bed", Vector2(960, 640))
 	place.place_furniture("kit_tree", Vector2(1120, 520))
 	place.place_furniture("kit_drum", Vector2(520, 520))
+	place.place_furniture("kit_lamp", Vector2(760, 540))
 	await _wait(0.5)
 	await _shot("decorate")
 	place.open_tab("")
@@ -370,6 +373,34 @@ func _play_at_home() -> void:
 	place._play_with_furniture(zorp)
 	await _wait(5.0)
 	await _shot("furniture_play")
+	await _night()
+
+
+## Half past nine: the place goes lavender, lamps glow, everyone is curled up asleep - and a tap
+## wakes one gently. Then dusk, then morning, when they stretch and say good morning.
+func _night() -> void:
+	var home_id: String = _place().home["id"]
+	Clock.forced_hour = 21.5
+	game.go_place(home_id)
+	await _wait(2.0)
+	await _shot("night")
+	var place := _place()
+	place.boop(place.creatures[0])
+	await _wait(0.8)
+	await _shot("night_wake")
+	place._panel.visible = false
+	await _wait(1.5)
+	Clock.forced_hour = 19.7
+	game.go_place(home_id)
+	await _wait(1.0)
+	await _shot("dusk")
+	Clock.forced_hour = 8.0
+	game.go_place(home_id)
+	await _wait(1.4)
+	await _shot("morning")
+	Clock.forced_hour = 12.0
+	game.go_place(home_id)
+	await _wait(0.6)
 
 
 ## Every toy the way its words say: fetch and throw again, a rope held out, a teddy, a chew bone,

@@ -21,7 +21,7 @@ const TOY := {
 	"chewy": {"hint": "a long happy chew", "stat": "stamina"},
 	"puzzly": {"hint": "a treat hides inside", "stat": "smarts"},
 	"spinny": {"hint": "spins in the air", "stat": "agility"},
-	"glowy": {"hint": "sparkles in the dark", "stat": ""},
+	"glowy": {"hint": "glows in the dark", "stat": ""},
 }
 
 ## What a toy is FOR. The first of these words a toy has decides how a pet plays with it, so a
@@ -79,6 +79,7 @@ const FURNITURE := {
 	"scratchy": {"hint": "scratches it", "stat": "strength"},
 	"slidey": {"hint": "slides down it", "stat": "speed"},
 	"fancy": {"hint": "feels fancy near it", "stat": "charm"},
+	"glowy": {"hint": "lights up at night", "stat": ""},
 }
 
 ## Clothes. A Style Show has a theme word; clothes with that word score.

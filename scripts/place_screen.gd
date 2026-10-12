@@ -18,6 +18,9 @@ extends Node2D
 ##   Wardrobe drawer   -> drag clothes onto a pet.
 ## Left alone, pets use the furniture by its words: nap on cozy things, bounce on bouncy ones.
 ## Every kind of play trains a stat (Stats), and milestones pay gold stars (GameRoot.reward).
+## At night (Clock) the place goes lavender, glowy things light up, and the pets curl up asleep
+## somewhere cozy. A tap wakes one gently - it stays up while it is played with - and in the
+## morning they stretch and say good morning.
 
 const ZOOM := {"tiny": 1.5, "small": 1.2, "medium": 1.0, "big": 0.9, "huge": 0.78, "giant": 0.66}
 const TABS := [["food", "icon_pantry", "Food"], ["toy", "icon_toys", "Toys"],
@@ -95,6 +98,9 @@ var _hint_time := 8.0
 var _save_in := 10.0
 var _ai_in := 1.5
 var _squeak_in := 0.0
+## Night: when each pet woken up, or played with, goes back to bed (Creature -> _now() seconds).
+var _up_till := {}
+var _was_night := false
 
 
 func _ready() -> void:
@@ -146,6 +152,13 @@ func _ready() -> void:
 
 	_build_hud()
 	_drop_daily_snacks()
+	_was_night = Clock.is_night()
+	if _was_night:
+		for c in creatures:
+			if c.pet["id"] == focus_id:
+				_up_till[c] = _now() + 90.0  # just made, fixed or visited: it stays up to see you
+			else:
+				_go_to_bed(c, true)
 	_greet()
 	print("[timing] home %d ms (%d pets)" % [(Time.get_ticks_usec() - t0) / 1000, creatures.size()])
 
@@ -162,6 +175,12 @@ func _greet() -> void:
 	var focus := _focus_creature()
 	if focus == null:
 		_show_hint("Nobody lives here yet - draw a pet and move it in!")
+		return
+	if _was_night and not first_visit:
+		_show_hint("It's night time - shh! Tap a pet to wake it up gently.")
+		return
+	if Clock.is_morning() and not first_visit and game.profile.count_today("morning_" + home["id"], 1):
+		_good_morning()
 		return
 	if first_visit:
 		_show_hint("Welcome home, %s! Rub it to pet it. Open a drawer to feed it, play, decorate or dress up." % focus.pet["name"])
@@ -381,7 +400,9 @@ func _press(at: Vector2) -> void:
 		_pet_hearts = 0
 	elif at.y > Places.HORIZON and toy_state not in ["chase", "return"]:
 		var who := _focus_creature()
-		if who != null and who != _eater and who != _tug and who != _toy_pet:
+		if who != null and who.action() == "sleep":
+			_show_hint("Shh - %s is asleep. Tap it to wake it up gently." % who.pet["name"])
+		elif who != null and who != _eater and who != _tug and who != _toy_pet:
 			who.go_to(at, func(): who.say("note"))
 
 
@@ -452,13 +473,13 @@ func _toy_at(at: Vector2) -> bool:
 
 # --- Petting ---------------------------------------------------------------------------------
 
-## A tap on a pet: it looks up and says hello, and its card opens.
+## A tap on a pet: it looks up and says hello, and its card opens. Asleep, it just wakes up.
 func boop(c: Creature) -> void:
+	if c.action() == "sleep":
+		_wake(c)
+		return
 	_show_panel(c)
 	if c == _eater or c == _tug or (c == _toy_pet and toy_state != ""):
-		return
-	if c.action() == "sleep":
-		c.say("zzz")
 		return
 	c.interrupt()
 	c.perform("look", 0.9)
@@ -470,8 +491,10 @@ func boop(c: Creature) -> void:
 ## rub matters: its head and it shuts its eyes and leans into your finger; its body and it
 ## wiggles - keep going and it rolls over for a belly rub. Every so far of rubbing is a heart.
 func stroke_pet(c: Creature, distance: float, at := Vector2.INF, speed := 0.0) -> void:
-	# Busy eating, tugging or playing with a toy, it still loves it - it just carries on.
-	var busy := c == _eater or c == _tug or (c == _toy_pet and toy_state != "")
+	# Busy eating, tugging or playing with a toy, it still loves it - it just carries on. Asleep,
+	# it sleeps on, and dreams of you.
+	var asleep := c.action() == "sleep"
+	var busy := c == _eater or c == _tug or (c == _toy_pet and toy_state != "") or asleep
 	var zone := c.touch_zone(at) if at != Vector2.INF else "body"
 	if not busy:
 		if c.action() != "belly":
@@ -487,11 +510,11 @@ func stroke_pet(c: Creature, distance: float, at := Vector2.INF, speed := 0.0) -
 	_pet_hearts += 1
 	var belly := c.action() == "belly"
 	# Every heart shows; every other one it says so, so a long rub is not a wall of noise.
-	if _pet_hearts % 2 == 1:
+	if _pet_hearts % 2 == 1 and not asleep:
 		c.say("heart")
 	else:
 		_on_emote("heart", c.top_global())
-	if speed > 1100.0 and randf() < 0.5:
+	if speed > 1100.0 and randf() < 0.5 and not asleep:
 		c.say("note")  # a tickle: it giggles
 	_love(c, 1)
 	_train(c, "charm", 0.5 if belly else 0.35)
@@ -784,7 +807,8 @@ func _start_chase() -> void:
 		_chasers.append(c)
 		c.say("note")
 	if _chasers.is_empty():
-		_show_hint("Everyone's too sleepy to play. Let them rest on something cozy!")
+		if not _asleep_hint():
+			_show_hint("Everyone's too sleepy to play. Let them rest on something cozy!")
 		toy_state = ""
 
 
@@ -1449,7 +1473,8 @@ func _update_food(delta: float) -> void:
 	if hungriest == null:
 		if not _told_full and not creatures.is_empty():
 			_told_full = true
-			_show_hint("Everyone's full! Maybe later.")
+			if not _asleep_hint():
+				_show_hint("Everyone's full! Maybe later.")
 		return
 	_eater = hungriest
 	hungriest.interrupt()
@@ -1537,7 +1562,9 @@ func _play_with_furniture(c: Creature) -> void:
 	if f == null:
 		return
 	var spot := f.position + Vector2(0, 3)
-	if word == "hidey":
+	if word == "cozy":
+		spot = f.nap_spot()
+	elif word == "hidey":
 		spot = f.position + Vector2(randf_range(-20, 20), -10)  # just behind it
 	elif word in ["shady", "warm", "musical", "scratchy", "fancy"]:
 		spot = f.position + Vector2(signf(c.position.x - f.position.x + 0.1) * f.height_px * 0.45, 8)
@@ -1549,7 +1576,7 @@ func _use_furniture(c: Creature, f: Furniture, word: String) -> void:
 		return
 	match word:
 		"cozy":
-			c.rest_z = f.perch_height()
+			c.rest_z = f.nap_height()
 			c.perform("sleep", randf_range(6.0, 10.0), func():
 				PetStore.change_need(c.pet, "energy", 0.35)
 				_train(c, "stamina", 0.4)
@@ -1605,6 +1632,106 @@ func _use_furniture(c: Creature, f: Furniture, word: String) -> void:
 			c.perform("look", 2.5, func(): _train(c, "charm", 0.6))
 
 
+# --- Night ----------------------------------------------------------------------------------
+
+## Bedtime: off to something cozy (or warm), a big yawn, and curled up asleep till morning - or
+## till a tap. `now`: already asleep there, as when the home is opened at night.
+func _go_to_bed(c: Creature, now := false) -> void:
+	# A real bed if there is one, then a house's doorstep, then by something warm.
+	var beds := []
+	for f in furniture:
+		if f.has_word("cozy") and not f.has_word("hidey"):
+			beds.append(f)
+	var bed: Furniture = beds.pick_random() if not beds.is_empty() else _furniture_with("cozy")
+	if bed == null:
+		bed = _furniture_with("warm")
+	var spot := c.position
+	var perch := 0.0
+	if bed != null and bed.has_word("cozy"):
+		spot = bed.nap_spot()
+		perch = bed.nap_height()
+	elif bed != null:
+		var side := signf(c.position.x - bed.position.x + 0.1)
+		spot = bed.position + Vector2(side * bed.height_px * randf_range(0.5, 0.8), randf_range(4, 24))
+	spot = spot.clamp(GROUND.position, GROUND.end)
+	if now:
+		c.position = spot
+		c.z = perch
+		_lie_down(c, perch, 2.0)
+	else:
+		c.go_to(spot, _lie_down.bind(c, perch, 0.0))
+
+
+func _lie_down(c: Creature, perch: float, asleep_for: float) -> void:
+	c.rest_z = perch
+	c.perform("sleep", 900.0, _slept.bind(c), asleep_for)
+
+
+func _slept(c: Creature) -> void:
+	c.rest_z = 0.0
+
+
+## A tap on a sleeping pet: it wakes gently - a long stretch and a yawn - says hello, and stays
+## up a while to play.
+func _wake(c: Creature) -> void:
+	c.interrupt()
+	_up_till[c] = _now() + 60.0
+	c.perform("stretch", 1.6, _woken.bind(c))
+
+
+func _woken(c: Creature) -> void:
+	c.rest_z = 0.0
+	c.perform("look", 0.8)
+	c.say("hello")
+
+
+## Morning: everyone stretches, then says good morning.
+func _good_morning() -> void:
+	for c in creatures:
+		c.interrupt()
+		c.rest_z = 0.0
+		c.perform("stretch", 1.6 + randf() * 0.6, _morning_hello.bind(c))
+	_show_hint("Good morning! Everyone slept well.")
+
+
+func _morning_hello(c: Creature) -> void:
+	c.perform("greet", 1.6)
+	c.say("heart")
+
+
+## Every so often: sleepers get their energy back, pets being played with stay up, and night
+## falling or morning coming while the home is open is noticed.
+func _night_tick() -> void:
+	var night := Clock.is_night()
+	for c in creatures:
+		if c.is_asleep():
+			PetStore.change_need(c.pet, "energy", 0.01)
+		elif c == _eater or c == _tug or c == _toy_pet or _chasers.has(c) \
+				or c.action() in ["petted", "wiggle", "belly", "cuddle", "greet", "stretch", "celebrate"]:
+			_up_till[c] = maxf(float(_up_till.get(c, 0.0)), _now() + 40.0)
+	if night == _was_night:
+		return
+	_was_night = night
+	if night:
+		_show_hint("Bedtime! The pets are getting sleepy.")
+		return
+	for c in creatures:
+		if c.action() == "sleep":
+			c.interrupt()
+			c.rest_z = 0.0
+			c.perform("stretch", 1.6 + randf() * 0.6, _morning_hello.bind(c))
+	_show_hint("Good morning!")
+
+
+## Shows "they're asleep" if anyone is - true when it did.
+func _asleep_hint() -> bool:
+	for c in creatures:
+		if c.action() == "sleep":
+			_show_hint("Shh - they're asleep! Tap a pet to wake it up gently.")
+			return true
+	return false
+
+
 # --- Training, trust and rewards -------------------------------------------------------------
 
 func _train(c: Creature, stat: String, amount: float) -> void:
@@ -1647,8 +1774,14 @@ func _process(delta: float) -> void:
 	_ai_in -= delta
 	if _ai_in <= 0.0:
 		_ai_in = 1.2
+		_night_tick()
+		var night := Clock.is_night()
 		for c in creatures:
 			if c.is_busy() or c == _toy_pet or c == _eater or c == _tug or c == _tug_caller or _chasers.has(c):
+				continue
+			if night and _now() > float(_up_till.get(c, 0.0)):
+				if randf() < 0.3:
+					_go_to_bed(c)
 				continue
 			if randf() < 0.22:
 				_play_with_furniture(c)

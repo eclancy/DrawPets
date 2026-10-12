@@ -295,6 +295,7 @@ static func place_button(id: String, caption: String, min_size := Vector2(150, 9
 	var painter := PlacePainter.new()
 	painter.place_id = id
 	painter.animate = false
+	painter.by_clock = false
 	thumb.add_child(painter)
 	# A home's house and things, standing where they stand in the place.
 	for entry in items:

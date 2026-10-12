@@ -61,6 +61,12 @@ the parts; sizes and places; pet, feed, fetch; gentle needs; save and load; `--d
 - Every ready-made creature has its own eyes, mouth and neck; shiny markers last a whole
   drawing and cost 120-150.
 
+## M1.9 - Day and night (built)
+
+The device clock: dusk, a lavender night with a moon, stars and fireflies, glowy lamps and toys,
+pets asleep somewhere cozy, a tap to wake one gently, and good morning (`places.md`,
+`pet-life.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a
@@ -78,7 +84,7 @@ over or wake up - always with the tap-the-ground way round it.
 ## M4 - Tricks, walks and presents
 
 Trick cards (drawn by the kid, taught by gesture - and used in the Trick Show), walks with
-presents ("draw what's inside"), bath and mud, sleeping at night, photo album and journal.
+presents ("draw what's inside"), bath and mud, photo album and journal.
 
 ## M5 - Visiting through ecec.dev
 

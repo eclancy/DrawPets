@@ -15,6 +15,7 @@ extends Node
 ##   --stars=N       start with N gold stars (for trying the shop)
 ##   --screen=place|create|shop|calendar   boot straight into a screen
 ##   --shot=N        screenshot frame N to .shots/shot.png. F12 grabs a frame any time.
+##   --hour=H        pretend it is H o'clock (0-24, e.g. 21.5) - to see dusk, night and morning
 
 var screen: Node
 var profile: Profile
@@ -36,6 +37,8 @@ func _ready() -> void:
 			var kv := arg.substr(2).split("=", true, 1)
 			dev[kv[0]] = kv[1] if kv.size() > 1 else "true"
 	_shot_at = int(dev.get("shot", "-1"))
+	if dev.has("hour"):
+		Clock.forced_hour = float(dev["hour"])
 	profile = Profile.load_or_new()
 	var sounds := Sounds.new()
 	sounds.name = "Sounds"

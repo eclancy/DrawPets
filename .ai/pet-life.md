@@ -111,6 +111,19 @@ Touch is the whole of it - a finger, or a mouse standing in for one.
 - **Tap it**: it looks up, hops and says hello, and its card opens (how it is doing, its stats).
 - Every so far of rubbing is a heart (trust, charm, a little fun).
 
+## Bedtime (built)
+
+At night (`places.md`) pets yawn and curl up asleep - legs folded under, head down, ears droopy -
+on a cozy bed or cushion, else on the doorstep of a house or tent, else by something warm, else
+where they are. Opening a home at night finds them already asleep ("It's night time - shh!").
+- **Tap a sleeping pet** and it wakes gently: a long stretch and a yawn, then hello. It stays up
+  for a minute, and for as long as it is fed, played with or petted; then it goes back to bed.
+- **Rub a sleeping pet** and it sleeps on - the hearts still come, quietly.
+- Food and toys do not wake anyone; the hint says to tap one.
+- Sleeping gives energy back. Day naps on cozy things work the same way (a tap wakes them too).
+- **Morning** (6-11 am), the first visit of the day to a home: everyone stretches and says good
+  morning. Morning coming while the home is open does the same.
+
 ## Favourites are mechanics, not labels
 
 - **Favourite food** always gets a celebration.
@@ -145,6 +158,5 @@ From the pet panel (tap a pet in its home):
 1. **Bath and mud**: muddy places splat crayon mud overlays; a sponge scrubs them off.
 2. **Trick cards**: the kid draws a symbol; doing the gesture with the card teaches the trick.
 3. **Walks and presents**: sparkles hide presents; opening one is a drawing prompt.
-4. **Sleep at night** by the device clock, and a pale-lavender night in every place.
-5. **Photo mode** and a pet journal.
-6. **Voice** (optional, see above).
+4. **Photo mode** and a pet journal.
+5. **Voice** (optional, see above).

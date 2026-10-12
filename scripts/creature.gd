@@ -54,6 +54,8 @@ var ear_droop := 0.0
 var lean := 0.0
 ## Lying over on its back for a belly rub, 0-1. The whole rig tips over backwards about its feet.
 var roll := 0.0
+## Curled up asleep, 0-1: legs and arms folded under, the body sunk down onto them.
+var curl := 0.0
 ## Leaning into something heavy it is pushing along.
 var straining := false
 ## Where a finger is petting it (global), or Vector2.INF. It leans into the finger.
@@ -254,14 +256,20 @@ func stop() -> void:
 
 
 ## Plays an action for `duration` seconds: eat, petted, wiggle, belly, cuddle, celebrate, greet,
-## hop, look, sniff, sleep, bounce, dance, splash, scratch, chew, tug, hide.
-func perform(action_name: String, duration: float, on_done := Callable()) -> void:
+## hop, look, sniff, sleep, stretch, bounce, dance, splash, scratch, chew, tug, hide. `from`
+## starts it part way in - a pet already sound asleep, past its yawn.
+func perform(action_name: String, duration: float, on_done := Callable(), from := 0.0) -> void:
 	_end_action()
 	_action = action_name
 	_action_len = duration
-	_action_left = duration
+	_action_left = duration - from
 	_on_action_done = on_done
 	_has_goal = false
+
+
+## Asleep: curled up, past the yawn and the first snore.
+func is_asleep() -> bool:
+	return _action == "sleep" and _action_len - _action_left > 1.2
 
 
 ## Keeps a running action going a while longer - stroking keeps "petted" alive.
@@ -383,9 +391,11 @@ func _process(delta: float) -> void:
 		part.animate(self, delta)
 	if _action != "belly":
 		roll = move_toward(roll, 0.0, delta * 3.0)
+	curl = move_toward(curl, 1.0 if is_asleep() else 0.0, delta * 1.5)
 	# Rolled over, it lies on its back where it stood: tipped backwards about its feet, then
 	# slid forwards so its middle stays over its shadow.
-	rig.position = Vector2(facing * roll * height_px * 0.3 / maxf(scale.x, 0.01), -z)
+	var sink := curl * height_px * 0.2 / maxf(scale.y, 0.01) if has_legs else 0.0
+	rig.position = Vector2(facing * roll * height_px * 0.3 / maxf(scale.x, 0.01), -z + sink)
 	rig.rotation = (lean + (0.16 if straining else 0.0) - roll * 1.35) * facing
 	rig.scale = Vector2(move_toward(rig.scale.x, norm * facing, norm * delta * 10.0), norm)
 	if depth_scale:
@@ -511,7 +521,7 @@ func _move(delta: float) -> void:
 			Sounds.play_varied("bubble", _size_pitch(), 0.15, step_volume_db - 2.0)
 	swim = move_toward(swim, 1.0 if swimming and moving else 0.0, delta * 3.0)
 	tuck = move_toward(tuck, 1.0 if (z - rest_z > 6.0 and not walking) else 0.0, delta * 4.0)
-	var target_squash := 0.0
+	var target_squash := -0.06 * curl
 	if hopping:
 		target_squash = -0.1 if z - rest_z < height_px * 0.04 else 0.06
 	squash = move_toward(squash, target_squash, delta * 2.0)
@@ -524,7 +534,7 @@ func _mood(delta: float) -> void:
 	var excited := 1.0 if _action in ["celebrate", "petted", "greet", "dance", "bounce", "wiggle", "belly"] else 0.0
 	wag = 0.08 + 0.3 * happiness + 0.2 * excited
 	wag_speed = 3.0 + 11.0 * happiness + 8.0 * excited
-	ear_droop = (1.0 - happiness) * 0.35
+	ear_droop = (1.0 - happiness) * 0.35 + (0.3 if is_asleep() else 0.0)
 	breath_speed = 1.2 if _action == "sleep" else 2.2 + stride * 2.0
 
 	# The mouth: shut unless something opens it. It pants when running, grins when excited,
@@ -542,7 +552,7 @@ func _mood(delta: float) -> void:
 	if _action not in ["eat", "chew", "sleep", "tug"]:
 		mouth_open = move_toward(mouth_open, target_mouth, delta * 6.0)
 
-	if _action in ["petted", "sleep", "belly", "cuddle"]:
+	if _action in ["petted", "sleep", "belly", "cuddle"] or (_action == "stretch" and _action_left > 0.5):
 		blink = move_toward(blink, 0.85, delta * 6.0)
 		return
 	_next_blink -= delta
@@ -636,10 +646,20 @@ func _run_action(delta: float) -> void:
 			if t <= delta:
 				Voice.yawn(pet, self)
 			mouth_open = sin(clampf(t / 1.4, 0.0, 1.0) * PI) * 0.9  # one big yawn first
+			if t > 1.2:
+				head_tilt = move_toward(head_tilt, 0.12, delta * 0.5)  # its head sinks
 			_zzz -= delta
 			if _zzz <= 0.0 and t > 1.4:
 				_zzz = 1.6
 				say("zzz")
+		"stretch":
+			# Waking up: a long stretch - leaning back, then forwards - and a big yawn.
+			if t <= delta:
+				Voice.yawn(pet, self)
+			mouth_open = sin(k * PI) * 0.9
+			lean = -sin(k * TAU) * 0.12
+			head_tilt = -sin(k * PI) * 0.1
+			z = rest_z + sin(k * PI) * height_px * 0.04
 
 
 func _end_action() -> void:
