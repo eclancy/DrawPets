@@ -124,6 +124,8 @@ var _rain_in := -1.0
 var _rain_left := 0.0
 var _rain_loop := -1
 var _editor: PhotoEditor
+## The food bowl: snacks dropped in it (or tapped in from the drawer) are eaten there, nose down.
+var _bowl: Sprite2D
 ## Listening for a call: the button, how loud the room usually is, and a rest after each call.
 var _listen_btn: Button
 var _listening := false
@@ -185,6 +187,7 @@ func _ready() -> void:
 	add_child(_cam)
 	_cam.make_current()
 
+	_make_bowl()
 	_build_hud()
 	_drop_daily_snacks()
 	_was_night = Clock.is_night()
@@ -217,6 +220,10 @@ func _greet() -> void:
 	if Clock.is_morning() and not first_visit and game.profile.count_today("morning_" + home["id"], 1):
 		_good_morning()
 		return
+	for c in creatures:
+		if Care.is_bath_day(c.pet) and not first_visit:
+			_show_hint("It's bath day for %s! Open the Bath drawer." % c.pet["name"])
+			return
 	if first_visit:
 		_show_hint("Welcome home, %s! Rub it to pet it. Open a drawer to feed it, play, decorate or dress up." % focus.pet["name"])
 		focus.perform("celebrate", 1.8)
@@ -336,7 +343,7 @@ func open_tab(which: String) -> void:
 	tab = "" if tab == which else which
 	if tab == "bath" and not _hinted.has("bath"):
 		_hinted["bath"] = true
-		_show_hint("Rub a pet with the sponge to wash the mud off. The brush makes it fluffy!")
+		_show_hint("Bath day! once a week - or rub off a little mud with the sponge.")
 	for t in _tab_buttons:
 		_tab_buttons[t].set_pressed_no_signal(t == tab)
 	_select_furniture(null)
@@ -361,7 +368,11 @@ func _fill_drawer() -> void:
 			_drawer.add_child(UI.icon_button(entry[0], entry[1], entry[2], 52, Vector2(104, 96)))
 		return
 	var draw_new := func(): game.make_item(tab, game.back_to_place.bind(home["id"], focus_id))
-	if tab != "bath":
+	if tab == "bath":
+		var bath := UI.icon_button("icon_bath", "Bath day!", go_bath, 52, Vector2(120, 96))
+		bath.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 3))
+		_drawer.add_child(bath)
+	else:
 		var draw := UI.icon_button("icon_draw", "Draw", draw_new, 52, Vector2(96, 96))
 		draw.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 3))
 		_drawer.add_child(draw)
@@ -700,6 +711,9 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 		"food":
 			(held as PlaceItem).held = false
 			_told_full = false
+			# Let go over the drawer (a tap) or near the bowl: it goes in the bowl.
+			if over_bar or at.distance_to(_bowl.position) < 110.0:
+				_into_bowl(held as PlaceItem)
 			if int(_held_item.get("uses", 0)) > 0:
 				game.profile.use_up(_held_item["id"])
 				_fill_drawer()
@@ -1536,7 +1550,15 @@ func _update_food(delta: float) -> void:
 	if food == null or not is_instance_valid(food):
 		return
 	if _eater != null:
-		if food.carrier == _eater:
+		if food.has_meta("in_bowl") and _eater.action() == "eat_bowl":
+			food.sprite.scale *= 1.0 - delta * 0.35
+			if randf() < delta * 2.5:
+				_on_emote("crumb", _bowl.position + Vector2(randf_range(-20, 20), -40))
+			_munch_in -= delta
+			if _munch_in <= 0.0:
+				_munch_in = randf_range(0.3, 0.42)
+				Sounds.play_varied("munch", _eater._size_pitch(), 0.1)
+		elif food.carrier == _eater:
 			food.hold_in_mouth(_eater)
 			food.sprite.scale *= 1.0 - delta * 0.3
 			if randf() < delta * 2.5:
@@ -1576,6 +1598,11 @@ func _arrive_at_food() -> void:
 		_eater = null
 		return
 	_eater.face_toward(food.position.x)
+	if food.has_meta("in_bowl"):
+		# Eaten from the bowl, nose down.
+		_munch_in = 0.0
+		_eater.perform("eat_bowl", 2.6, _ate)
+		return
 	# It picks the food up to munch it - no drawn neck is long enough to reach the ground.
 	food.pick_up(_eater)
 	_munch_in = 0.0
@@ -2028,7 +2055,7 @@ func _bath_done(c: Creature) -> void:
 	_bathed = true
 	Mud.clear(c.pet)
 	c.refresh_mud()
-	Care.bathed(c.pet)
+	PetStore.change_need(c.pet, "clean", 0.15)  # a quick wash; bath day is the real thing
 	c.interrupt()
 	Sounds.play("shake")
 	c.perform("shake", 1.3, _shaken.bind(c))
@@ -2040,11 +2067,53 @@ func _shaken(c: Creature) -> void:
 		_on_emote("twinkle", c.global_position + Vector2(randf_range(-0.5, 0.5) * c.height_px,
 			-randf_range(0.2, 1.0) * c.height_px))
 	c.say("heart")
-	_love(c, 2)
+	_love(c, 1)
 	_train(c, "charm", 0.5)
-	game.reward_daily("bath", 2, 1, "%s is squeaky clean!" % c.pet["name"])
-	Journal.add_once(c.pet, "first_bath", "Had its first bath - squeaky clean!")
 	_panel.refresh()
+
+
+# --- Bath day and the food bowl ------------------------------------------------------------
+
+## Bath day: the pet whose card is open (or the one this home is looking at) trots off - into the
+## house if there is one, the bathroom's in there, else off to the watering hole - and the bath
+## routine begins (BathScreen).
+func go_bath() -> void:
+	var c := _panel_pet if _panel.visible and _panel_pet != null else _focus_creature()
+	if c == null:
+		return
+	if c.action() == "sleep":
+		_wake(c)
+	var spot := BathDay.spot(home)
+	var to := Vector2(GROUND.end.x, c.position.y)
+	if spot == "tub":
+		for f in furniture:
+			if f.item.get("house", false):
+				to = f.position + Vector2(0, 6)
+	_panel.visible = false
+	c.interrupt()
+	c.say("note")
+	_show_hint("Bath day! Off to %s, %s!" % [BathDay.SPOT_NAMES.get(spot, "the pond"), c.pet["name"]])
+	c.go_to(to, _leave_with.bind(c.pet, game.go_bath.bind(home["id"], c.pet["id"])), true)
+
+
+func _make_bowl() -> void:
+	_bowl = Sprite2D.new()
+	var tex := Items.art_texture("prop_bowl")
+	_bowl.texture = tex
+	_bowl.centered = false
+	_bowl.offset = -Items.art_pivot("prop_bowl", tex.get_image())
+	_bowl.scale = Vector2.ONE * (58.0 / maxf(tex.get_height(), 1.0))
+	_bowl.position = Vector2(GROUND.position.x + 110.0, GROUND.end.y - 24.0)
+	world.add_child(_bowl)
+
+
+func _into_bowl(it: PlaceItem) -> void:
+	it.position = _bowl.position + Vector2(0, -3)
+	it.vel = Vector2.ZERO
+	it.vz = 0.0
+	it.z = 0.0
+	it.set_meta("in_bowl", true)
+	Sounds.play_varied("place", 1.2, 0.05, -4.0)
 
 
 # --- Night ----------------------------------------------------------------------------------

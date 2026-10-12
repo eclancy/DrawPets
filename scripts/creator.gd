@@ -696,6 +696,18 @@ func _personality() -> void:
 	s.max_pick = 2
 	s.on_done = func(words: Array):
 		pet["personality"] = words
+		_coat()
+	_show(s)
+
+
+## Its coat - picked, never read from the drawing - decides how bath day grooms it (BathDay).
+func _coat() -> void:
+	var s := ChoiceScreen.new()
+	s.question = "What's %s's coat like?" % pet["name"]
+	s.picture = PetStore.texture(pet, PetBuilder.parts_of(pet, "body")[0]["image"])
+	s.options = BathDay.COATS.map(func(c): return [c[0], c[1], c[2]])
+	s.on_choose = func(id: String):
+		pet["coat"] = id
 		_voice()
 	_show(s)
 

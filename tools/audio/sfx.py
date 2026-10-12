@@ -329,6 +329,11 @@ def _pop(f0, f1=None, dur=0.05):
     return S.env_mul(S.osc("sine", S.sweep(dur, f0, f1, 0.6), dur), S.ad(dur, 0.002, 4.0))
 
 
+def snip():
+    """Clipping a nail: a tiny bright click with a ting."""
+    return S.layer([(tick(0.03, 4500, 120.0, seed=330), 0.0, 1.0), (bell(G6, 0.15, 0.3), 0.0, 0.25)])
+
+
 def splat():
     """Mud landing on a pet: a wet, low thwack and a drip or two."""
     dur = 0.3
@@ -587,6 +592,7 @@ REGISTRY = [
     ("splash", "pet", -12.0, splash, False),
     ("scratch", "pet", -16.0, scratch, False),
     ("splat", "pet", -13.0, splat, False),
+    ("snip", "pet", -15.0, snip, False),
     ("scrub", "pet", -16.0, scrub, False),
     ("brush", "pet", -18.0, brush, False),
     ("shake", "pet", -13.0, shake, False),

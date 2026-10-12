@@ -20,7 +20,7 @@ with a toast that says what it was for; a kid should always know what they did t
 | playing with a toy its own way (a cuddle, a chew, a pounce, a treat out, a push) | 1 | 5 a day, all together |
 | drawing something new (toy, food, furniture, clothes) | 2 | 5 a day |
 | decorating | 1 | 3 a day |
-| a bath (scrubbed squeaky clean) | 1 | 2 a day |
+| bath day (the whole routine) | 3 | once a day |
 | a present from a walk, drawn | 1 | 3 a day |
 | a pet learns a trick | 3 | once per trick per pet |
 | a stat goes up a level | 3 per level | - (Advanced only) |

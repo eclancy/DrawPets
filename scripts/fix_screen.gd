@@ -92,7 +92,7 @@ func _hub() -> void:
 	for entry in [["tool_crayon", "Redraw a part", redraw_list], ["ui_plus", "Add a part", add_host],
 			["edit_remove", "Take a part off", remove_list], ["edit_layer", "Move parts", assemble],
 			["ui_sign", "Name, size\n& place", details], ["icon_charm", "Personality", personality],
-			["icon_food", "Favourites", favourites], ["snd_voice", "Its voice", voice]]:
+			["icon_food", "Favourites", favourites], ["snd_voice", "Its voice", voice], ["kit_brush", "Its coat", coat]]:
 		var b := UI.icon_button(entry[0], entry[1], entry[2], 64, Vector2(0, 150))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(b)
@@ -414,6 +414,17 @@ func details() -> void:
 	s.pet = pet
 	s.profile = game.profile
 	s.on_done = _hub
+	_show(s)
+
+
+func coat() -> void:
+	var s := ChoiceScreen.new()
+	s.question = "What's %s's coat like?" % pet["name"]
+	s.picture = PetStore.texture(pet, PetBuilder.parts_of(pet, "body")[0]["image"])
+	s.options = BathDay.COATS.map(func(c): return [c[0], c[1], c[2]])
+	s.on_choose = func(id: String):
+		pet["coat"] = id
+		_hub()
 	_show(s)
 
 

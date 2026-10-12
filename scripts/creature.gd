@@ -415,6 +415,23 @@ func touch_zone(point: Vector2) -> String:
 	return "head" if point.y < whole.position.y + whole.size.y * 0.4 else "body"
 
 
+## True when a global point is on the ink of one of its parts (not its clothes) - for tools that
+## work over the drawing, like a bath sponge.
+func on_drawing(point: Vector2) -> bool:
+	for part in parts:
+		if part.type == "clothing":
+			continue
+		var p := PetBuilder.find(pet, String(part.name))
+		var img: Image = pet["_img"].get(p.get("image", ""))
+		if img == null:
+			continue
+		var px := part.sprite.get_global_transform().affine_inverse() * point - part.sprite.offset
+		if px.x >= 0.0 and px.y >= 0.0 and px.x < img.get_width() and px.y < img.get_height() \
+				and img.get_pixel(int(px.x), int(px.y)).a > 0.3:
+			return true
+	return false
+
+
 ## Its drawing's bounds on screen.
 func _box() -> Rect2:
 	var g := body.get_global_transform()
@@ -607,7 +624,7 @@ func _mood(delta: float) -> void:
 	if _bark > 0.0:
 		_bark -= delta
 		target_mouth = 1.0
-	if _action not in ["eat", "chew", "sleep", "tug"]:
+	if _action not in ["eat", "chew", "sleep", "tug", "open_wide", "eat_bowl"]:
 		mouth_open = move_toward(mouth_open, target_mouth, delta * 6.0)
 
 	if _action == "sleep":
@@ -695,6 +712,16 @@ func _run_action(delta: float) -> void:
 			stride = 1.0
 			phase += delta * 22.0
 			head_tilt = 0.1
+		"open_wide":
+			# Say "ahh": mouth wide, chin up - for brushing its teeth.
+			mouth_open = move_toward(mouth_open, 1.0, delta * 4.0)
+			head_tilt = move_toward(head_tilt, -0.1, delta)
+		"eat_bowl":
+			# Nose down in its bowl, munching.
+			mouth_open = absf(sin(t * 10.0)) * 0.8
+			head_tilt = move_toward(head_tilt, 0.22, delta * 2.0)
+			lean = move_toward(lean, 0.14, delta)
+			nod = 0.08
 		"spin":
 			# Round and round: facing flips fast, a little hop.
 			facing = 1.0 if int(t * 10.0) % 2 == 0 else -1.0

@@ -300,6 +300,19 @@ func go_journal(pet_id: String, home_id: String) -> void:
 	show_screen(s)
 
 
+## Bath day for one pet (BathScreen).
+func go_bath(home_id: String, pet_id: String) -> void:
+	var h := profile.home(home_id)
+	if h.is_empty():
+		go_home()
+		return
+	var s := BathScreen.new()
+	s.game = self
+	s.home = h
+	s.pet_id = pet_id
+	show_screen(s)
+
+
 ## Teaching one pet tricks (TrickScreen).
 func go_tricks(home_id: String, pet_id: String) -> void:
 	var h := profile.home(home_id)
@@ -390,6 +403,8 @@ func _music_for(node: Node) -> void:
 		place = (node as PlaceScreen).home.get("place", "")
 	elif node is WalkScreen:
 		place = (node as WalkScreen).home.get("place", "")
+	elif node is BathScreen:
+		place = (node as BathScreen).home.get("place", "")
 	elif node is LetGoScreen:
 		place = (node as LetGoScreen).home.get("place", "")
 	Sounds.music(track)

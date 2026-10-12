@@ -146,12 +146,30 @@ splat lowers the clean need a little (never under the floor).
 - What gets on it is the place's: mud, sand on sandy places, dust on rocky ones; nothing under
   the sea, in the clouds or in the snow.
 
-The **Bath** drawer has a **Sponge** ("soapy") and a **Brush** ("fluffy").
-- Rub the sponge over a pet: bubbles, and the splat under the sponge comes off. When the last
-  one is gone (or after a good long wash of a clean pet) it **shakes itself dry** and glints:
-  clean is full, two hearts of trust, a little charm, and **1 star (2 baths a day)**. A wet
-  sponge wakes a sleeping pet.
-- Brush a pet: pale glints and hearts, like petting - and a sleeper sleeps on.
+**Bath day (once a week).** The Bath drawer's **Bath day!** button sends the pet off - into the
+house if its home has one (the bathroom's in there), else to its place's watering hole
+(`BathDay.SPOTS`: a pond, a rock pool, a hot spring, an oasis, a crystal pool, a cloud puddle, a
+giant shell) - and `BathScreen` runs the routine, one step at a time:
+1. **Clip its nails** - only if it has feet, hands or claws (no nails, no clipping).
+2. **A wash** - bubbles, the mud comes off; a rinse, and it shakes itself dry.
+3. **Brush its teeth** - it says "ahh".
+4. **Groom its coat** - brush fur, polish scales, smooth feathers or rub lotion into skin.
+Each step's tool works its way over the pet **by itself, slowly**; rub with a finger and the
+tool goes where you rub, and faster. The pet shuts its eyes and enjoys it. At the end: clean is
+full for the week, two hearts of trust, and **3 stars once a day**. The home says when it is
+bath day for someone.
+
+**Its coat** is picked by the kid when making a pet ("What's its coat like?" - fluffy fur, shiny
+scales, soft feathers, smooth skin) and changed in Fix; pets from before have one guessed from
+their parts (fins: scales, wings: feathers, else fur). The drawing is never read.
+
+The drawer also keeps the **Sponge** ("soapy") and **Brush** ("fluffy") for in-between: the
+sponge rubs off mud (and a pet shakes dry, a little cleaner), the brush gives hearts like
+petting - and a sleeper sleeps on.
+
+**Food goes in the bowl.** Every home has a food bowl. Tap a snack in the Food drawer (or drop
+it near the bowl) and it goes in; the hungriest pet trots over and eats from it, nose down.
+Dropped anywhere else, it is picked up and munched as before.
 
 ## Trick cards (built)
 

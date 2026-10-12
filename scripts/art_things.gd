@@ -55,6 +55,13 @@ const ASSETS := {
 	# Bath things - free starter kit.
 	"kit_sponge": {"pivot": "center", "look": "yellow bath sponge, green scrubby top, holes, bubbles"},
 	"kit_brush": {"pivot": "center", "look": "pet brush: wooden handle, pink oval pad of bristle dots"},
+	# Bath day's tools (BathScreen), and the food bowl in every home.
+	"bath_clippers": {"pivot": "center", "look": "little pet nail clippers, mint handles, pointing right"},
+	"bath_toothbrush": {"pivot": "center", "look": "a toothbrush with a blob of minty paste, pointing right"},
+	"bath_cloth": {"pivot": "center", "look": "a folded polishing cloth, pale yellow, a glint"},
+	"bath_comb": {"pivot": "center", "look": "a wide comb with a feather tucked in it"},
+	"bath_lotion": {"pivot": "center", "look": "a squeezy bottle of lotion with a pump, a drop coming out"},
+	"prop_bowl": {"pivot": "bottom", "look": "a pet food bowl, pale blue, a paw print on the side"},
 	# Found on walks.
 	"prop_present": {"pivot": "center", "look": "a gift box in pale blue paper, pink ribbon and a big bow"},
 	# Toys - shop, shiny at runtime.
@@ -187,6 +194,18 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_brush(c)
 		"prop_present":
 			_present(c)
+		"bath_clippers":
+			_clippers(c)
+		"bath_toothbrush":
+			_toothbrush(c)
+		"bath_cloth":
+			_cloth(c)
+		"bath_comb":
+			_comb(c)
+		"bath_lotion":
+			_lotion(c)
+		"prop_bowl":
+			_bowl(c)
 		"kit_log":
 			_heavy_log(c)
 		"shiny_ball":
@@ -1766,6 +1785,78 @@ static func _brush(c: CanvasItem) -> void:
 			if Geometry2D.is_point_in_polygon(p, pad) and Geometry2D.is_point_in_polygon(p + u * 10.0, pad):
 				c.draw_circle(p, 6.0, pink.darkened(0.32))
 				c.draw_circle(p + Vector2(-2, -2), 2.0, Color(1, 1, 1, 0.8))
+
+
+## Marker: little nail clippers - two mint handles meeting at a silver jaw, pointing right.
+static func _clippers(c: CanvasItem) -> void:
+	var mint := Color("#8fd8c0")
+	_mark(c, _capsule(Vector2(92, 200), Vector2(300, 236), 30.0), mint, 5401, 7.0)
+	_mark(c, _capsule(Vector2(92, 316), Vector2(300, 278), 30.0), mint, 5402, 7.0)
+	var jaw := _pv([Vector2(286, 216), Vector2(430, 238), Vector2(446, 256), Vector2(430, 274), Vector2(286, 298)])
+	_mark(c, jaw, Color("#cfd3e2"), 5403, 7.0)
+	c.draw_circle(Vector2(300, 257), 14.0, Color("#9aa0bd"))
+	_mline(c, _pv([Vector2(320, 256), Vector2(436, 256)]), Color("#9aa0bd"), 5.0, 5404)
+
+
+## Marker: a toothbrush pointing right, a blob of minty paste on its bristles.
+static func _toothbrush(c: CanvasItem) -> void:
+	_mark(c, _capsule(Vector2(70, 300), Vector2(330, 262), 24.0), Color("#f7a6c8"), 5411, 7.0)
+	var head := Crayon.rounded_rect(Rect2(320, 230, 120, 44), 16)
+	_mark(c, head, Color("#f7a6c8"), 5412, 7.0)
+	for i in 8:
+		var x := 330.0 + i * 14.0
+		_mline(c, _pv([Vector2(x, 230), Vector2(x, 180)]), Color("#e9f2ff").darkened(0.15), 8.0, 5413 + i)
+	_mark(c, Crayon.blob(Vector2(382, 166), Vector2(56, 28), 5422, 16, 0.2), Color("#b8ecd6"), 5423, 6.0)
+
+
+## Pencil: a folded polishing cloth, pale yellow, with a bright glint.
+static func _cloth(c: CanvasItem) -> void:
+	var yellow := Color("#ffe39a")
+	var back := _pv([Vector2(90, 200), Vector2(400, 170), Vector2(430, 330), Vector2(110, 360)])
+	_pen(c, back, yellow.darkened(0.06), 5431, 5.0)
+	var front := _pv([Vector2(110, 250), Vector2(420, 230), Vector2(436, 330), Vector2(110, 360)])
+	_pen(c, front, yellow, 5432, 5.0)
+	for i in 4:
+		_pline(c, _pv([Vector2(140, 280 + i * 18), Vector2(400, 262 + i * 18)]), yellow.darkened(0.2), 3.0, 5433 + i)
+	_twinkle(c, Vector2(380, 150), 46.0, Color("#e0b84a"), 5440)
+
+
+## Pencil: a wide comb with a soft feather tucked through its teeth.
+static func _comb(c: CanvasItem) -> void:
+	var lilac := Color("#c3a9ec")
+	_pen(c, Crayon.rounded_rect(Rect2(80, 150, 352, 60), 18), lilac, 5451, 5.0)
+	for i in 13:
+		var x := 100.0 + i * 25.0
+		_pen(c, Crayon.rounded_rect(Rect2(x, 200, 13, 120), 6), lilac, 5452 + i, 3.0)
+	var quill := _pv([Vector2(140, 400), Vector2(240, 300), Vector2(380, 160)])
+	var vane := _pv([Vector2(150, 392), Vector2(230, 270), Vector2(330, 170), Vector2(380, 160), Vector2(330, 230),
+		Vector2(250, 330)])
+	_pen(c, _smooth(vane), Color("#9cc9ef"), 5470, 4.0)
+	_pline(c, quill, Color("#6f9fcf"), 5.0, 5471)
+
+
+## Marker: a squeezy bottle of lotion with a pump, a creamy drop coming out of its nozzle.
+static func _lotion(c: CanvasItem) -> void:
+	var peach := Color("#f9c98a")
+	_mark(c, Crayon.rounded_rect(Rect2(150, 190, 200, 260), 40), peach, 5481, 7.0)
+	_mark(c, Crayon.rounded_rect(Rect2(214, 120, 72, 76), 10), Color("#fffdf6"), 5482, 6.0)
+	_mark(c, Crayon.rounded_rect(Rect2(200, 92, 170, 34), 12), Color("#fffdf6"), 5483, 6.0)
+	_mark(c, Crayon.rounded_rect(Rect2(186, 280, 128, 90), 20), Color("#fffdf6"), 5484, 5.0)
+	_mark(c, Crayon.blob(Vector2(396, 150), Vector2(22, 28), 5485, 14, 0.1), Color("#fff6e8"), 5486, 5.0)
+
+
+## Marker: a pet food bowl seen from the side, pale blue, a paw print on it, standing on y = 470.
+static func _bowl(c: CanvasItem) -> void:
+	var blue := Color("#9cc9ef")
+	var side := _pv([Vector2(84, 330), Vector2(428, 330), Vector2(392, 466), Vector2(120, 466)])
+	_mark(c, side, blue, 5491, 8.0)
+	_mark(c, Crayon.ellipse(Vector2(256, 330), Vector2(176, 40), 32), blue.lightened(0.25), 5492, 8.0)
+	_mark(c, Crayon.ellipse(Vector2(256, 332), Vector2(146, 26), 28), Color("#e6f2fb"), 5493, 4.0)
+	var paw := Color("#fffdf6")
+	_mfill(c, Crayon.ellipse(Vector2(256, 412), Vector2(26, 20), 16), paw, 5494)
+	for i in 4:
+		var a := -PI * 0.85 + i * PI * 0.23
+		_mfill(c, Crayon.ellipse(Vector2(256, 412) + Vector2(cos(a), sin(a)) * 34.0, Vector2(9, 11), 10), paw, 5495 + i)
 
 
 ## Marker: a gift box seen a little from above - pale blue paper with dots, a pink ribbon both

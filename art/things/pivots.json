@@ -1,4 +1,24 @@
 {
+	"bath_clippers": [
+		197.0,
+		94.0
+	],
+	"bath_cloth": [
+		177.0,
+		134.0
+	],
+	"bath_comb": [
+		180.5,
+		129.0
+	],
+	"bath_lotion": [
+		138.0,
+		184.0
+	],
+	"bath_toothbrush": [
+		202.0,
+		98.5
+	],
 	"crystal_squeaker": [
 		197.5,
 		147.5
@@ -182,6 +202,10 @@
 	"kit_umbrella": [
 		217.0,
 		432.0
+	],
+	"prop_bowl": [
+		181.5,
+		188.0
 	],
 	"prop_bunting": [
 		246.0,

@@ -173,6 +173,9 @@ func _make_pet(creator: Creator) -> void:
 			w.toggle("sporty")
 			await _shot("personality")
 			w.press_done()
+		elif s is ChoiceScreen:
+			await _shot("coat")
+			(s as ChoiceScreen).choose("fur")
 		elif s is ItemPickerScreen:
 			var ip := s as ItemPickerScreen
 			if ip.category == "food" and not food_drawn:
@@ -376,6 +379,7 @@ func _play_at_home() -> void:
 	await _shot("furniture_play")
 	await _night()
 	await _bath()
+	await _bath_day()
 	await _walk()
 	await _tricks()
 	await _photo()
@@ -465,6 +469,46 @@ func _tricks() -> void:
 	await _shot("trick_learned")
 	ts.go_home()
 	await _wait(1.0)
+
+
+## Bath day: off to the bathroom, then nails, a wash, teeth and a brush - the tools work by
+## themselves, and the demo kid rubs along to hurry them. Then a snack in the bowl back home.
+func _bath_day() -> void:
+	var place := _place()
+	place.open_tab("bath")
+	await _wait(0.3)
+	place.go_bath()
+	await _until(func(): return game.screen is BathScreen, 10.0)
+	var bath := game.screen as BathScreen
+	await _wait(1.6)
+	var shot_steps := {}
+	var t := 0.0
+	while not bath._finished and t < 60.0:
+		var i := bath._done_pts.find(false)
+		if bath._wait <= 0.0 and i >= 0 and bath._step >= 0:
+			bath.rub_at(bath._points[i])
+			if not shot_steps.has(bath._step) and bath._done_pts.count(true) >= 2:
+				shot_steps[bath._step] = true
+				await _shot("bath_day_" + str(bath._steps[bath._step][0]))
+		else:
+			bath.rub_at(Vector2.ZERO, false)
+		await _wait(0.06)
+		t += 0.06
+	bath.rub_at(Vector2.ZERO, false)
+	await _wait(1.2)
+	await _shot("bath_day_done")
+	bath.go_home()
+	await _wait(1.2)
+	place = _place()
+	var zorp: Creature = place.creatures[0]
+	zorp.pet["needs"]["food"] = 0.4
+	place.open_tab("food")
+	place.drop_food("kit_apple", place._bowl.position)
+	await _until(func(): return zorp.action() == "eat_bowl", 8.0)
+	await _wait(0.6)
+	await _shot("bowl_eat")
+	await _wait(2.6)
+	place.open_tab("")
 
 
 ## A walk: off along the place, a glint in the grass, a dig, a present - and drawing what's in it.

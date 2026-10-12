@@ -73,6 +73,15 @@ The kit lamp, campfire, lantern, crystal lamp and candy lamp are glowy.
 
 `--hour=21.5` pretends it is that time, to see it; the demo forces midday, then has a night turn.
 
+## Bath spots (built)
+
+Bath day (`pet-life.md`) happens in the bathroom if the home has a house, else at the place's
+own watering hole (`BathDay.SPOTS`): a pond in the meadow, forest, jungle, swamp and Candy Land,
+a rock pool at the beach, a hot spring in the mountains and the volcano, an oasis in the desert,
+a crystal pool in the cave, a cloud puddle in the sky, a giant shell under the sea, and a tub on
+the Moon and in the Castle. Drawn by `BathScreen.BathPainter` in two layers, so the pet stands
+in the water.
+
 ## Walks (built)
 
 **Walk** (under Home in a home) takes one pet - the one whose card is open, else the one the home
