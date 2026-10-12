@@ -67,6 +67,7 @@ func _ready() -> void:
 	creature.audible = true
 	creature.emote.connect(_on_emote)
 	_last_x = creature.position.x
+	Journal.add_once(pet, "first_walk", "Went for its first walk.")
 
 	_zoom = PlaceScreen.ZOOM.get(pet.get("size", "medium"), 1.0)
 	_cam = Camera2D.new()
@@ -186,7 +187,13 @@ func _process(delta: float) -> void:
 			creature.face_toward(_present.get_parent().position.x)
 			creature.perform("look", 1.5)
 		else:
-			creature.go_to(creature.position + Vector2(240, randf_range(-50, 50)))
+			# Its nose leads it towards a glint up ahead.
+			var y := creature.position.y + randf_range(-50, 50)
+			for g in _glints:
+				var ahead := g.position.x - creature.position.x
+				if ahead > 0.0 and ahead < 700.0:
+					y = lerpf(creature.position.y, g.position.y, 0.6)
+			creature.go_to(Vector2(creature.position.x + 240.0, y))
 
 
 # --- Presents --------------------------------------------------------------------------------
@@ -218,6 +225,7 @@ func _dug_up(g: Glint) -> void:
 	var at := g.position
 	g.queue_free()
 	game.profile.count_today("present_found", 99)
+	Journal.add(pet, "Dug up a present on a walk!")
 	if Mud.splat(pet, 1, "front", _mud_kind) > 0:
 		creature.refresh_mud()
 	var holder := Node2D.new()

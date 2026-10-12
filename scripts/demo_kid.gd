@@ -377,6 +377,65 @@ func _play_at_home() -> void:
 	await _bath()
 	await _walk()
 	await _tricks()
+	await _photo()
+	await _listening()
+
+
+## Calling by voice: the Listen button (the mic is said yes to), then a call - here faked, since
+## the demo has no room to clap in - and everyone comes running.
+func _listening() -> void:
+	var place := _place()
+	place.toggle_listening()
+	await _wait(0.4)
+	await _shot("listen_ask")
+	place._mic_yes()
+	await _wait(0.4)
+	place.creatures[0].go_to(Vector2(300, 480))
+	await _wait(1.0)
+	place.heard_call()
+	await _wait(0.8)
+	await _shot("listen_called")
+	await _wait(1.6)
+	await _shot("listen_came")
+	place.toggle_listening()
+	game.profile.settings()["mic"] = false
+
+
+## A photo: everyone jumps, snap, a frame and two stickers, into the album and the journal.
+func _photo() -> void:
+	var place := _place()
+	place.open_tab("camera")
+	await _wait(0.4)
+	place.pose("happy")
+	await _wait(0.5)
+	await _shot("camera")
+	place.snap()
+	await _wait(0.6)
+	var ed := place._editor
+	ed.set_frame("hearts")
+	ed.add_sticker("star")
+	ed.add_sticker("hello", Vector2(650, 110))
+	await _wait(0.4)
+	await _shot("photo_editor")
+	await ed.keep_it()
+	await _wait(0.6)
+	place.open_tab("")
+	var zorp: Creature = place.creatures[0]
+	place._show_panel(zorp)
+	await _wait(0.3)
+	await _shot("pet_card_journal")
+	place._panel.on_journal.call(zorp.pet)
+	await _wait(1.0)
+	await _shot("journal")
+	game.go_album()
+	await _wait(1.0)
+	await _shot("album")
+	var album := game.screen as AlbumScreen
+	album.show_photo(Album.photos(game.profile)[0])
+	await _wait(0.4)
+	await _shot("album_photo")
+	game.go_place(game.profile.homes()[0]["id"])
+	await _wait(1.0)
 
 
 ## Tricks: draw a card for SPIN, then teach it with circles - four lessons at most.
@@ -416,6 +475,13 @@ func _walk() -> void:
 	walk.creature.position.x = walk._glints[0].position.x - 420.0  # skip ahead to the first glint
 	walk.creature.interrupt()
 	await _until(func(): return walk._present != null, 12.0)
+	if walk._present == null:
+		# It should have found one by now: say why not, then send it straight to the glint.
+		push_warning("demo walk: no present - pet %s action '%s' busy %s ending %s glints %s" % [walk.creature.position,
+			walk.creature.action(), walk.creature.is_busy(), walk._ending, walk._glints.map(func(g): return g.position)])
+		if not walk._glints.is_empty():
+			walk._find(walk._glints[0])
+		await _until(func(): return walk._present != null, 8.0)
 	await _wait(0.4)
 	await _shot("present")
 	walk.open_present("food", "crunchy")

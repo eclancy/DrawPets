@@ -125,6 +125,9 @@ func _results(scores: Array) -> void:
 	var gained := Stats.train(pet, stat, 3.0 if place == 1 else 2.0)
 	pet["love"] = int(pet.get("love", 0)) + 1
 	PetStore.change_need(pet, "energy", -0.15)
+	if not practice and place <= 3:
+		Journal.add(pet, "Came %s in the %s, %s!" % [_ordinal(place), Events.info(event["kind"]).get("name", ""),
+			Events.TIERS[tier]["name"]])
 	PetStore.save_pet(pet)
 
 	var prize: Array = Events.TIERS[tier]["prize"]

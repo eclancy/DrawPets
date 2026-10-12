@@ -73,6 +73,8 @@ same screen), played when they bounce, are caught or squeak.
 - Stored as `voice.f32` in the pet's folder (`sound.f32` for a toy). **Never uploaded, never
   shared** (`sharing.md`).
 - Loudness and playback only - no speech recognition (no AI).
+- **Listening for a call** (a home's Listen button) reads only the loudest moment of the last
+  frames (`AudioEffectCapture` on the muted Record bus) and throws the samples away.
 
 ## Loudness follows how often a sound plays
 

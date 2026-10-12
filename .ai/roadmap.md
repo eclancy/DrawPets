@@ -82,6 +82,11 @@ Draw it!" with a word already picked - three a day (`places.md`).
 Seven tricks, each with its own swipe; the kid draws each trick's card; the right swipe teaches it,
 faster for a clever pet; the Trick Show uses the pet's own cards (`pet-life.md`).
 
+## M1.13 - Photos and a journal (built)
+
+A camera in every home - poses, Snap!, frames and stickers - an album that stays on the device,
+and a journal for each pet that writes itself (`pet-life.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a
@@ -91,14 +96,10 @@ faster for a clever pet; the Trick Show uses the pet's own cards (`pet-life.md`)
   scrolling the drawers, the back gesture, petting and toy play.
 - Pinch to turn and resize parts.
 
-## M3 - Calling by voice (optional, off by default)
+## M3 - Calling by voice (built; optional, off by default)
 
-Voices and recordings are built (M1.6). Still to do: call or clap by loudness to make a pet come
-over or wake up - always with the tap-the-ground way round it.
-
-## M4 - Photos and a journal
-
-A photo mode with an album, and a journal for each pet that writes itself.
+A Listen button: a clap or a shout - loudness only - and the pets come running, sleepers wake
+gently. Tapping the ground does the same (`pet-life.md`).
 
 ## M5 - Visiting through ecec.dev
 

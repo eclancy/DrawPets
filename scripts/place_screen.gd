@@ -16,6 +16,12 @@ extends Node2D
 ##                        picked up again, and tapped.
 ##   Decorate drawer   -> drag furniture in, drag it about, drag it back to put it away.
 ##   Wardrobe drawer   -> drag clothes onto a pet.
+##   Listen (optional) -> with the mic on, a clap or a shout - only how loud, never what is said,
+##                        nothing kept - makes the pets look up and come running, and wakes a
+##                        sleeper gently. Tapping the ground does the same without the mic.
+##   Photo             -> everyone strikes the pose you pick; Snap! freezes the moment, then
+##                        a frame and stickers (PhotoEditor) and it goes in the album and the
+##                        journal of every pet in it.
 ##   Bath drawer       -> scrub a muddy pet with the sponge till it shakes itself dry, squeaky
 ##                        clean; brush it fluffy. Pets get muddy (Mud) splashing about a muddy
 ##                        place, digging, and running about in a passing shower of rain.
@@ -117,6 +123,13 @@ var _painter: PlacePainter
 var _rain_in := -1.0
 var _rain_left := 0.0
 var _rain_loop := -1
+var _editor: PhotoEditor
+## Listening for a call: the button, how loud the room usually is, and a rest after each call.
+var _listen_btn: Button
+var _listening := false
+var _quiet := 0.05
+var _call_rest := 0.0
+var _ask: Control
 
 
 func _ready() -> void:
@@ -242,6 +255,12 @@ func _build_hud() -> void:
 		var trick_btn := UI.icon_button("icon_tricks", "Tricks", go_tricks, 40, Vector2(92, 84))
 		trick_btn.position = Vector2(12, 196)
 		root.add_child(trick_btn)
+		var photo_btn := UI.icon_button("icon_camera", "Photo", open_tab.bind("camera"), 40, Vector2(92, 84))
+		photo_btn.position = Vector2(12, 288)
+		root.add_child(photo_btn)
+		_listen_btn = UI.icon_button("snd_mic_off", "Listen", toggle_listening, 40, Vector2(92, 84))
+		_listen_btn.position = Vector2(12, 380)
+		root.add_child(_listen_btn)
 
 	var title := UI.title("%s  -  %d of %d rooms" % [Places.display_name(home["place"]), home["pets"].size(),
 		int(home["rooms"])], 30)
@@ -284,6 +303,7 @@ func _build_hud() -> void:
 	_panel.on_voice = func(p: Dictionary): _leave_with(p, func(): game.go_voice(p["id"], home["id"]))
 	_panel.on_move = func(p: Dictionary): _leave_with(p, func(): game.go_move(p["id"], home["id"]))
 	_panel.on_let_go = func(p: Dictionary): _leave_with(p, func(): game.go_let_go(p["id"], home["id"]))
+	_panel.on_journal = func(p: Dictionary): _leave_with(p, func(): game.go_journal(p["id"], home["id"]))
 
 	var bar := PanelContainer.new()
 	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -328,6 +348,9 @@ func _fill_drawer() -> void:
 		var l := UI.label("Open a drawer: Food, Toys, Decorate, Wardrobe or Bath.", 22)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_drawer.add_child(l)
+		return
+	if tab == "camera":
+		_fill_camera()
 		return
 	if tab == "furniture" and _selected != null:
 		for entry in [["edit_bigger", "Bigger", _resize_selected.bind(1.15)],
@@ -732,6 +755,7 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 
 ## Puts a piece of clothing on a pet.
 func dress(c: Creature, item: Dictionary) -> void:
+	Journal.add_once(c.pet, "first_outfit", "Dressed up for the first time!")
 	Wardrobe.put_on(c.pet, item)
 	Sounds.play("dress")
 	c.rebuild()
@@ -1019,6 +1043,7 @@ func _on_fetched() -> void:
 	PetStore.change_need(c.pet, "fun", 0.12)
 	PetStore.change_need(c.pet, "energy", -0.04)
 	_love(c, 1)
+	Journal.add_once(c.pet, "first_fetch", "Played fetch for the first time!")
 	var n := int(game.profile.today().get("fetch", 0)) + 1
 	game.profile.today()["fetch"] = n
 	if n % 5 == 0 and n <= 25:
@@ -1501,6 +1526,7 @@ func _end_tug(pet_wins: bool) -> void:
 		_love(c, 1)
 		PetStore.change_need(c.pet, "fun", 0.1)
 		game.reward_daily("tug", 5, 1, "%s won tug of war!" % c.pet["name"])
+		Journal.add_once(c.pet, "first_tug", "Won a tug of war!")
 
 
 # --- Feeding ---------------------------------------------------------------------------------
@@ -1692,6 +1718,201 @@ func _use_furniture(c: Creature, f: Furniture, word: String) -> void:
 			c.perform("look", 2.5, func(): _train(c, "charm", 0.6))
 
 
+# --- Calling by voice (optional) ------------------------------------------------------------
+
+## The Listen button: on, the game listens for a clap or a shout; off, the mic is off. The mic
+## needs a yes first (the Settings switch, or this asking) - and "No thanks" always works.
+func toggle_listening() -> void:
+	if _listening:
+		_set_listening(false)
+		return
+	if not bool(game.profile.settings().get("mic", false)):
+		_ask_mic()
+		return
+	_set_listening(true)
+
+
+func _set_listening(on: bool) -> void:
+	_listening = on
+	if on:
+		if OS.get_name() == "Android":
+			OS.request_permission("android.permission.RECORD_AUDIO")
+		Sounds.listen_start()
+		_quiet = 0.05
+		_call_rest = 1.0
+		_show_hint("Listening! Clap or call - your pets will come running.")
+	else:
+		Sounds.listen_stop()
+	var b := _listen_btn
+	b.get_child(0).get_child(0).texture = Items.art_texture("snd_record" if on else "snd_mic_off")
+	if on:
+		b.add_theme_stylebox_override("normal", UI._box(UI.GOOD, UI.INK, 3))
+	else:
+		b.remove_theme_stylebox_override("normal")
+
+
+func _ask_mic() -> void:
+	if _ask != null:
+		return
+	_ask = PanelContainer.new()
+	_ask.add_theme_stylebox_override("panel", UI._box(UI.PAPER, UI.INK, 3, 20, 24))
+	_ask.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_ask.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_ask.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 12)
+	_ask.add_child(col)
+	col.add_child(UI.title("Call your pets?", 34))
+	var l := UI.label("The game listens for a clap or a shout - just how loud, never the words. Nothing is recorded or kept.", 22, true)
+	l.custom_minimum_size = Vector2(520, 0)
+	col.add_child(l)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	row.add_child(UI.icon_button("snd_mic_off", "No thanks", _close_ask, 44, Vector2(180, 96)))
+	var yes := UI.big_icon_button("snd_record", "Yes, listen!", _mic_yes)
+	yes.custom_minimum_size = Vector2(300, 96)
+	row.add_child(yes)
+	col.add_child(row)
+	_hud_root.add_child(_ask)
+
+
+func _close_ask() -> void:
+	if _ask != null:
+		UI.retire(_ask)
+		_ask = null
+
+
+func _mic_yes() -> void:
+	game.profile.settings()["mic"] = true
+	game.profile.save()
+	_close_ask()
+	_set_listening(true)
+
+
+## Every frame while listening: a sound much louder than the room - a clap, a shout - is a call.
+func _listen(delta: float) -> void:
+	var level := Sounds.loudness()
+	_call_rest -= delta
+	if level > maxf(0.3, _quiet * 5.0) and _call_rest <= 0.0:
+		_call_rest = 2.0
+		heard_call()
+		return
+	_quiet = lerpf(_quiet, level, minf(1.0, delta * 0.5))
+
+
+## A call! Everyone looks up and comes running to the front - a sleeper wakes up gently first.
+func heard_call() -> void:
+	var i := 0
+	for c in creatures:
+		if c == _eater or c == _tug:
+			continue
+		if c.action() == "sleep":
+			_wake(c)
+		else:
+			c.interrupt()
+			c.rest_z = 0.0
+			c.say("question")
+			var spot := Vector2(640.0 + (i - (creatures.size() - 1) / 2.0) * 150.0, GROUND.end.y - 20.0)
+			c.go_to(spot, _came.bind(c), true)
+		i += 1
+	if not _hinted.has("called"):
+		_hinted["called"] = true
+		_show_hint("They heard you!")
+
+
+func _came(c: Creature) -> void:
+	c.face_toward(640.0 if absf(c.position.x - 640.0) > 40.0 else c.position.x + 1.0)
+	c.perform("greet", 1.2)
+	c.say("hello")
+	_love(c, 1)
+
+
+# --- The camera ------------------------------------------------------------------------------
+
+const POSES := [["icon_heart", "Happy", "happy"], ["trick_jump", "Jump", "jump"], ["trick_wave", "Wave", "wave"],
+	["trick_dance", "Dance", "dance"], ["trick_sit", "Sit", "sit"], ["icon_energy", "Sleepy", "sleepy"]]
+
+
+func _fill_camera() -> void:
+	var snap_btn := UI.icon_button("icon_camera", "Snap!", snap, 52, Vector2(110, 96))
+	snap_btn.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 3))
+	_drawer.add_child(snap_btn)
+	for p in POSES:
+		_drawer.add_child(UI.icon_button(p[0], p[1], pose.bind(p[2]), 48, Vector2(92, 96)))
+	_drawer.add_child(UI.icon_button("icon_album", "Album", _open_album, 48, Vector2(92, 96)))
+	if not _hinted.has("camera"):
+		_hinted["camera"] = true
+		_show_hint("Pick a pose, then Snap!")
+
+
+## Everyone strikes a pose for the camera.
+func pose(kind: String) -> void:
+	for c in creatures:
+		if c == _eater or c == _tug:
+			continue
+		c.interrupt()
+		c.rest_z = 0.0
+		match kind:
+			"happy":
+				c.perform("greet", 3.0)
+				c.say("heart")
+			"jump":
+				c.do_trick("jump")
+			"sleepy":
+				c.perform("sleep", 8.0, Callable(), 2.0)
+			_:
+				c.perform(kind, 3.5)
+
+
+## Snap! The place and the pets just as they are - not the buttons - for the photo editor.
+func snap() -> void:
+	if _editor != null:
+		return
+	var layer := _hud_root.get_parent() as CanvasLayer
+	layer.visible = false
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	layer.visible = true
+	Sounds.play("camera")
+	# A 16:9 picture from the middle of a wide phone screen.
+	var w := img.get_width()
+	var h := img.get_height()
+	if float(w) / h > 16.0 / 9.0:
+		var cw := int(h * 16.0 / 9.0)
+		img = img.get_region(Rect2i((w - cw) / 2, 0, cw, h))
+	img.resize(int(PhotoEditor.SIZE.x), int(PhotoEditor.SIZE.y), Image.INTERPOLATE_BILINEAR)
+	_editor = PhotoEditor.new()
+	_editor.game = game
+	_editor.photo = img
+	_editor.home_id = home["id"]
+	_editor.pets = pets
+	_editor.on_done = _photo_done
+	_hud_root.add_child(UI.full_rect(_editor))
+
+
+func _photo_done(id: String) -> void:
+	UI.retire(_editor)
+	_editor = null
+	if id != "":
+		_save_all()
+		_show_hint("In the album - and in their journals!")
+
+
+func _open_album() -> void:
+	_save_all()
+	game.go_album(game.go_place.bind(home["id"], focus_id))
+
+
+## Android's back gesture: out of the photo editor first, then home.
+func go_back() -> void:
+	if _editor != null:
+		_photo_done("")
+	else:
+		game.go_home()
+
+
 # --- Mud and the bath ------------------------------------------------------------------------
 
 ## Every so often: running about a muddy place, or out in the rain, gets feet muddy.
@@ -1821,6 +2042,7 @@ func _shaken(c: Creature) -> void:
 	_love(c, 2)
 	_train(c, "charm", 0.5)
 	game.reward_daily("bath", 2, 1, "%s is squeaky clean!" % c.pet["name"])
+	Journal.add_once(c.pet, "first_bath", "Had its first bath - squeaky clean!")
 	_panel.refresh()
 
 
@@ -1935,6 +2157,7 @@ func _train(c: Creature, stat: String, amount: float) -> void:
 		var lvl := Stats.level(Stats.value(c.pet, stat))
 		c.say("star")
 		game.reward(3 * levels, "%s's %s is level %d!" % [c.pet["name"], Stats.label(stat), lvl])
+		Journal.add(c.pet, "%s went up to level %d!" % [Stats.label(stat), lvl])
 		if stat == "speed":
 			c.set_display_height(c.fixed_height)  # walk speed follows the speed stat
 
@@ -1948,11 +2171,14 @@ func _love(c: Creature, n: int) -> void:
 		for i in after:
 			_on_emote("heart", c.top_global() + Vector2((i - after / 2.0) * 30.0, -10))
 		game.reward(5 * after, "%s trusts you more! (%d hearts)" % [c.pet["name"], after])
+		Journal.add(c.pet, "Trusts you with %d %s now!" % [after, "heart" if after == 1 else "hearts"])
 
 
 # --- Every frame -----------------------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	if _listening:
+		_listen(delta)
 	if _rain_in > 0.0:
 		_rain_in -= delta
 		if _rain_in <= 0.0:
@@ -2027,6 +2253,7 @@ func _save_all() -> void:
 
 func _exit_tree() -> void:
 	_save_all()
+	Sounds.listen_stop()
 	if _rain_loop >= 0:
 		Sounds.loop_stop(_rain_loop)
 

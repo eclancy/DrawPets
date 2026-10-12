@@ -276,6 +276,7 @@ func teach(t: String) -> void:
 		creature.say("star")
 		if game.profile.first_time("trick_%s_%s" % [pet["id"], t]):
 			game.reward(3, "%s learned %s!" % [pet["name"], name])
+			Journal.add(pet, "Learned a trick: %s!" % Tricks.display_name(t))
 		_show_hint("%s learned %s! Its card is ready for the Trick Show." % [pet["name"], name])
 	elif randf() < after:
 		creature.do_trick(t)

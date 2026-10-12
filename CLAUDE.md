@@ -9,7 +9,9 @@ Godot 4.5, **GDScript**, 2D, GL Compatibility renderer. **Android first**, iOS l
 Players are 10-12. **M0 and M1 are built**: drawing and assembly; homes with several pets,
 decorating, food/toys/clothes (drawn, starter kit or shop) described by preset words; six stats
 trained by play; gold stars and a shop; a weekly competition calendar with six events and eight
-rival pets.
+rival pets. Since then: day and night from the clock, mud and the bath, walks with presents to
+draw, trick cards taught by swipe, a camera with an album and a journal per pet, and calling
+by loudness (`.ai/roadmap.md`).
 
 Everything is built in code; `scenes/Main.tscn` only attaches `GameRoot`. `GameRoot` owns the
 screen flow and the family save (`Profile`) and swaps screens as its own children: home ->
@@ -117,7 +119,10 @@ have only parsed, say so and list what still needs checking in a run.
 - Randomise a crayon wobble. Hash it from a seed with `Crayon.noise`.
 - Add C#. It would cost the iOS and web exports.
 - Change the screen in the middle of a button press - go through `GameRoot.show_screen`, which
-  defers the swap. A screen swapping its own steps or panels throws the old one away with
+  defers the swap.
+- Hand a screen that will outlive yours (`on_done`, `on_back`) a lambda or method of your own
+  screen: yours is freed by the time it calls, and the kid is stuck. Bind a method of the game
+  (`game.go_place.bind(home_id)`, `game.back_to_place.bind(...)`). A screen swapping its own steps or panels throws the old one away with
   `UI.retire`, never `remove_child`: on a phone a lifted finger arrives as a mouse release AND a
   touch release, and Godot errors if the button has left the tree in between.
 - Put a multi-line lambda in the middle of an argument list. Assign it to a variable first, or

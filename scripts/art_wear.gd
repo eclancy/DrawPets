@@ -63,6 +63,9 @@ const ASSETS := {
 	"icon_toys": {"pivot": "center", "look": "toy box with a ball on top"},
 	"icon_bath": {"pivot": "center", "look": "a little bathtub on feet, heaped with bubbles"},
 	"icon_walk": {"pivot": "center", "look": "a red lead with a loop handle, and two paw prints"},
+	"icon_camera": {"pivot": "center", "look": "a chunky toy camera, big lens, a flash"},
+	"icon_album": {"pivot": "center", "look": "a photo album open, two little photos in it"},
+	"icon_journal": {"pivot": "center", "look": "a diary with a heart on the cover and a ribbon bookmark"},
 	"icon_pantry": {"pivot": "center", "look": "picnic basket with an apple"},
 	"icon_draw": {"pivot": "center", "look": "a crayon drawing a squiggle"},
 	"marker_gold": {"pivot": "center", "look": "felt-tip marker, gold cap (gold)"},
@@ -181,6 +184,12 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_icon_bath(c)
 		"icon_walk":
 			_icon_walk(c)
+		"icon_camera":
+			_icon_camera(c)
+		"icon_album":
+			_icon_album(c)
+		"icon_journal":
+			_icon_journal(c)
 		"icon_decorate":
 			_palette(c)
 		"icon_toys":
@@ -1333,6 +1342,41 @@ static func _icon_bath(c: CanvasItem) -> void:
 		Crayon.marker_line(c, b, Color("#7fb7e6"), 9.0, 9340 + i)
 		Crayon.marker_line(c, PackedVector2Array([at + Vector2(-r * 0.55, -r * 0.1), at + Vector2(-r * 0.4, -r * 0.45),
 			at + Vector2(-r * 0.1, -r * 0.6)]), Color(1, 1, 1, 0.95), 8.0, 9350 + i, false)
+
+
+## Marker: a chunky toy camera - a mint body, a big lavender lens, a yellow flash.
+static func _icon_camera(c: CanvasItem) -> void:
+	_mark(c, Crayon.rounded_rect(Rect2(150, 108, 110, 70), 18), Color("#ffd166"), 9501, 10.0)
+	_mark(c, Crayon.rounded_rect(Rect2(52, 150, 408, 270), 50), Color("#8fd8c0"), 9502)
+	_mark(c, Crayon.ellipse(Vector2(256, 288), Vector2(104, 104), 32), Color("#fffdf6"), 9503, 10.0)
+	_mark(c, Crayon.ellipse(Vector2(256, 288), Vector2(70, 70), 28), Color("#b9a6f0"), 9504, 9.0)
+	c.draw_circle(Vector2(232, 262), 18.0, Color(1, 1, 1, 0.85))
+	_mark(c, Crayon.ellipse(Vector2(396, 200), Vector2(24, 20), 16), Color("#f7a6c8"), 9505, 7.0)
+
+
+## Marker: a photo album lying open - a pale blue cover, two little photos with a sun and a hill.
+static func _icon_album(c: CanvasItem) -> void:
+	var blue := Color("#9cc9ef")
+	_mark(c, PackedVector2Array([Vector2(36, 140), Vector2(250, 112), Vector2(262, 420), Vector2(48, 440)]), blue, 9601)
+	_mark(c, PackedVector2Array([Vector2(262, 112), Vector2(476, 140), Vector2(464, 440), Vector2(250, 420)]), blue, 9602)
+	for p in [[Vector2(84, 178), -0.07], [Vector2(296, 162), 0.06]]:
+		var at: Vector2 = p[0]
+		var photo := Crayon.rounded_rect(Rect2(at, Vector2(132, 150)), 8)
+		_mark(c, photo, Color("#fffdf6"), 9610 + int(at.x), 7.0)
+		_mark(c, Crayon.rounded_rect(Rect2(at + Vector2(14, 14), Vector2(104, 92)), 6), Color("#cfe9f7"), 9620 + int(at.x), 5.0)
+		_mark(c, Crayon.ellipse(at + Vector2(88, 42), Vector2(14, 14), 12), Color("#ffd166"), 9630 + int(at.x), 4.0)
+		_mark(c, PackedVector2Array([at + Vector2(14, 106), at + Vector2(60, 66), at + Vector2(118, 106)]),
+			Color("#a9dd9a"), 9640 + int(at.x), 4.0)
+
+
+## Marker: a diary - a pink cover with a heart, pages showing at the edge, a ribbon bookmark.
+static func _icon_journal(c: CanvasItem) -> void:
+	_mark(c, Crayon.rounded_rect(Rect2(150, 60, 270, 392), 24), Color("#fffdf6"), 9701, 9.0)
+	_mark(c, Crayon.rounded_rect(Rect2(92, 44, 300, 410), 30), Color("#f497b8"), 9702)
+	_mark(c, Crayon.rounded_rect(Rect2(92, 44, 54, 410), 20), Color("#e07a9e"), 9703, 9.0)
+	_mark(c, Crayon.heart(Vector2(270, 230), 150.0), Color("#fff3a8"), 9704, 9.0)
+	_mark(c, PackedVector2Array([Vector2(318, 440), Vector2(352, 440), Vector2(352, 500), Vector2(335, 480),
+		Vector2(318, 500)]), Color("#9d8af4"), 9705, 7.0)
 
 
 ## Marker: a red lead - a loop handle, a swinging line and a clip - beside two paw prints.

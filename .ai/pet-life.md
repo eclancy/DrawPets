@@ -152,6 +152,22 @@ seven cards beside it - **Sit, Jump, Spin, Roll over, Wave, Bow, Dance**.
   and round, jump leaps, dance dances.
 - The **Trick Show** is played with the pet's own cards (`competitions.md`).
 
+## Photos and the journal (built)
+
+**Photo** (in a home) turns the drawer bar into a camera: pick a pose - Happy, Jump, Wave,
+Dance, Sit, Sleepy - and every pet strikes it; **Snap!** freezes that moment (the place and the
+pets, not the buttons). Then `PhotoEditor`: pick a frame (paper, hearts, stars, flowers, rainbow,
+snapshot with the date), tap stickers on (heart, star, flower, crown, note, paw, sun, "Hi!") and
+drag them about - off the edge takes one away - and **Keep it** or Throw away. Frames and
+stickers are crayon drawn in code, never shine.
+- Kept photos go in the **album** (`Album`, `AlbumScreen`: from Photo, or the home screen's
+  Album button) at 960x540 in `user://photos/`. They are **never saved to the phone's gallery
+  and never shared** (`sharing.md`). The oldest go after 120.
+- Each pet has a **journal** that writes itself (`Journal`, the pet card's Journal button): the
+  day it was drawn or adopted, then its firsts (fetch, tug of war, bath, outfit, walk), presents
+  dug up, tricks learned, levels and trust gained, places in competitions - and every photo
+  it is in. A front page has its portrait, words, favourites, tricks and trust.
+
 ## Bedtime (built)
 
 At night (`places.md`) pets yawn and curl up asleep - legs folded under, head down, ears droopy -
@@ -177,8 +193,16 @@ where they are. Opening a home at night finds them already asleep ("It's night t
 Every pet has a voice the kid makes: a base sound shaped with sliders, or their own recording of
 up to 3 seconds - and it talks with small variations every time. See `audio-direction.md`. The mic
 is **off until turned on** (Settings, or a yes on first Record), every mic feature has a touch way
-round it, no speech recognition, and recordings never leave the device. Still planned: calling or
-clapping by loudness to make a pet come over or wake up.
+round it, no speech recognition, and recordings never leave the device.
+
+**Calling (built).** A **Listen** button in every home: on, the game listens for a clap or a
+shout - **how loud only**, never the words, and nothing is recorded or kept (`Sounds.loudness`
+reads a quarter-second rolling buffer). A sound much louder than the room (five times its
+usual level, and at least a third of full scale) is a call: every pet looks up and comes
+running to the front to say hello (a heart of trust), and a sleeping pet wakes gently first.
+Two seconds' rest between calls. Listening is **off until tapped**, stops when the home is
+left, and the first time asks "Call your pets?" (the same mic yes as Settings). **Tapping the
+ground** does the same without the mic, and a tap wakes a sleeper.
 
 ## Fixing and letting go (built)
 
@@ -196,7 +220,5 @@ From the pet panel (tap a pet in its home):
 
 ## Planned next
 
-1. **Photo mode** and a pet journal.
-2. **Voice** (optional, see above).
-
-Walks and presents are built - see `places.md`.
+Everything planned for pets is built: walks and presents are in `places.md`; ideas still to come
+are in `roadmap.md`.

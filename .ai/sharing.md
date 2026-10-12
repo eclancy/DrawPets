@@ -31,8 +31,9 @@ low-risk; a pet's name can contain a real name; **a child's voice is personal in
 2. **Everything is moderated before anyone sees it.** Uploads land in a queue (like DrawFight's
    `fighters/incoming/`) and Eric approves each one. Nothing is auto-published.
 3. **Drawings, words and layout only.** What travels is `pet.json`, its part PNGs, and the
-   drawn items it brings. **Never the voice recording** - visitors use the generated voice. No
-   free text beyond the pet's name, shown only after moderation.
+   drawn items it brings. **Never the voice recording** - visitors use the generated voice.
+   Never the album's photos or the pet's journal, which stay on the device. No free text beyond
+   the pet's name, shown only after moderation.
 4. **No contact between kids.** No messages, no chat, no names of kids - a visit is pets playing.
 5. **Friends, not strangers, first.** Start with share codes between families who know each
    other (a code a parent passes on), not a public pool. Far lower risk and moderation load.

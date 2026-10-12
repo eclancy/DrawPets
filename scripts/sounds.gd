@@ -42,6 +42,8 @@ var _loops := {}
 var _loop_id := 0
 var _mic: AudioStreamPlayer
 var _record: AudioEffectRecord
+var _capture: AudioEffectCapture
+var _listening := false
 
 
 func _ready() -> void:
@@ -63,6 +65,12 @@ func _ready() -> void:
 	if AudioServer.get_bus_effect_count(rec_bus) == 0:
 		AudioServer.add_bus_effect(rec_bus, AudioEffectRecord.new())
 	_record = AudioServer.get_bus_effect(rec_bus, 0) as AudioEffectRecord
+	# Listening for a call reads only how loud the mic is, from a short rolling buffer.
+	if AudioServer.get_bus_effect_count(rec_bus) < 2:
+		var cap := AudioEffectCapture.new()
+		cap.buffer_length = 0.25
+		AudioServer.add_bus_effect(rec_bus, cap)
+	_capture = AudioServer.get_bus_effect(rec_bus, 1) as AudioEffectCapture
 
 	for id in SFX:
 		var path := "res://sfx/%s.wav" % id
@@ -234,12 +242,54 @@ static func record_start() -> bool:
 	return true
 
 
+## Starts listening for a call (PlaceScreen): only how loud it is, never what is said, and
+## nothing is kept. The caller asks Android for permission first.
+static func listen_start() -> bool:
+	if main == null or main._capture == null:
+		return false
+	main._mic_on()
+	main._capture.clear_buffer()
+	main._listening = true
+	return true
+
+
+static func listen_stop() -> void:
+	if main == null or not main._listening:
+		return
+	main._listening = false
+	if main._mic != null and not main._record.is_recording_active():
+		main._mic.stop()
+
+
+## How loud the mic has been since last asked, 0-1 (the loudest moment). 0 when not listening.
+static func loudness() -> float:
+	if main == null or not main._listening or main._capture == null:
+		return 0.0
+	var n := main._capture.get_frames_available()
+	if n <= 0:
+		return 0.0
+	var peak := 0.0
+	for f in main._capture.get_buffer(n):
+		peak = maxf(peak, maxf(absf(f.x), absf(f.y)))
+	return peak
+
+
+func _mic_on() -> void:
+	if _mic == null:
+		_mic = AudioStreamPlayer.new()
+		_mic.stream = AudioStreamMicrophone.new()
+		_mic.bus = "Record"
+		add_child(_mic)
+	if not _mic.playing:
+		_mic.play()
+
+
 ## Stops recording and returns what was heard (null if nothing).
 static func record_stop() -> AudioStreamWAV:
 	if main == null or main._record == null:
 		return null
 	main._record.set_recording_active(false)
-	if main._mic != null:
+	if main._mic != null and not main._listening:
 		main._mic.stop()
 	return main._record.get_recording()
 

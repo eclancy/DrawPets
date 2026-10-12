@@ -273,6 +273,23 @@ func go_walk(home_id: String, pet_id: String) -> void:
 	show_screen(s)
 
 
+## The photo album. `back` is where Back goes - a home, or (by default) the home screen.
+func go_album(back := Callable()) -> void:
+	var s := AlbumScreen.new()
+	s.game = self
+	s.on_back = back
+	show_screen(s)
+
+
+## A pet's journal (JournalScreen), then back to its home.
+func go_journal(pet_id: String, home_id: String) -> void:
+	var s := JournalScreen.new()
+	s.game = self
+	s.pet_id = pet_id
+	s.home_id = home_id
+	show_screen(s)
+
+
 ## Teaching one pet tricks (TrickScreen).
 func go_tricks(home_id: String, pet_id: String) -> void:
 	var h := profile.home(home_id)
