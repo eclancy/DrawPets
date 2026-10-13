@@ -90,7 +90,19 @@ func _facts() -> Array:
 		out.append("Tricks: %s." % ", ".join(tricks.map(func(t): return Tricks.display_name(t))))
 	var hearts := Stats.trust(pet)
 	out.append("Trusts you: %d %s." % [hearts, "heart" if hearts == 1 else "hearts"])
+	for f in Friends.list(pet).slice(0, 3):
+		var other := _friend(str(f["id"]))
+		var why := Friends.why(pet, other, 1) if not other.is_empty() else []
+		out.append("%s: %s%s." % [Friends.sentence(Friends.level_name(int(f["level"]))), f["name"],
+			(" - " + str(why[0])) if not why.is_empty() else ""])
 	return out
+
+
+## A friend's details: a pet in the family, or a party guest.
+func _friend(id: String) -> Dictionary:
+	if id.begins_with("rival_"):
+		return Rivals.build(id.trim_prefix("rival_"))
+	return PetStore.load_pet(id)
 
 
 func _entry(e: Dictionary) -> Control:

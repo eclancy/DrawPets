@@ -171,6 +171,8 @@ static func art_group(id: String) -> String:
 
 ## An item by id, with its picture loaded. Empty if it does not exist.
 static func get_item(id: String) -> Dictionary:
+	if id == "":
+		return {}
 	if _cache.has(id):
 		return _cache[id]
 	var item := {}

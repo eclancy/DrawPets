@@ -23,6 +23,7 @@ func run() -> void:
 	await _wait(2.0)
 	await _play_at_home()
 	await _adopt()
+	await _friends()
 	await _let_go_pip()
 	await _settings()
 	await _shop()
@@ -272,6 +273,41 @@ func _adopt() -> void:
 	hp.on_done.call(game.profile.homes()[0])
 	await _wait(2.0)
 	await _shot("adopted_at_home")
+
+
+## Friends: Pip (shy, cuddly) has moved in with Zorp (playful, sporty) - a shy pet takes its time.
+## Then, some days later as it were, they are friends: a nuzzle, a chase, and it's on their cards.
+func _friends() -> void:
+	var place := _place()
+	if place == null or place.creatures.size() < 2:
+		return
+	var zorp: Creature = place.creatures[0]
+	var pip: Creature = place.creatures[1]
+	for c in [zorp, pip]:
+		c.interrupt()
+	zorp.position = Vector2(420, 560)
+	pip.position = Vector2(760, 580)
+	place.meet(zorp, pip)
+	await _wait(2.2)
+	await _shot("friends_meet")
+	zorp.pet["friends"][pip.pet["id"]]["f"] = 44.0
+	pip.pet["friends"][zorp.pet["id"]]["f"] = 44.0
+	for p in [zorp.pet, pip.pet]:
+		for id in p["friends"]:
+			p["friends"][id]["today"] = 0.0
+	zorp.go_to(place._beside(pip, zorp), place._nuzzle.bind(zorp, pip))
+	await _until(func(): return zorp.action() == "nuzzle", 6.0)
+	await _wait(0.6)
+	await _shot("friends_made")
+	await _wait(1.5)
+	place.chase(zorp, pip)
+	await _wait(0.9)
+	await _shot("friends_chase")
+	await _wait(1.6)
+	place._show_panel(zorp)
+	await _wait(0.3)
+	await _shot("friends_card")
+	place._panel.visible = false
 
 
 ## Inside the item picker: draw a snack and give it words.

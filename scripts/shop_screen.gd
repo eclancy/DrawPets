@@ -98,6 +98,27 @@ func show_tab(which: String) -> void:
 
 # --- Adopt -----------------------------------------------------------------------------------
 
+## Which of the family's pets it would get on with (Friends) - or that it would take its time.
+func _would_get_on(pet: Dictionary) -> String:
+	var best := []
+	var slow := true
+	for h in game.profile.homes():
+		for id in h["pets"]:
+			var mine := PetStore.load_pet(id)
+			if mine.is_empty():
+				continue
+			var fit := Friends.fit(pet, mine)
+			if fit >= 0.85:
+				slow = false
+			if fit >= 1.2:
+				var why := Friends.why(pet, mine, 1)
+				best.append("%s%s" % [mine["name"], (" (" + str(why[0]) + ")") if not why.is_empty() else ""])
+	if not best.is_empty():
+		return "Would get on with " + ", ".join(best.slice(0, 2)) + "."
+	if slow and game.profile.pet_count() > 0:
+		return "Would take its time making friends with your pets."
+	return ""
+
 func _adopt_cards() -> void:
 	var tabs := HBoxContainer.new()
 	tabs.custom_minimum_size = Vector2(1200, 0)
@@ -219,6 +240,9 @@ func meet(id: String) -> void:
 	for key in ["food", "toy"]:
 		likes.add_child(UI.item_picture(Items.get_item(pet[key]["item"]), 56))
 	col.add_child(likes)
+	var getting_on := _would_get_on(pet)
+	if getting_on != "":
+		col.add_child(UI.label(getting_on, 20, true))
 	for stat in (Stats.LIST if game.profile.advanced() else []):
 		var srow := HBoxContainer.new()
 		srow.add_child(UI.icon(Stats.INFO[stat]["icon"], 30))

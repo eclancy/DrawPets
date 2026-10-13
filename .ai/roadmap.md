@@ -96,6 +96,12 @@ with the whole routine (nails, wash, teeth, coat) at a bath spot for each place;
 for every pet; a food bowl in every home; seven fun days for Beginner (`pet-life.md`,
 `competitions.md`).
 
+## M1.15 - Friends (built)
+
+Pets become friends and best friends by attitude (personality) and interest (favourites), with
+preferences for kinds of pet (fliers, swimmers, wrigglers, walkers); hellos, nuzzles, chases,
+fetch together, sleeping side by side (`pet-life.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a

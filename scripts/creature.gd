@@ -630,7 +630,7 @@ func _mood(delta: float) -> void:
 	if _action == "sleep":
 		blink = move_toward(blink, 1.0, delta * 3.0)  # fast asleep: eyes right shut
 		return
-	if _action in ["petted", "belly", "cuddle"] or (_action == "stretch" and _action_left > 0.5):
+	if _action in ["petted", "belly", "cuddle", "nuzzle"] or (_action == "stretch" and _action_left > 0.5):
 		blink = move_toward(blink, 0.85, delta * 6.0)
 		return
 	_next_blink -= delta
@@ -712,6 +712,10 @@ func _run_action(delta: float) -> void:
 			stride = 1.0
 			phase += delta * 22.0
 			head_tilt = 0.1
+		"nuzzle":
+			# Saying hello to a friend: leaning in, head tipped, eyes shut.
+			lean = sin(k * PI) * 0.14
+			head_tilt = 0.12 + sin(t * 6.0) * 0.04
 		"open_wide":
 			# Say "ahh": mouth wide, chin up - for brushing its teeth.
 			mouth_open = move_toward(mouth_open, 1.0, delta * 4.0)

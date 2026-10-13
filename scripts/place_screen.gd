@@ -25,6 +25,8 @@ extends Node2D
 ##   Bath drawer       -> scrub a muddy pet with the sponge till it shakes itself dry, squeaky
 ##                        clean; brush it fluffy. Pets get muddy (Mud) splashing about a muddy
 ##                        place, digging, and running about in a passing shower of rain.
+## Pets in a home make friends (Friends): they say hello, nuzzle, play chase and fetch together,
+## and best friends sleep side by side - sooner when their personalities and favourites click.
 ## Left alone, pets use the furniture by its words: nap on cozy things, bounce on bouncy ones.
 ## Every kind of play trains a stat (Stats), and milestones pay gold stars (GameRoot.reward).
 ## At night (Clock) the place goes lavender, glowy things light up, and the pets curl up asleep
@@ -1032,6 +1034,7 @@ func _catch(c: Creature) -> void:
 		if other != c:
 			other.stop()
 			_train(other, "speed", 0.3)
+			_friend_time(c, other, 2.0)  # they chased it together
 	_chasers.clear()
 	if toy.play() == "squeak":
 		toy_state = "busy"
@@ -1861,6 +1864,139 @@ func _came(c: Creature) -> void:
 	_love(c, 1)
 
 
+# --- Friends ----------------------------------------------------------------------------------
+
+func _free_to_socialise(c: Creature) -> bool:
+	return c.action() == "" and c != _toy_pet and c != _eater and c != _tug and c != _tug_caller \
+		and not _chasers.has(c)
+
+
+## Now and then an idle pet (or a party guest) goes to spend time with another - more often one it
+## gets on with, or knows well. A first hello; after that a nuzzle, or for lively friends a game
+## of chase. True if it went.
+func _social(c: Creature) -> bool:
+	var choices := []
+	var total := 0.0
+	for o in creatures + guests:
+		if o == c or not _free_to_socialise(o):
+			continue
+		var w := Friends.fit(c.pet, o.pet) * (1.0 + Friends.points(c.pet, o.pet["id"]) / 30.0)
+		choices.append([o, w])
+		total += w
+	if choices.is_empty():
+		return false
+	var roll := randf() * total
+	var o: Creature = choices[0][0]
+	for ch in choices:
+		roll -= float(ch[1])
+		if roll <= 0.0:
+			o = ch[0]
+			break
+	if not Friends.has_met(c.pet, o.pet["id"]):
+		meet(c, o)
+		return true
+	var lively := false
+	for w in c.pet.get("personality", []) + o.pet.get("personality", []):
+		if w in ["playful", "sporty", "silly"]:
+			lively = true
+	if Friends.level(Friends.points(c.pet, o.pet["id"])) >= 2 and lively and randf() < 0.5:
+		chase(c, o)
+	else:
+		c.go_to(_beside(o, c), _nuzzle.bind(c, o))
+	return true
+
+
+## The spot beside `o` where `c` stands to say hello, on the side `c` is coming from.
+func _beside(o: Creature, c: Creature) -> Vector2:
+	var side := signf(c.position.x - o.position.x + 0.1)
+	return (o.position + Vector2(side * (o.height_px * 0.45 + c.height_px * 0.4), 4)).clamp(GROUND.position, GROUND.end)
+
+
+## Two pets meet for the first time: a sniff - and how it goes says how they will get on.
+func meet(c: Creature, o: Creature) -> void:
+	Friends.meet(c.pet, o.pet)
+	c.go_to(_beside(o, c), _met.bind(c, o))
+
+
+func _met(c: Creature, o: Creature) -> void:
+	c.face_toward(o.position.x)
+	o.face_toward(c.position.x)
+	c.perform("sniff", 1.0)
+	if _free_to_socialise(o):
+		o.perform("sniff", 1.0)
+	var fit := Friends.fit(c.pet, o.pet)
+	var slow: bool = Friends.liking(c.pet, o.pet)["slow"] or Friends.liking(o.pet, c.pet)["slow"]
+	var why := Friends.why(c.pet, o.pet, 1, slow)
+	var reason := ("%s." % Friends.sentence(str(why[0]))) if not why.is_empty() else ""
+	if slow:
+		c.say("question")
+		_show_hint("%s met %s! %s" % [c.pet["name"], o.pet["name"], reason])
+	elif fit >= 1.25:
+		c.say("heart")
+		o.say("heart")
+		_show_hint("%s met %s! %s - they'll get on!" % [c.pet["name"], o.pet["name"], reason.trim_suffix(".")])
+	else:
+		c.say("hello")
+		_show_hint("%s met %s!" % [c.pet["name"], o.pet["name"]])
+	_friend_time(c, o, 2.0)
+
+
+func _nuzzle(c: Creature, o: Creature) -> void:
+	c.face_toward(o.position.x)
+	c.perform("nuzzle", 1.4)
+	if _free_to_socialise(o):
+		o.face_toward(c.position.x)
+		o.perform("nuzzle", 1.4)
+	var lv := Friends.level(Friends.points(c.pet, o.pet["id"]))
+	for i in maxi(1, lv):
+		_on_emote("heart", c.top_global().lerp(o.top_global(), 0.5) + Vector2((i - lv / 2.0) * 26.0, -i * 8.0))
+	_friend_time(c, o, 3.0)
+
+
+## Friends who like a run: one dashes off, the other gives chase, then they both bounce about.
+func chase(c: Creature, o: Creature) -> void:
+	var spot := Vector2(randf_range(GROUND.position.x + 80, GROUND.end.x - 80), randf_range(GROUND.position.y + 20, GROUND.end.y - 10))
+	c.go_to(spot, _caught_up.bind(c, o), true)
+	c.say("note")
+	get_tree().create_timer(0.5).timeout.connect(_give_chase.bind(o, c))
+
+
+func _give_chase(o: Creature, c: Creature) -> void:
+	if is_instance_valid(o) and _free_to_socialise(o):
+		o.go_to(_beside(c, o) if c.is_busy() else c.position, Callable(), true)
+
+
+func _caught_up(c: Creature, o: Creature) -> void:
+	c.perform("celebrate", 1.2)
+	if is_instance_valid(o) and o.action() == "":
+		o.perform("celebrate", 1.2)
+	_friend_time(c, o, 5.0)
+
+
+## Time spent together: friendship grows (Friends.grow), and a new level is celebrated.
+func _friend_time(a: Creature, b: Creature, amount: float) -> void:
+	var lv := Friends.grow(a.pet, b.pet, amount)
+	if lv > 0:
+		_became(a, b, lv)
+
+
+## Friends now - or best friends: hearts all round, a hint, both journals, and stars once.
+func _became(a: Creature, b: Creature, lv: int) -> void:
+	for i in 5:
+		_on_emote("heart", a.top_global().lerp(b.top_global(), 0.5) + Vector2(randf_range(-60, 60), randf_range(-30, 10)))
+	a.say("heart")
+	Sounds.play("trust_up")
+	var what := "best friends" if lv >= 3 else "friends"
+	_show_hint("%s and %s are %s now!" % [a.pet["name"], b.pet["name"], what])
+	for pair in [[a, b], [b, a]]:
+		if not str(pair[0].pet["id"]).begins_with("rival_"):
+			Journal.add(pair[0].pet, "%s with %s!" % ["Best friends" if lv >= 3 else "Became friends", pair[1].pet["name"]])
+	var ids := [str(a.pet["id"]), str(b.pet["id"])]
+	ids.sort()
+	if game.profile.first_time("friends_%s_%s_%d" % [ids[0], ids[1], lv]):
+		game.reward(5 if lv >= 3 else 3, "%s and %s are %s!" % [a.pet["name"], b.pet["name"], what])
+
+
 # --- Fun days (Beginner) --------------------------------------------------------------------
 
 func _start_fun_day() -> void:
@@ -1895,11 +2031,9 @@ func _guest_tick() -> void:
 	for g in guests:
 		if g.is_busy() or randf() > 0.35:
 			continue
-		if randf() < 0.5 and not creatures.is_empty():
-			var friend: Creature = creatures.pick_random()
-			g.go_to(friend.position + Vector2(randf_range(-90, 90), 6), g.say.bind("heart"))
-		else:
-			g.perform("dance", 2.0)
+		if randf() < 0.6 and _social(g):
+			continue
+		g.perform("dance", 2.0)
 
 
 # --- The camera ------------------------------------------------------------------------------
@@ -2168,6 +2302,18 @@ func _into_bowl(it: PlaceItem) -> void:
 ## Bedtime: off to something cozy (or warm), a big yawn, and curled up asleep till morning - or
 ## till a tap. `now`: already asleep there, as when the home is opened at night.
 func _go_to_bed(c: Creature, now := false) -> void:
+	# Best friends sleep side by side.
+	for o in creatures:
+		if o != c and o.is_asleep() and Friends.level(Friends.points(c.pet, o.pet["id"])) >= 3:
+			var side := signf(c.position.x - o.position.x + 0.1)
+			var by := (o.position + Vector2(side * (o.height_px * 0.45 + c.height_px * 0.35), 3)).clamp(GROUND.position, GROUND.end)
+			if now:
+				c.position = by
+				c.z = o.rest_z
+				_lie_down(c, o.rest_z, 2.0)
+			else:
+				c.go_to(by, _lie_down.bind(c, o.rest_z, 0.0))
+			return
 	# A real bed if there is one, then a house's doorstep, then by something warm.
 	var beds := []
 	for f in furniture:
@@ -2331,6 +2477,8 @@ func _process(delta: float) -> void:
 				continue
 			if _mud_kind != "" and randf() < 0.03:
 				_dig(c)
+				continue
+			if randf() < 0.14 and _social(c):
 				continue
 			if randf() < 0.22:
 				_play_with_furniture(c)

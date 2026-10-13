@@ -147,4 +147,7 @@ func refresh() -> void:
 		bits.append(w)
 	_words.text = "%s. Loves %s." % [", ".join(bits).capitalize() if not bits.is_empty() else "Itself",
 		Places.display_name(_pet.get("place", "meadow"))]
+	var friends := Friends.summary(_pet, 2)
+	if friends != "":
+		_words.text += "\n" + friends
 	_take_off.visible = not _pet.get("outfit", []).is_empty()

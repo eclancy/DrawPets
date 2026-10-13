@@ -17,10 +17,11 @@ need, stat, activity, reaction or reward.
 | accessories | clothes from the shop or drawn, dragged onto a pet | built |
 | contests | six events on a weekly calendar, four cups each (`competitions.md`) | built |
 | money | gold stars for milestones, a shop of things you cannot draw (`shop.md`) | built |
-| shampoo and brush | scrub off mud - overlays only, never touching the drawing | planned |
-| teach tricks by voice | trick cards the kid draws | planned |
-| call its name | tap the ground (always); optionally call or clap into the mic | tap built, mic planned |
-| walks and presents | a walk through its place; presents are "draw what's inside!" prompts | planned |
+| shampoo and brush | bath day: nails, a wash, teeth, its coat; mud as overlays that wash off | built |
+| teach tricks by voice | trick cards the kid draws, taught by swipe | built |
+| call its name | tap the ground (always); optionally call or clap into the mic | built |
+| walks and presents | a walk through its place; presents are "draw what's inside!" prompts | built |
+| dogs that know each other | friendships between pets, by personality and favourites | built |
 | Bark Mode | visiting friends' homes through ecec.dev (`sharing.md`) | planned |
 
 ## Needs - gentle real time (decided)
@@ -220,6 +221,40 @@ where they are. Opening a home at night finds them already asleep ("It's night t
 - Sleeping gives energy back. Day naps on cozy things work the same way (a tap wakes them too).
 - **Morning** (6-11 am), the first visit of the day to a home: everyone stretches and says good
   morning. Morning coming while the home is open does the same.
+
+## Friends (built)
+
+Pets get to know each other, become **friends**, then **best friends** (`Friends`, kept on both
+pets in `pet["friends"]`). Never enemies: a pair that does not click just takes longer.
+
+**Who clicks** - only from what the kid chose, never the drawing:
+- **Attitude** (personality words): playful likes playful, silly and sporty; sleepy and calm like
+  each other and the cuddly; cuddly likes the cuddly, the shy and soft coats (fur, feathers);
+  brave looks out for the shy and likes big pets; **shy** likes calm, shy and cuddly pets and is
+  *slow* with playful, sporty and silly ones, and with pets much bigger than itself; curious is
+  drawn to pets of another kind; hungry pets are snack buddies; fancy likes a pet who dresses up.
+- **Interest**: the same favourite place; the same favourite way to play (fetch, tug...); the
+  same favourite food words; and a favourite place that points at a kind - a pet that loves wet
+  places likes swimmers, one that loves high places likes fliers.
+- **Kind**, from its parts: fliers (wings), swimmers (fins), wrigglers (no legs), walkers.
+How much A takes to B is one-way (a shy pet can adore a calm one that barely notices); how fast
+they become friends is the two averaged (`Friends.fit`, 0.4-2, 1 ordinary).
+
+**Time together** - in a home, now and then an idle pet goes to another, more often one it gets
+on with or knows well:
+- **Meeting**: a sniff, and a hint saying how it will go - "Zorp met Pip! Pip is shy with playful
+  pets - give it time." or "...Both playful - they'll get on!".
+- **Nuzzles** (hearts for each level), **chase** for lively friends, **fetch together** (chasing
+  the same toy), party guests visiting, and **best friends sleep side by side** at night.
+- Friendship grows by how well they fit, at most 22 points a pair a day: getting to know at 15,
+  friends at 45, best friends at 80 - a few days for a pair that clicks, longer for one that does
+  not. It never shrinks.
+- Becoming friends: hearts, a hint, a line in both journals, and **3 stars** (best friends: **5**),
+  once per pair. Party guests (the rival pets) can become friends too.
+
+**Where it shows**: the pet card ("Best friends with Pip. Friends with Biscuit."), the journal's
+front page with why ("Friends: Pip - both dream of Sunny Meadow."), and the shop's adopt panel
+("Would get on with Zorp (both playful)." or "Would take its time making friends with your pets.").
 
 ## Favourites are mechanics, not labels
 
