@@ -115,24 +115,6 @@ func go_place(home_id: String, focus := "", first_visit := false, fun_day := "")
 	show_screen(s)
 
 
-## Building a home on an empty plot, then back home to see it.
-## Fixing a pet, then back to its home.
-func go_fix(pet_id: String, home_id: String) -> void:
-	var pet := PetStore.load_pet(pet_id)
-	if pet.is_empty():
-		go_home()
-		return
-	var s := FixScreen.new()
-	s.game = self
-	s.pet = pet
-	s.on_done = func(saved: bool):
-		if saved:
-			toast("%s is all fixed up!" % pet["name"], "ui_fix")
-		go_place(home_id, pet_id)
-	show_screen(s)
-
-
-## Changing a pet's voice on its own (the Voice button), then back home.
 func go_voice(pet_id: String, home_id: String) -> void:
 	var pet := PetStore.load_pet(pet_id)
 	if pet.is_empty():
@@ -180,6 +162,7 @@ func go_let_go(pet_id: String, home_id: String) -> void:
 	show_screen(s)
 
 
+## Building a home on an empty plot, then back home to see it.
 func go_build_home() -> void:
 	if game_free_plots() <= 0:
 		go_shop()
@@ -416,7 +399,7 @@ func _check_safe_area(delta: float) -> void:
 func _music_for(node: Node) -> void:
 	var track := "home"
 	var place := ""
-	if node is Creator or node is FixScreen or node is ItemMaker or node is VoiceMakerScreen:
+	if node is Creator or node is ItemMaker or node is VoiceMakerScreen:
 		track = "create"
 	elif node is CompetitionScreen:
 		track = "contest"

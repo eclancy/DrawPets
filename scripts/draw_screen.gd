@@ -41,12 +41,10 @@ var required: Array = []
 var on_addon := Callable()
 var on_remove_addon := Callable()
 var on_placed := Callable()
-## Just "where does it go?" for this type, on `start_image` - no crayons, no Done: adding a part
-## to a pet that is already made. Cancel calls `on_done` with {}.
-var place_only := ""
 var on_back := Callable()
 var on_quit := Callable()
-## Fixing a part: the drawing to start from, its dot, and {mode, mask} if it had shiny strokes.
+## Back on an earlier step, or a saved draft: the drawing to start from, its dot, and
+## {mode, mask} if it had shiny strokes.
 var start_image: Image
 var start_pivot := Vector2.ZERO
 var start_shine := {}
@@ -204,11 +202,6 @@ func _ready() -> void:
 		var at := (dot - start_pivot).clamp(Vector2.ZERO, room)
 		canvas.load_drawing(start_image, at, start_shine.get("mask"), start_shine.get("mode", ""))
 		canvas.set_dot(at + start_pivot, show_dot)
-	if place_only != "":
-		finish.visible = false
-		if _addon_box != null:
-			_addon_box.visible = false
-		begin_placing(place_only)
 
 
 ## The add-on buttons: a part picture (or the kid's own drawing once added, with how many),
@@ -357,8 +350,6 @@ func begin_placing(type: String, spots: Array = []) -> void:
 	_place_box.visible = true
 	for c in _crayon_box:
 		c.visible = false
-	if place_only != "":
-		_place_label.text = "Where does it go? Tap the drawing once for each one, then Draw it!"
 	_say("")
 	_update_place()
 
@@ -398,8 +389,6 @@ func press_place_done() -> void:
 
 func _cancel_placing() -> void:
 	end_placing()
-	if place_only != "":
-		_finish({})
 
 
 func end_placing() -> void:
@@ -409,7 +398,7 @@ func end_placing() -> void:
 	canvas.set_marks([])
 	_place_box.visible = false
 	for c in _crayon_box:
-		c.visible = place_only == ""
+		c.visible = true
 
 
 func is_placing() -> bool:

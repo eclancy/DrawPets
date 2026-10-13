@@ -131,7 +131,7 @@ const SHOP := {
 	"back_cape": {"category": "clothing", "name": "Hero Cape", "words": ["brave"], "price": 25, "wear": "back"},
 	"back_backpack": {"category": "clothing", "name": "Backpack", "words": ["sporty"], "price": 15, "wear": "back"},
 	"back_wings": {"category": "clothing", "name": "Fairy Wings", "words": ["silly", "fancy"], "price": 30, "wear": "back", "shine": "glitter"},
-	# One marker lasts a whole drawing - every part of a new pet, all of a fix-up, or one toy -
+	# One marker lasts a whole drawing - every part of a new pet, or one toy -
 	# and is used up when it is finished. So they cost a lot.
 	"marker_gold": {"category": "supply", "name": "Gold Marker", "words": [], "price": 120, "uses": 1, "shine": "gold",
 		"note": "Draw a whole pet (or one thing) in shining gold"},

@@ -66,7 +66,6 @@ const ASSETS := {
 	"ui_plus": {"pivot": "center", "look": "a big friendly plus sign"},
 	"ui_minus": {"pivot": "center", "look": "a big friendly minus sign"},
 	# Looking after a pet.
-	"ui_fix": {"pivot": "center", "look": "a crayon and a sticking plaster (band-aid) crossed - fixing up a pet"},
 	"ui_let_go": {"pivot": "center", "look": "an open garden gate with a little heart floating out of it - letting a pet go off to live in the wild"},
 	"ui_move_home": {"pivot": "center", "look": "a little house with a curved arrow swooping into its door"},
 	"ui_settings": {"pivot": "center", "look": "a friendly gear / cog"},
@@ -226,8 +225,6 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_plus(c)
 		"ui_minus":
 			_minus(c)
-		"ui_fix":
-			_fix(c)
 		"ui_let_go":
 			_let_go(c)
 		"ui_move_home":
@@ -1262,22 +1259,6 @@ static func _minus(c: CanvasItem) -> void:
 
 
 # --- Looking after a pet -----------------------------------------------------------------------
-
-## Marker: a blue crayon and a peach sticking plaster crossed in an X - fixing up a pet.
-static func _fix(c: CanvasItem) -> void:
-	_crayon_stick(c, Vector2(256, 256), deg_to_rad(-45), Color("#79aeea"), 3000)
-	var skin := Color("#f5c08e")
-	var at := Vector2(256, 256)
-	var ang := deg_to_rad(45)
-	var o := Vector2.ZERO
-	_mark(c, _place(Crayon.rounded_rect(Rect2(-212, -66, 424, 132), 60), o, at, ang), skin, 3010, 11.0)
-	_pen(c, _place(Crayon.rounded_rect(Rect2(-68, -46, 136, 92), 20), o, at, ang), Color("#fbe3c6"), 3011, 7.0)
-	for i in 8:
-		var x := (118.0 + (i % 2) * 44.0) * (1.0 if i < 4 else -1.0)
-		var y := -22.0 + ((i / 2) % 2) * 44.0
-		c.draw_colored_polygon(Crayon.ellipse(_place1(Vector2(x, y), o, at, ang), Vector2(9, 9), 12), skin.darkened(0.3))
-	Crayon.line(c, _place1(Vector2(-184, -38), o, at, ang), _place1(Vector2(-96, -38), o, at, ang), SHINE, 11.0, 3012)
-
 
 ## Marker: a garden gate swung wide open, a pink heart floating up and out through it.
 static func _let_go(c: CanvasItem) -> void:

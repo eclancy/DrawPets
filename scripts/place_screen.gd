@@ -313,7 +313,6 @@ func _build_hud() -> void:
 	_panel.visible = false
 	_panel.on_close = func(): _panel.visible = false
 	_panel.on_take_off = _take_off_clothes
-	_panel.on_fix = func(p: Dictionary): _leave_with(p, func(): game.go_fix(p["id"], home["id"]))
 	_panel.on_voice = func(p: Dictionary): _leave_with(p, func(): game.go_voice(p["id"], home["id"]))
 	_panel.on_move = func(p: Dictionary): _leave_with(p, func(): game.go_move(p["id"], home["id"]))
 	_panel.on_let_go = func(p: Dictionary): _leave_with(p, func(): game.go_let_go(p["id"], home["id"]))

@@ -32,7 +32,6 @@ on, so a kid is never asked about horns before there is a head to put them on.
    so far does what that part does - legs walk, a tail wags, eyes blink, a mouth chomps, wings
    fly, fins swim, springy parts wobble as it hops. It is the real rig and the real recipes, not
    a canned animation; an add-on's preview is a copy of the pet with the host as drawn so far.
-   Fixing a pet (redraw, add) shows it off the same way.
 6. **Back and Stop, on every drawing step.** Back reopens the step before - its drawing and
    add-ons as they were - and from the body goes back to the parts picker; the drawing being
    left is kept for when the kid comes forward again (`Creator._carry`). The pet is rebuilt from
@@ -171,16 +170,12 @@ Six sizes: tiny (mouse), small (cat), medium (dog), big (horse), huge (elephant)
 then scaled. Size changes stride rate (tiny scurries, giant lumbers), walk speed, the camera
 zoom in its place, toy and food scale, and - when voices land - pitch.
 
-## Fixing a pet later
+## Once it is made
 
-`FixScreen` (see `pet-life.md`) reuses the same pieces - adding a part asks where it goes
-first, on the drawing it goes on (`DrawScreen.place_only`), then draws it zoomed in there: `DrawCanvas.load_drawing` starts a sheet
-from the existing drawing (undo stops at it), placed so its red dot - its joint - lands on the
-sheet's dot, and `PetBuilder.replace_drawing` swaps the drawing for every part using it while
-keeping their joints, so nothing moves. Adding uses `add_parts` with an explicit host; a second,
-different drawing of a type gets its own file (`unused_file`), never painting over the first.
-`remove_drawing` takes a drawing off with everything riding on it, refusing if it would leave no
-eyes or no mouth. Saving deletes drawings no longer used.
+A pet's drawings are final once it is finished - there is no redrawing, adding or taking off
+parts later (`pet-life.md`). Back and drafts during making reopen a step with
+`DrawCanvas.load_drawing`, which starts a sheet from the drawing as it was (undo stops at it),
+placed so its red dot - its joint - lands on the sheet's dot.
 
 ## Clothes
 

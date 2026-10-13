@@ -2,17 +2,17 @@
 """The app icon: the launcher on a phone, the Godot project manager, the taskbar.
 
 Run:
-    "$GODOT_BIN" --path . -- --demo --quit     -> .shots/demo_NN_fix_hub.png among the rest
+    "$GODOT_BIN" --path . -- --demo --quit     -> .shots/demo_NN_journal.png among the rest
     python tools/app_icon.py                   -> icon/*.png
 
 IT IS A CROP OF A REAL FRAME OF THE GAME, not a drawing made for the icon (the DrawFight rule):
 an icon drawn separately is a second answer to "what does this game look like", and it drifts
 the moment the game changes. This one is Zorp - the creature the demo kid draws, stroke by
-stroke, through the real screens - standing in its meadow on the Fix screen, the frame that shows
-a pet biggest. When a real kid's pet should be the face of the game, point SHOT_NAME at a frame
+stroke, through the real screens - in its portrait on the front page of its journal, the same
+pose every run. When a real kid's pet should be the face of the game, point SHOT_NAME at a frame
 of it.
 
-Look at the result before committing it - if the demo's drawing or the Fix screen's layout moves
+Look at the result before committing it - if the demo's drawing or the journal's layout moves
 Zorp, adjust PET below.
 
 Android adaptive icons are two 432px layers: the launcher masks them to a circle or squircle
@@ -32,12 +32,12 @@ ROOT = os.path.abspath(os.path.join(HERE, ".."))
 
 # Found by name: the demo numbers its shots in order, so the number moves as steps are added.
 SHOTS = os.path.join(ROOT, ".shots")
-SHOT_NAME = "_fix_hub.png"
+SHOT_NAME = "_journal.png"
 OUT = os.path.join(ROOT, "icon")
 
-# Zorp on the 1280x720 Fix screen: centre x, centre y, square side. Tail tip to whiskers, wing
-# tips to feet, with enough meadow round it that the round mask never clips the tail.
-PET = (321, 478, 360)
+# Zorp on the 1280x720 journal page: centre x, centre y, square side. Tail tip to ears, wing tips
+# to feet, stopping above the words under the portrait.
+PET = (191, 250, 290)
 
 PAPER = (246, 243, 236)    # project.godot default_clear_color - the paper every screen sits on
 

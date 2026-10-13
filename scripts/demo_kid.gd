@@ -22,7 +22,6 @@ func run() -> void:
 	await _make_pet(creator)
 	await _wait(2.0)
 	await _play_at_home()
-	await _fix_pet()
 	await _adopt()
 	await _let_go_pip()
 	await _settings()
@@ -230,60 +229,6 @@ func _make_voice(v: VoiceMakerScreen) -> void:
 	v.pick_base("meow")
 	await _wait(0.3)
 	v.press_done()
-
-
-## Fixing Zorp: redraw its tail starting from the old one, add horns, take its ears off.
-func _fix_pet() -> void:
-	var h: Dictionary = game.profile.homes()[0]
-	var zorp_id: String = h["pets"][0]
-	game.go_fix(zorp_id, h["id"])
-	await _wait(1.0)
-	var fix := game.screen as FixScreen
-	await _shot("fix_hub")
-	fix.redraw_list()
-	await _wait(0.5)
-	await _shot("fix_redraw_list")
-	var tail := {}
-	var ears := {}
-	for e in PetBuilder.drawings(fix.pet):
-		if e["type"] == "tail":
-			tail = e
-		elif e["type"] == "ear":
-			ears = e
-	fix.redraw(tail)
-	await _wait(0.5)
-	var d := fix.current as DrawScreen
-	_line(d.canvas, PackedVector2Array([Vector2(150, 200), Vector2(110, 160), Vector2(90, 190), Vector2(120, 230),
-		Vector2(150, 200)]), UI.PALETTE[10], 14.0, 30)
-	await _wait(0.3)
-	await _shot("fix_redraw")
-	await d.press_done()
-	await _through_preview(fix)
-	await _wait(0.5)
-	fix.add_draw("head", "horn")
-	await _wait(0.5)
-	var where := fix.current as DrawScreen
-	for spot in fix.suggest_spots("horn", "head"):
-		where.place_at(spot)
-	await _wait(0.2)
-	await _shot("fix_place_horn")
-	where.press_place_done()
-	await _wait(0.5)
-	var a := fix.current as DrawScreen
-	await _draw("horn", a.canvas)
-	await _shot("fix_add_horn")
-	await a.press_done()
-	await _through_preview(fix, "fix_preview_horn")
-	await _wait(0.5)
-	fix.remove_ask(ears)
-	await _wait(0.4)
-	await _shot("fix_remove_ask")
-	fix.remove_do(ears)
-	await _wait(0.6)
-	await _shot("fix_hub_after")
-	fix.press_done()
-	await _wait(1.5)
-	await _shot("fixed_at_home")
 
 
 ## Letting Pip go to live in the wild (it was adopted, so it goes back to the shop).

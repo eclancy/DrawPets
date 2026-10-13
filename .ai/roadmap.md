@@ -35,10 +35,11 @@ the parts; sizes and places; pet, feed, fetch; gentle needs; save and load; `--d
 - Forty adoptable pets in the shop, with a meet panel.
 - Fourteen ready-built homes for empty plots, named by the kid.
 
-## M1.6 - Fixing pets, sound (built)
+## M1.6 - Moving pets, sound (built)
 
-- Fix a pet (redraw from the old drawing, add, take off, move parts, every detail), move it to
-  another home, let it go to live in the wild (hold to confirm).
+- Move a pet to another home, or let it go to live in the wild (hold to confirm). (A Fix screen
+  for redrawing and editing pets was built here and later taken out: a pet's drawings are final
+  once it is made.)
 - Sound for everything: 59 generated effects, 14 place ambiences, three music loops, settings.
 - Pet voices: 18 base sounds, seven sliders, own recordings (3 s), varied every time it talks.
   Drawn toys can have a sound.

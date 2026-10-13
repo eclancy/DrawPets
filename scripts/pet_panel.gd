@@ -5,11 +5,10 @@ extends PanelContainer
 ##
 ## Laid out in two columns - feelings on the left, stats on the right, its buttons along the
 ## bottom - so the whole card fits between the top buttons and the drawer bar on a phone. One
-## tall column put Fix, Voice, Move and Let go under the bar.
+## tall column put its buttons under the bar.
 
 var on_close := Callable()
 var on_take_off := Callable()
-var on_fix := Callable()
 var on_voice := Callable()
 var on_move := Callable()
 var on_let_go := Callable()
@@ -105,7 +104,7 @@ func _ready() -> void:
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 6)
-	for entry in [["icon_journal", "Journal", "journal"], ["ui_fix", "Fix", "fix"], ["snd_voice", "Voice", "voice"],
+	for entry in [["icon_journal", "Journal", "journal"], ["snd_voice", "Voice", "voice"],
 			["ui_move_home", "Move", "move"], ["ui_let_go", "Let go", "let_go"]]:
 		var b := UI.icon_button(entry[0], entry[1], _action.bind(entry[2]), 36, Vector2(78, 76))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -114,7 +113,7 @@ func _ready() -> void:
 
 
 func _action(what: String) -> void:
-	var cb: Callable = {"fix": on_fix, "voice": on_voice, "move": on_move, "let_go": on_let_go,
+	var cb: Callable = {"voice": on_voice, "move": on_move, "let_go": on_let_go,
 		"journal": on_journal}[what]
 	if cb.is_valid():
 		cb.call(_pet)

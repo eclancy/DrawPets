@@ -57,7 +57,7 @@ opens for each one. Versions are rendered once and cached.
 
 **Where voices come from.** A new pet starts with a guess from its size and parts (wings chirp,
 fins gurgle) and the kid shapes it in creation's "What does it sound like?" step, or later from
-the pet panel's Voice button or Fix. Adoptable pets and rivals have preset recipes
+the pet panel's Voice button. Adoptable pets and rivals have preset recipes
 (`Adoptables.VOICES`, `Rivals.VOICES`). **Drawn toys** can have a sound too (optional, from the
 same screen), played when they bounce, are caught or squeak.
 
@@ -103,7 +103,7 @@ seamless loops.
   tune, a toy piano answering. C - Am - F - G with secondary dominants (E7, D7), a borrowed F minor
   wink in the bridge, ending on G7 into the top. Homes, shop, calendar, settings.
 - **create** - 84 BPM, straight: a slow toy-piano tune over plucked ukulele arpeggios, no drums.
-  Drawing, fixing, making things and voices.
+  Drawing, making things and voices.
 - **contest** - 152 BPM: a handheld-console lead calling, cartoon horns answering, offbeat chops,
   a bouncing bass, claps, a slide whistle back to the top. Competitions.
 

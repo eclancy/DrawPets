@@ -53,7 +53,7 @@ The family plays on one shared Android phone or tablet first, iOS later.
 | care | **gentle real-time** - needs drift while the app is closed, with a floor |
 | microphone | record the creature's own voice (3 s at most), and call it by loudness - **all optional**, off unless turned on, with a button for everything the mic does |
 | voices | a base sound + sliders (higher/deeper, faster/slower, wobble, echo, bend, robot, backwards) or a recording; varied every time the pet talks |
-| fixing pets | redraw, add, take off, move parts; move home; let go "to live in the wild" (hold to confirm) |
+| after making | a pet's drawings are **final** - no redrawing or editing parts later; move home; let go "to live in the wild" (hold to confirm) |
 | sharing | **online through ecec.dev**, moderated: visit friends' homes with a pet, learn, make friends, bring gifts home - see `sharing.md` |
 | face | eyes and a mouth are required; the mouth is drawn open and the game shuts it |
 | drawing order | ask heads, arms and legs up front; add everything else while drawing the part it goes on |

@@ -160,8 +160,7 @@ full for the week, two hearts of trust, and **3 stars once a day**. The home say
 bath day for someone.
 
 **Its coat** is picked by the kid when making a pet ("What's its coat like?" - fluffy fur, shiny
-scales, soft feathers, smooth skin) and changed in Fix; pets from before have one guessed from
-their parts (fins: scales, wings: feathers, else fur). The drawing is never read.
+scales, soft feathers, smooth skin); pets from before have one guessed from their parts (fins: scales, wings: feathers, else fur). The drawing is never read.
 
 The drawer also keeps the **Sponge** ("soapy") and **Brush** ("fluffy") for in-between: the
 sponge rubs off mud (and a pet shakes dry, a little cleaner), the brush gives hearts like
@@ -245,14 +244,14 @@ Two seconds' rest between calls. Listening is **off until tapped**, stops when t
 left, and the first time asks "Call your pets?" (the same mic yes as Settings). **Tapping the
 ground** does the same without the mic, and a tap wakes a sleeper.
 
-## Fixing and letting go (built)
+## Its card, and letting go (built)
+
+**A pet's drawings are final once it is made** - there is no going back to redraw, add or take
+off parts later (decided: the drawing is the pet). While making it, Back and drafts still let a
+kid change a step before they finish.
 
 From the pet panel (tap a pet in its home):
-- **Fix** (`FixScreen`): redraw a part starting from the old drawing (draw on it, rub out, or
-  clear and start again - it keeps its joints, so it stays where it was), add a part to its body,
-  head, arms or legs, take a part off (and everything on it), move parts, and change its name,
-  size, place, personality, favourites and voice. Done saves; "Forget changes" leaves the pet as
-  it was. A creature always keeps its body, eyes and a mouth.
+- **Journal**: its journal (see Photos and the journal).
 - **Voice**: straight to the sound maker.
 - **Move**: to another home with a free room, or build a new one.
 - **Let go** (`LetGoScreen`): the pet goes off "to live in the wild" - gentle, and final. The

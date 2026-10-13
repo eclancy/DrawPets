@@ -59,7 +59,7 @@ static func load_pet(id: String) -> Dictionary:
 	return pet
 
 
-## Gone for good - a pet let go to live in the wild (FixScreen).
+## Gone for good - a pet let go to live in the wild (LetGoScreen).
 static func delete_pet(id: String) -> void:
 	var dir := folder(id)
 	var d := DirAccess.open(dir)
