@@ -43,6 +43,10 @@ var game: GameRoot
 var home: Dictionary
 var focus_id := ""
 var first_visit := false
+## A Beginner fun day held here (FunDays): "party" (friends come to play) or "photo" (Photo Day).
+var fun_day := ""
+## Party guests: friendly pets who wander about, dance and say hello - just visiting.
+var guests: Array[Creature] = []
 
 var pets: Array = []
 var creatures: Array[Creature] = []
@@ -198,6 +202,7 @@ func _ready() -> void:
 			else:
 				_go_to_bed(c, true)
 	_greet()
+	_start_fun_day()
 	print("[timing] home %d ms (%d pets)" % [(Time.get_ticks_usec() - t0) / 1000, creatures.size()])
 
 
@@ -285,8 +290,8 @@ func _build_hud() -> void:
 	right.add_child(UI.star_counter(game.profile, 40))
 	right.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(game.go_place.bind(home["id"])),
 		40, Vector2(84, 84)))
-	if game.profile.advanced():
-		right.add_child(UI.icon_button("icon_calendar", "Events", func(): game.go_calendar(), 40, Vector2(84, 84)))
+	right.add_child(UI.icon_button("icon_calendar", "Events" if game.profile.advanced() else "Fun days",
+		func(): game.go_calendar(), 40, Vector2(84, 84)))
 	root.add_child(right)
 
 	_hint = UI.title("", 22)
@@ -1857,6 +1862,47 @@ func _came(c: Creature) -> void:
 	_love(c, 1)
 
 
+# --- Fun days (Beginner) --------------------------------------------------------------------
+
+func _start_fun_day() -> void:
+	match fun_day:
+		"party":
+			var friends := FunDays.friends(2)
+			for i in friends.size():
+				var c := Creature.new()
+				c.bounds = GROUND
+				c.in_water = _place.get("water", false)
+				c.position = Vector2(GROUND.end.x - 120.0 - i * 160.0, GROUND.position.y + 60.0 + i * 50.0)
+				world.add_child(c)
+				c.setup(friends[i])
+				c.audible = true
+				c.emote.connect(_on_emote)
+				c.perform("greet", 2.0)
+				guests.append(c)
+			var confetti := PlacePainter.Drift.new()
+			confetti.kind = "sprinkles"
+			add_child(confetti)
+			_show_hint("Party time! %s and %s came to play!" % [friends[0]["name"], friends[1]["name"]])
+			for c in creatures:
+				c.perform("celebrate", 1.6)
+			FunDays.join(game, "party")
+		"photo":
+			open_tab("camera")
+			_show_hint("It's Photo Day! Pick a pose, then Snap! your pets.")
+
+
+## Party guests now and then dance, or come and say hello to one of yours.
+func _guest_tick() -> void:
+	for g in guests:
+		if g.is_busy() or randf() > 0.35:
+			continue
+		if randf() < 0.5 and not creatures.is_empty():
+			var friend: Creature = creatures.pick_random()
+			g.go_to(friend.position + Vector2(randf_range(-90, 90), 6), g.say.bind("heart"))
+		else:
+			g.perform("dance", 2.0)
+
+
 # --- The camera ------------------------------------------------------------------------------
 
 const POSES := [["icon_heart", "Happy", "happy"], ["trick_jump", "Jump", "jump"], ["trick_wave", "Wave", "wave"],
@@ -1926,6 +1972,8 @@ func _photo_done(id: String) -> void:
 	if id != "":
 		_save_all()
 		_show_hint("In the album - and in their journals!")
+		if fun_day == "photo":
+			FunDays.join(game, "photo")
 
 
 func _open_album() -> void:
@@ -2271,6 +2319,7 @@ func _process(delta: float) -> void:
 	_ai_in -= delta
 	if _ai_in <= 0.0:
 		_ai_in = 1.2
+		_guest_tick()
 		_night_tick()
 		_mud_tick()
 		var night := Clock.is_night()

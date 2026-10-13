@@ -18,6 +18,8 @@ const STAND := Vector2(640, 612)
 var game: GameRoot
 var home: Dictionary
 var pet_id := ""
+## A Beginner Spa Day (FunDays): the same routine, bubblier, whatever day its bath is.
+var spa := false
 
 var pet: Dictionary
 var creature: Creature
@@ -99,7 +101,7 @@ func _build_hud() -> void:
 	col.add_theme_constant_override("separation", 6)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hud_root.add_child(col)
-	_title = UI.title("Bath day for %s %s!" % [pet["name"], BathDay.where(_spot)], 30)
+	_title = UI.title(("Spa Day for %s %s!" if spa else "Bath day for %s %s!") % [pet["name"], BathDay.where(_spot)], 30)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_title)
 	var row := HBoxContainer.new()
@@ -325,6 +327,11 @@ func _all_done() -> void:
 		game.reward(5 * Stats.trust(pet), "%s trusts you more! (%d hearts)" % [pet["name"], Stats.trust(pet)])
 	Journal.add_once(pet, "first_bath_day", "Had its first bath day - squeaky clean!")
 	game.reward_daily("bath_day", 1, 3, "Bath day done - %s is squeaky clean!" % pet["name"])
+	if spa:
+		FunDays.join(game, "spa")
+		for i in 10:
+			_on_emote("bubble", creature.global_position + Vector2(randf_range(-0.6, 0.6) * creature.height_px,
+				-randf_range(0.0, 1.2) * creature.height_px))
 	PetStore.save_pet(pet)
 	_hint.text = "All done - squeaky clean! See you next bath day."
 	_home_btn.visible = true

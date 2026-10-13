@@ -76,6 +76,13 @@ func _draw() -> void:
 			draw_colored_polygon(pts, Color("#f4fbff"))
 			pts.append(pts[0])
 			draw_polyline(pts, Color("#7fb7e6"), 2.5, true)
+		"confetti":
+			var colors := [Color("#f7a6c8"), Color("#9cc9ef"), Color("#ffd166"), Color("#a9dd9a"), Color("#c3a9ec")]
+			for i in 7:
+				var p := Vector2(Crayon.noise(_seed, i) * 40.0, Crayon.noise(_seed + 3, i) * 26.0)
+				var a := Crayon.noise(_seed + 5, i) * PI
+				var d := Vector2(cos(a), sin(a)) * 6.0
+				draw_line(p - d, p + d, colors[i % colors.size()], 5.0, true)
 		"dirt":
 			for i in 5:
 				draw_circle(Vector2(Crayon.noise(_seed, i) * 22.0, Crayon.noise(_seed + 3, i) * 10.0),

@@ -87,6 +87,14 @@ faster for a clever pet; the Trick Show uses the pet's own cards (`pet-life.md`)
 A camera in every home - poses, Snap!, frames and stickers - an album that stays on the device,
 and a journal for each pet that writes itself (`pet-life.md`).
 
+## M1.14 - Beginner and Advanced (built)
+
+A first-start choice: Beginner (caretaking, gentle fun days, no stats or contests) or Advanced
+(adds stats, training and competitions); switched by a grown-up in Settings. A weekly bath day
+with the whole routine (nails, wash, teeth, coat) at a bath spot for each place; a coat picked
+for every pet; a food bowl in every home; seven fun days for Beginner (`pet-life.md`,
+`competitions.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a

@@ -35,11 +35,11 @@ static func load_or_new() -> Profile:
 	var parsed = JSON.parse_string(text) if text != "" else null
 	p.data = parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 	for key in ["stars", "home_slots", "homes", "owned", "items", "places", "results", "daily",
-			"once", "settings", "photos"]:
+			"once", "settings", "photos", "fun_days"]:
 		if not p.data.has(key):
 			p.data[key] = {"stars": 0, "home_slots": START_HOMES, "homes": [], "owned": {},
 				"items": [], "places": [], "results": {}, "daily": {}, "once": {},
-				"settings": DEFAULT_SETTINGS.duplicate(), "photos": []}[key]
+				"settings": DEFAULT_SETTINGS.duplicate(), "photos": [], "fun_days": {}}[key]
 	for k in DEFAULT_SETTINGS:
 		if not p.data["settings"].has(k):
 			p.data["settings"][k] = DEFAULT_SETTINGS[k]

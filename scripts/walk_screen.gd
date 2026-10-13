@@ -24,6 +24,8 @@ const GLINTS := 2
 var game: GameRoot
 var home: Dictionary
 var pet_id := ""
+## A Beginner Treasure Hunt (FunDays): three glints, whatever was found today.
+var treasure := false
 
 var pet: Dictionary
 var creature: Creature
@@ -90,10 +92,10 @@ func _ready() -> void:
 ## Glints in the grass along the way - as many as there are presents left today, two at most.
 func _hide_presents() -> void:
 	var found := int(game.profile.today().get("present_found", 0))
-	var n := mini(GLINTS, PRESENTS_A_DAY - found)
+	var n := 3 if treasure else mini(GLINTS, PRESENTS_A_DAY - found)
 	for i in n:
 		var g := Glint.new()
-		g.position = Vector2(TILE * (1.4 + i * 2.1) + randf_range(0, 500), randf_range(500, 600))
+		g.position = Vector2(TILE * (1.4 + i * (1.3 if treasure else 2.1)) + randf_range(0, 500), randf_range(500, 600))
 		_world.add_child(g)
 		_glints.append(g)
 
@@ -107,7 +109,7 @@ func _build_hud() -> void:
 	var back := UI.icon_button("icon_home", "Home", go_home, 40, Vector2(92, 84))
 	back.position = Vector2(12, 12)
 	_hud_root.add_child(back)
-	var title := UI.title("Out for a walk with %s" % pet["name"], 30)
+	var title := UI.title(("Treasure Hunt with %s!" if treasure else "Out for a walk with %s") % pet["name"], 30)
 	title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	title.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	title.offset_top = 16
@@ -226,6 +228,8 @@ func _dug_up(g: Glint) -> void:
 	g.queue_free()
 	game.profile.count_today("present_found", 99)
 	Journal.add(pet, "Dug up a present on a walk!")
+	if treasure:
+		FunDays.join(game, "treasure")
 	if Mud.splat(pet, 1, "front", _mud_kind) > 0:
 		creature.refresh_mud()
 	var holder := Node2D.new()

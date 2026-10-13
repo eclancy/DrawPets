@@ -64,6 +64,7 @@ const ASSETS := {
 	"icon_bath": {"pivot": "center", "look": "a little bathtub on feet, heaped with bubbles"},
 	"icon_walk": {"pivot": "center", "look": "a red lead with a loop handle, and two paw prints"},
 	"icon_camera": {"pivot": "center", "look": "a chunky toy camera, big lens, a flash"},
+	"icon_rosette": {"pivot": "center", "look": "a rainbow rosette with a heart in the middle and two ribbon tails - for joining in, not winning"},
 	"icon_album": {"pivot": "center", "look": "a photo album open, two little photos in it"},
 	"icon_journal": {"pivot": "center", "look": "a diary with a heart on the cover and a ribbon bookmark"},
 	"icon_pantry": {"pivot": "center", "look": "picnic basket with an apple"},
@@ -186,6 +187,8 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_icon_walk(c)
 		"icon_camera":
 			_icon_camera(c)
+		"icon_rosette":
+			_icon_rosette(c)
 		"icon_album":
 			_icon_album(c)
 		"icon_journal":
@@ -1342,6 +1345,24 @@ static func _icon_bath(c: CanvasItem) -> void:
 		Crayon.marker_line(c, b, Color("#7fb7e6"), 9.0, 9340 + i)
 		Crayon.marker_line(c, PackedVector2Array([at + Vector2(-r * 0.55, -r * 0.1), at + Vector2(-r * 0.4, -r * 0.45),
 			at + Vector2(-r * 0.1, -r * 0.6)]), Color(1, 1, 1, 0.95), 8.0, 9350 + i, false)
+
+
+## Marker: a rosette for joining in - rainbow petals round a heart, two ribbon tails. No number,
+## no place: everybody gets one.
+static func _icon_rosette(c: CanvasItem) -> void:
+	var tails := [[Vector2(200, 300), Vector2(150, 480)], [Vector2(312, 300), Vector2(362, 480)]]
+	for i in tails.size():
+		var a: Vector2 = tails[i][0]
+		var b: Vector2 = tails[i][1]
+		_mark(c, PackedVector2Array([a + Vector2(-34, 0), a + Vector2(34, 0), b + Vector2(30, 0), b + Vector2(0, -36),
+			b + Vector2(-30, 0)]), [Color("#9cc9ef"), Color("#f7a6c8")][i], 9801 + i, 9.0)
+	var colors := [Color("#f7a1a1"), Color("#f9c98a"), Color("#f7e48a"), Color("#a9dd9a"), Color("#9cc9ef"), Color("#c3a9ec")]
+	for i in 12:
+		var a := TAU * i / 12.0
+		_mark(c, Crayon.ellipse(Vector2(256, 230) + Vector2(cos(a), sin(a)) * 112.0, Vector2(52, 52), 18),
+			colors[i % colors.size()], 9810 + i, 8.0)
+	_mark(c, Crayon.ellipse(Vector2(256, 230), Vector2(100, 100), 32), Color("#fffdf6"), 9830, 9.0)
+	_mark(c, Crayon.heart(Vector2(256, 236), 120.0), Color("#f2557a"), 9831, 8.0)
 
 
 ## Marker: a chunky toy camera - a mint body, a big lavender lens, a yellow flash.

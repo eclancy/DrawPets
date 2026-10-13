@@ -10,8 +10,9 @@ Players are 10-12. **M0 and M1 are built**: drawing and assembly; homes with sev
 decorating, food/toys/clothes (drawn, starter kit or shop) described by preset words; six stats
 trained by play; gold stars and a shop; a weekly competition calendar with six events and eight
 rival pets. Since then: day and night from the clock, mud and the bath, walks with presents to
-draw, trick cards taught by swipe, a camera with an album and a journal per pet, and calling
-by loudness (`.ai/roadmap.md`).
+draw, trick cards taught by swipe, a camera with an album and a journal per pet, calling by
+loudness, a weekly bath day, and **Beginner and Advanced modes** - Beginner is caretaking and
+gentle fun days with no stats, scores or contests (`.ai/roadmap.md`).
 
 Everything is built in code; `scenes/Main.tscn` only attaches `GameRoot`. `GameRoot` owns the
 screen flow and the family save (`Profile`) and swaps screens as its own children: home ->

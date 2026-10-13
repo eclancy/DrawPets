@@ -4,6 +4,9 @@ The calendar, the six events (one per stat), the cups, and the rule that makes t
 Code: `Events`, `CalendarScreen`, `EventScreen`, `CompetitionScreen`, `TrackGame`, `TugGame`,
 `TrickGame`, `StyleGame`, `Rivals`.
 
+**Competitions are Advanced mode only** (`pet-life.md`). Beginner has fun days instead - see the
+end of this doc.
+
 ## The rule
 
 **Every event is the pet's stat plus the kid's timing.** A well-trained pet does well with
@@ -52,6 +55,26 @@ picked by a seed from the date, with stats for that cup - strongest in the event
 spread out so the field has an easy one, a middling one and a tough one.
 
 Rivals are friendly: they cheer and celebrate, and nothing anyone says is unkind.
+
+## Beginner fun days (built)
+
+In Beginner the same calendar shows a **fun day every day** (`FunDays`, worked out from the date
+like the competitions). Nobody is scored, nobody is ranked, and there are no rivals: the rival
+pets come as friendly guests and as an audience that cheers for everything. Pick who's coming
+(`FunDayScreen`), and off it goes:
+
+| day | fun day | what happens |
+|---|---|---|
+| Sun | Pet Party | two friendly pets visit its home, dance and say hello; confetti |
+| Mon | Treasure Hunt | a walk with three glints to dig up, whatever was found today |
+| Tue | Talent Show | on stage, it does the tricks it knows (and a wave and a dance anyone can do); the crowd cheers each one; then a bow (`StageScreen`) |
+| Wed | Spa Day | the bath day routine, bubblier, whatever day its bath is |
+| Thu | Costume Parade | dress it up from the wardrobe, then down the catwalk, cameras flashing |
+| Fri | Dance Party | everyone from its home on stage; tap a move and they all do it |
+| Sat | Photo Day | its home with the camera open |
+
+Joining in puts a **rosette** on the calendar - a rainbow one with a heart, no number - and pays
+**3 stars once a day**, with a line in the journal.
 
 ## Ideas not built yet
 

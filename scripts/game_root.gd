@@ -101,7 +101,7 @@ func start_creator() -> Creator:
 
 
 ## Visits a home. `focus` is the pet the visit is about (selected, greeted first).
-func go_place(home_id: String, focus := "", first_visit := false) -> void:
+func go_place(home_id: String, focus := "", first_visit := false, fun_day := "") -> void:
 	var h := profile.home(home_id)
 	if h.is_empty():
 		go_home()
@@ -111,6 +111,7 @@ func go_place(home_id: String, focus := "", first_visit := false) -> void:
 	s.home = h
 	s.focus_id = focus
 	s.first_visit = first_visit
+	s.fun_day = fun_day
 	show_screen(s)
 
 
@@ -270,8 +271,8 @@ func back_to_place(_item: Dictionary, home_id: String, focus := "") -> void:
 	go_place(home_id, focus)
 
 
-## Out for a walk with one pet (WalkScreen).
-func go_walk(home_id: String, pet_id: String) -> void:
+## Out for a walk with one pet (WalkScreen) - a Treasure Hunt on that fun day.
+func go_walk(home_id: String, pet_id: String, treasure := false) -> void:
 	var h := profile.home(home_id)
 	if h.is_empty():
 		go_home()
@@ -280,6 +281,7 @@ func go_walk(home_id: String, pet_id: String) -> void:
 	s.game = self
 	s.home = h
 	s.pet_id = pet_id
+	s.treasure = treasure
 	show_screen(s)
 
 
@@ -300,8 +302,8 @@ func go_journal(pet_id: String, home_id: String) -> void:
 	show_screen(s)
 
 
-## Bath day for one pet (BathScreen).
-func go_bath(home_id: String, pet_id: String) -> void:
+## Bath day for one pet (BathScreen) - a Spa Day on that fun day.
+func go_bath(home_id: String, pet_id: String, spa := false) -> void:
 	var h := profile.home(home_id)
 	if h.is_empty():
 		go_home()
@@ -309,6 +311,25 @@ func go_bath(home_id: String, pet_id: String) -> void:
 	var s := BathScreen.new()
 	s.game = self
 	s.home = h
+	s.pet_id = pet_id
+	s.spa = spa
+	show_screen(s)
+
+
+## A Beginner fun day (FunDays): pick who's coming.
+func go_fun_day(event: Dictionary) -> void:
+	var s := FunDayScreen.new()
+	s.game = self
+	s.event = event
+	show_screen(s)
+
+
+## A fun day on the stage: the Talent Show, the Dance Party or the Costume Parade (StageScreen).
+func go_stage(kind: String, home_id: String, pet_id: String) -> void:
+	var s := StageScreen.new()
+	s.game = self
+	s.kind = kind
+	s.home = profile.home(home_id)
 	s.pet_id = pet_id
 	show_screen(s)
 

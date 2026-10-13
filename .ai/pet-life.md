@@ -52,7 +52,7 @@ keep competing away from kids who find it hard.
 | trust hearts, gold stars, the shop, adopting, drawing things | yes | yes |
 | the pet card | a "today" list (fed, played, bath day) | the six stats and levels |
 | stats | kept quietly, never shown: no level-up toasts, stars or journal lines | shown and trained |
-| the calendar | gentle fun days, no scores, no rivals | competitions with cups and rivals |
+| the calendar | a fun day every day - Pet Party, Treasure Hunt, Talent Show, Spa Day, Costume Parade, Dance Party, Photo Day - no scores, no rivals, a rosette for joining in (`competitions.md`) | competitions with cups and rivals |
 | Star Snack (a training boost), "trains twice as fast" in the shop | hidden | yes |
 
 ## Stats (built)

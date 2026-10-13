@@ -1,8 +1,9 @@
 class_name CalendarScreen
 extends Control
-## The competition calendar: this month, a competition most days, today's circled, and a
-## ribbon on every day a pet placed. Worked out on this device from the date (Events), so it
-## needs no internet and is the same for everyone in the family.
+## The calendar: this month, today's circled. In Advanced, a competition most days and a ribbon
+## on every day a pet placed (Events); in Beginner, a fun day every day and a rosette on every day
+## the family joined in (FunDays). Worked out on this device from the date, so it needs no
+## internet and is the same for everyone in the family.
 
 var game: GameRoot
 var _month_offset := 0
@@ -61,17 +62,63 @@ func _build() -> void:
 		grid.add_child(Control.new())
 	var today := Events.today()
 	var day := first
+	var adv := game.profile.advanced()
+	if not adv:
+		today = FunDays.today()
 	while true:
-		var ev := Events.for_unix(day)
+		var ev := Events.for_unix(day) if adv else FunDays.for_unix(day)
 		if int(ev["month"]) != month:
 			break
-		grid.add_child(_day_cell(ev, today))
+		grid.add_child(_day_cell(ev, today) if adv else _fun_cell(ev, today))
 		day += 86400
 	col.add_child(grid)
 
-	var info := Events.info(today["kind"])
-	var go := UI.big_button("Today: %s - let's go!" % info["name"], func(): game.go_event(today))
-	col.add_child(go)
+	if adv:
+		var info := Events.info(today["kind"])
+		col.add_child(UI.big_button("Today: %s - let's go!" % info["name"], func(): game.go_event(today)))
+	else:
+		var fun := FunDays.info(today["kind"])
+		col.add_child(UI.big_button("Today: %s - let's go!" % fun["name"], func(): game.go_fun_day(today)))
+
+
+## A Beginner day: its fun day, and a rosette if the family joined in.
+func _fun_cell(ev: Dictionary, today: Dictionary) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(150, 78)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var is_today: bool = ev["key"] == today["key"]
+	var past: bool = ev["key"] < today["key"]
+	if is_today:
+		b.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.ACCENT, 5))
+	elif past:
+		b.modulate = Color(1, 1, 1, 0.6)
+	var info := FunDays.info(ev["kind"])
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UI.full_rect(row)
+	row.offset_left = 8
+	row.add_child(UI.label(str(ev["day"]), 22))
+	row.add_child(UI.icon(info["icon"], 34, "none"))
+	var name := UI.label(info["name"], 14, true)
+	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name)
+	if FunDays.joined(game.profile, ev["key"]):
+		row.add_child(UI.icon("icon_rosette", 34, "none"))
+	b.add_child(row)
+	b.pressed.connect(_fun_day_tapped.bind(ev, is_today, past))
+	return b
+
+
+func _fun_day_tapped(ev: Dictionary, is_today: bool, past: bool) -> void:
+	var name: String = FunDays.info(ev["kind"])["name"]
+	if is_today:
+		game.go_fun_day(ev)
+	elif past:
+		game.toast("That was the %s! There's another next week." % name, "icon_calendar")
+	else:
+		game.toast("The %s is on the %s - see you then!" % [name, _nth(int(ev["day"]))], "icon_calendar")
 
 
 func _day_cell(ev: Dictionary, today: Dictionary) -> Button:

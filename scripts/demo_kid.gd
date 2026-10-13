@@ -28,6 +28,7 @@ func run() -> void:
 	await _settings()
 	await _shop()
 	await _competitions()
+	await _beginner()
 	game.go_home()
 	await _wait(1.0)
 	await _shot("home")
@@ -748,6 +749,49 @@ func _shop() -> void:
 
 
 # --- Competitions ----------------------------------------------------------------------------
+
+## The Beginner game: the pet card's today list, the fun-day calendar, and a Talent Show - no
+## stats, no scores. (Fun days follow the real date, so the demo plays the Talent Show whatever
+## today is.)
+func _beginner() -> void:
+	game.profile.set_mode("beginner")
+	var home_id: String = game.profile.homes()[0]["id"]
+	game.go_place(home_id)
+	await _wait(1.2)
+	var place := _place()
+	place._show_panel(place.creatures[0])
+	await _wait(0.3)
+	await _shot("beginner_card")
+	game.go_calendar()
+	await _wait(1.0)
+	await _shot("beginner_calendar")
+	game.go_fun_day(FunDays.today())
+	await _wait(0.8)
+	await _shot("fun_day_pick")
+	var pet_id: String = game.profile.homes()[0]["pets"][0]
+	game.go_stage("talent", home_id, pet_id)
+	await _wait(1.0)
+	var stage := game.screen as StageScreen
+	for t in ["spin", "wave", "dance"]:
+		stage.act(t)
+		await _wait(1.4)
+	await _shot("talent_show")
+	stage.finale()
+	await _wait(1.2)
+	await _shot("talent_show_rosette")
+	game.go_stage("parade", home_id, pet_id)
+	await _wait(1.0)
+	stage = game.screen as StageScreen
+	stage.wear(Items.get_item("hat_crown"))
+	stage.parade()
+	await _wait(2.0)
+	await _shot("costume_parade")
+	await _wait(3.0)
+	game.go_place(home_id, pet_id, false, "party")
+	await _wait(2.0)
+	await _shot("pet_party")
+	game.profile.set_mode("advanced")
+
 
 func _competitions() -> void:
 	game.go_calendar()
