@@ -2,8 +2,8 @@
 
 The plan for getting DrawPets onto real phones and tablets and finding what breaks there.
 **In progress** (2026-10-11): everything on the PC is set up and both presets export signed APKs
-(`build/drawpets-debug.apk`, `build/drawpets-demo.apk`; ~103 MB since 2026-10-15, when exports
-moved to Gradle for the Nearby plugin) with the right manifest and every `pivots.json` and voice
+(`build/drawpets-debug.apk`, `build/drawpets-demo.apk`; ~54 MB, built by Gradle since
+2026-10-15 for the Nearby plugin) with the right manifest and every `pivots.json` and voice
 file inside. Next: a device. Nothing has run on a phone yet - everything
 so far has been tested only on Windows with a mouse standing in for a finger.
 
@@ -133,10 +133,9 @@ Godot v2 Android plugin in Java. The game finds it with `Engine.get_singleton("D
   running inherits the console's output, and `_console.exe` sits after `[ DONE ] export` (the
   APK is already finished) until the daemon idles out hours later. The editor's own export is
   not affected.
-- **APK size**: ~100 MB instead of ~49 MB, because Gradle stores `libgodot_android.so`
-  uncompressed (Android's recommended way: it loads straight from the APK, so the installed app
-  is no bigger). `gradle_build/compress_native_libraries=true` in a preset would shrink the
-  download back if that ever matters.
+- **APK size**: ~54 MB. Gradle would store `libgodot_android.so` uncompressed (~100 MB APK),
+  so both presets set `gradle_build/compress_native_libraries=true`; Android unpacks it once at
+  install. Turn it off only if start-up time ever matters more than the download.
 
 **Permissions** (in the plugin's manifest; the dangerous ones are asked for by
 `request_permissions()`, only those this Android version needs):
