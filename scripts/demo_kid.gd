@@ -320,6 +320,14 @@ func _swap() -> void:
 	game.go_swap()
 	await _wait(1.0)
 	await _shot("friends_page")
+	# The swap code page - listening on this PC only, so no firewall prompt.
+	var was := LanLink.bind_host
+	LanLink.bind_host = "127.0.0.1"
+	(game.screen as SwapScreen)._use_way("code")
+	await _wait(0.8)
+	await _shot("swap_code")
+	(game.screen as SwapScreen)._main()
+	LanLink.bind_host = was
 	var home_id: String = game.profile.homes()[0]["id"]
 	game.profile.today().erase("visitor_" + home_id)
 	game.go_place(home_id)

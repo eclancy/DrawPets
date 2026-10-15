@@ -14,7 +14,6 @@ const SINGLETON := "DrawPetsNearby"
 var _n: Object
 var _session := 0
 var _endpoint := ""
-var _friend := ""
 
 
 ## True on a phone with the plugin and Google Play services.
@@ -65,8 +64,8 @@ func _on_initiated(endpoint_id: String, name: String, digits: String, _incoming:
 		_n.reject_connection(endpoint_id)
 		return
 	_endpoint = endpoint_id
-	_friend = name.split("|")[0]
-	check.emit(_friend, digits)
+	friend_name = name.split("|")[0]
+	check.emit(friend_name, digits)
 
 
 func confirm(yes: bool) -> void:

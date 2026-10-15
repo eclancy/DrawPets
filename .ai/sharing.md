@@ -33,6 +33,20 @@ you have met. (Not legal advice; revisit with a lawyer before adding anything on
 4. **All of each family's pets** hop across (`PetPack`), and are saved as visitors (`Visitors`).
 5. A first swap with a family: 3 stars, once.
 
+**Or with a code** ("Swap with a code" beside the big button, and on the what-to-try page) - for
+a friend whose phone can't find this one: an iPhone (when there is an iOS version; Nearby's iOS
+library is not ready, and an iPhone may only broadcast with Apple's say-so), or Wi-Fi that won't
+pass a broadcast. Both phones on the same Wi-Fi, or one on the other's hotspot (which needs no
+internet or data plan):
+
+1. Each phone shows its **swap code** (a QR code, `QrCode`) beside a **Scan my friend's code**
+   button. Either kid scans the other's.
+2. The code holds where to find the phone on the room's network and a one-time secret
+   (`LanLink.code`). The scanner calls straight there; the phone that showed it says nothing until
+   it hears the right secret. Scanning was the check, so there are no pictures - the pets go.
+3. The camera is asked for only when a kid taps Scan, after a kid-words explanation, and only to
+   read the code: the scanner (ZXing, a plain pattern decoder - no AI) keeps no picture.
+
 Before Nearby's Android permission pop-up the game explains it in kid words ("Tap ALLOW!"). If
 anything goes wrong the kid sees a picture checklist (is the swap screen open on both? is
 Bluetooth on? same Wi-Fi?) - never an error message.
@@ -47,6 +61,9 @@ Bluetooth on? same Wi-Fi?) - never an error message.
 3. **Everything received is untrusted** and checked field by field against the game's own
    tables (`PetPack.unpack`): sizes capped, ids and file names restricted, every drawing
    re-decoded and size-limited, names cut to 24 characters with control characters removed.
+   **A scanned code is untrusted too** (`LanLink.read_code`): only our own format, only our own
+   ports, only home, school and hotspot addresses (10.x, 172.16-31.x, 192.168.x), at most three -
+   whatever QR code a kid points the camera at, the game never calls out to the internet.
 4. **No contact between kids**: no messages, no chat, no kid names - families are "the Mango
    family", a made-up nickname (`Family`). A visit is pets playing.
 5. **Removable**: a grown-up holds a family's button on the Friends page to remove it - its pets

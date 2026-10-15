@@ -3,6 +3,7 @@ package dev.ecec.drawpets.nearby;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -28,6 +29,8 @@ import com.google.android.gms.nearby.connection.Payload;
 import com.google.android.gms.nearby.connection.PayloadCallback;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
+import com.journeyapps.barcodescanner.ScanIntentResult;
+import com.journeyapps.barcodescanner.ScanOptions;
 
 import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
@@ -54,7 +57,8 @@ import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Phone-to-phone pet swapping for DrawPets over Google Nearby Connections (Bluetooth and Wi-Fi,
- * no internet, no server), plus the Wi-Fi multicast lock the LAN fallback needs.
+ * no internet, no server), plus the Wi-Fi multicast lock the LAN fallback needs, and the camera
+ * scanner that reads a friend's swap code (ZXing - a plain pattern decoder, no AI).
  *
  * GDScript: Engine.get_singleton("DrawPetsNearby"). Methods are called on Godot's render thread;
  * Nearby answers on Android's main thread; every signal is handed back to the render thread, so
@@ -67,6 +71,11 @@ import java.util.concurrent.RejectedExecutionException;
 public class DrawPetsNearby extends GodotPlugin {
     private static final String TAG = "DrawPetsNearby";
     private static final int PERMISSION_REQUEST = 0x4E42; // "NB"
+    private static final int CAMERA_REQUEST = 0x5143; // "QC"
+    private static final int SCAN_REQUEST = 0x5153; // "QS"
+    /** A swap code is ~50 characters; anything far longer is not one. */
+    private static final int MAX_CODE_CHARS = 512;
+    private static final String CAMERA = "android.permission.CAMERA";
     /** Refuse anything bigger: a pet is a few MB at most, and it is all read into memory. */
     private static final long MAX_RECEIVE_BYTES = 64L * 1024 * 1024;
     /** At most this often per transfer, plus the last one. */
@@ -129,6 +138,9 @@ public class DrawPetsNearby extends GodotPlugin {
         s.add(new SignalInfo("payload_received", String.class, byte[].class));
         s.add(new SignalInfo("transfer_progress", String.class, Integer.class, Integer.class, Boolean.class));
         s.add(new SignalInfo("permissions_result", Boolean.class));
+        s.add(new SignalInfo("camera_result", Boolean.class));
+        s.add(new SignalInfo("code_scanned", String.class));
+        s.add(new SignalInfo("scan_cancelled"));
         s.add(new SignalInfo("error", String.class));
         return s;
     }
@@ -191,6 +203,10 @@ public class DrawPetsNearby extends GodotPlugin {
     @Override
     public void onMainRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onMainRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_REQUEST) {
+            emit("camera_result", camera_allowed());
+            return;
+        }
         if (requestCode != PERMISSION_REQUEST) {
             return;
         }
@@ -672,6 +688,78 @@ public class DrawPetsNearby extends GodotPlugin {
             if (multicastLock != null && multicastLock.isHeld()) {
                 multicastLock.release();
             }
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Reading a friend's swap code: ZXing's scanner screen opens over the game until it reads a
+    // QR code or the kid backs out. The game checks what the code says (LanLink.read_code).
+
+    /** True when this device has a camera to scan with. */
+    @UsedByGodot
+    public boolean can_scan() {
+        Context c = getContext();
+        return c != null && c.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY);
+    }
+
+    @UsedByGodot
+    public boolean camera_allowed() {
+        Context c = getContext();
+        return c != null && c.checkSelfPermission(CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Asks for the camera; answers with camera_result. */
+    @UsedByGodot
+    public void request_camera() {
+        if (camera_allowed()) {
+            emit("camera_result", true);
+            return;
+        }
+        runOnHostThread(() -> {
+            Activity a = getActivity();
+            if (a == null) {
+                emit("camera_result", false);
+                return;
+            }
+            a.requestPermissions(new String[] {CAMERA}, CAMERA_REQUEST);
+        });
+    }
+
+    /** Opens the scanner; answers with code_scanned(text) or scan_cancelled. */
+    @UsedByGodot
+    public void scan_code(String prompt) {
+        runOnHostThread(() -> {
+            Activity a = getActivity();
+            if (a == null) {
+                emit("scan_cancelled");
+                return;
+            }
+            ScanOptions o = new ScanOptions();
+            o.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
+            o.setPrompt(nonNull(prompt));
+            o.setBeepEnabled(false);
+            o.setBarcodeImageEnabled(false);
+            o.setOrientationLocked(true);
+            try {
+                a.startActivityForResult(o.createScanIntent(a), SCAN_REQUEST);
+            } catch (Exception e) {
+                Log.w(TAG, "The scanner did not open", e);
+                emit("scan_cancelled");
+            }
+        });
+    }
+
+    @Override
+    public void onMainActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onMainActivityResult(requestCode, resultCode, data);
+        if (requestCode != SCAN_REQUEST) {
+            return;
+        }
+        String text = ScanIntentResult.parseActivityResult(resultCode, data).getContents();
+        if (text != null && text.length() <= MAX_CODE_CHARS) {
+            emit("code_scanned", text);
+        } else {
+            emit("scan_cancelled");
         }
     }
 

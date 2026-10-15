@@ -106,7 +106,10 @@ fetch together, sleeping side by side (`pet-life.md`).
 
 Phone to phone, in person, no server: Nearby Connections (or the same Wi-Fi / a hotspot), the
 same three pictures on both phones, all of each family's pets swapped; friends' pets then visit
-(`sharing.md`).
+(`sharing.md`). Or with a code: one phone shows a QR code, the other scans it - the way an
+Android phone and an iPhone will swap, once there is an iOS version.
+
+Still to try on real phones: Nearby between two Android devices, and the camera scanner.
 
 ## M2 - On a real phone - see `android.md`
 
@@ -129,7 +132,10 @@ Would need a server holding children's content, so verifiable parental consent f
 
 ## M6 - iOS
 
-Needs a Mac with Xcode and an Apple developer account.
+Needs a Mac with Xcode and an Apple developer account. Swapping with Android phones goes by code
+(`sharing.md`): the iOS build needs a scanner (AVFoundation reads QR codes without AI) and the
+Local Network usage text for the TCP link - but not Apple's multicast entitlement, because the
+code way never broadcasts.
 
 ## Idea backlog
 

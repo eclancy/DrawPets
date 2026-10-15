@@ -7,6 +7,8 @@ def pluginName = "DrawPetsNearby"
 // Keep in step with NEARBY in addons/drawpets_nearby/drawpets_nearby.gd, which adds the same
 // library to the game's Gradle build (an AAR does not carry its dependencies).
 def nearbyVersion = "19.5.1"
+// The swap-code scanner (ZXing). Keep in step with SCANNER in drawpets_nearby.gd too.
+def scannerVersion = "4.3.0"
 
 android {
     namespace "dev.ecec.drawpets.nearby"
@@ -37,6 +39,7 @@ dependencies {
     // Godot provides itself at run time; this is only to compile against.
     compileOnly "org.godotengine:godot:4.5.1.stable"
     implementation "com.google.android.gms:play-services-nearby:$nearbyVersion"
+    implementation "com.journeyapps:zxing-android-embedded:$scannerVersion"
 }
 
 // Every build copies its AAR into the Godot addon, which is committed so an export never needs

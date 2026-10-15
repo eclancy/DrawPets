@@ -94,7 +94,8 @@ so it can never touch a kid's pets.
 Kids swap pets phone to phone over Google's Nearby Connections (Bluetooth and Wi-Fi Direct; no
 internet, no server). GDScript cannot reach it, so this is DrawPets' one piece of native code: a
 Godot v2 Android plugin in Java. The game finds it with `Engine.get_singleton("DrawPetsNearby")`
-(only on Android, and only in a Gradle export).
+(only on Android, and only in a Gradle export). The same plugin opens the camera scanner for
+swapping by code (`scan_code`, below) and holds the Wi-Fi multicast lock for the LAN fallback.
 
 - **Source** - `android_plugin/`, a small Gradle project (committed; `.gdignore` keeps Godot out
   of it): `plugin/src/main/java/dev/ecec/drawpets/nearby/DrawPetsNearby.java` (every method and
@@ -102,8 +103,11 @@ Godot v2 Android plugin in Java. The game finds it with `Engine.get_singleton("D
   `org.godotengine.plugin.v2.DrawPetsNearby` entry Godot looks for). Gradle 8.11.1 (the wrapper)
   and Android Gradle Plugin 8.6.1 - the same as Godot 4.5.1's build template, so one download
   serves both. Java 17, minSdk 24, compileSdk 35, build-tools 35.0.1. It compiles against
-  `org.godotengine:godot:4.5.1.stable` (compileOnly - Godot is already in the app) and
-  `com.google.android.gms:play-services-nearby:19.5.1`.
+  `org.godotengine:godot:4.5.1.stable` (compileOnly - Godot is already in the app),
+  `com.google.android.gms:play-services-nearby:19.5.1` and
+  `com.journeyapps:zxing-android-embedded:4.3.0` (ZXing's scanner screen, Apache 2.0, which
+  brings `com.google.zxing:core:3.4.1`; it is plain pattern decoding, not ML Kit, which would be
+  AI and need Play services).
 - **Building it** - only after changing the Java or its manifest:
   ```
   cd android_plugin
@@ -116,10 +120,11 @@ Godot v2 Android plugin in Java. The game finds it with `Engine.get_singleton("D
   `C:\Users\ericc\.gradle` and the Maven libraries (~7 minutes); after that ~1-2 minutes.
 - **How it gets into an export** - `addons/drawpets_nearby/` is an editor plugin, enabled in
   `project.godot` (`[editor_plugins]`). Its `EditorExportPlugin`, for Android only, hands the
-  export the AAR (`_get_android_libraries`) and the Maven coordinate of play-services-nearby
-  (`_get_android_dependencies` - an AAR does not carry its dependencies, so the game's Gradle
-  build fetches it). Gradle merges the plugin's manifest into the game's. **The Nearby version is
-  written twice**: `nearbyVersion` in `android_plugin/plugin/build.gradle` and `NEARBY` in
+  export the AAR (`_get_android_libraries`) and the Maven coordinates of play-services-nearby and
+  the scanner (`_get_android_dependencies` - an AAR does not carry its dependencies, so the
+  game's Gradle build fetches them). Gradle merges the plugin's manifest into the game's. **Both
+  versions are written twice**: `nearbyVersion` / `scannerVersion` in
+  `android_plugin/plugin/build.gradle` and `NEARBY` / `SCANNER` in
   `addons/drawpets_nearby/drawpets_nearby.gd` - change both.
 - **Exports now use Gradle.** Godot builds the APK from `android/build/` (gitignored: generated
   on each machine from `android_source.zip`). Install it once with the first export:
@@ -154,6 +159,10 @@ declared on every version: `ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`, `CHANGE_WIF
 Wi-Fi and location are `uses-feature required="false"` - swapping is optional, so a store must
 not hide the game from a tablet without one of them.
 
+`CAMERA` is declared on every version and asked for only by `request_camera()`, when a kid taps
+"Scan my friend's code" (after the game explains it); the camera features are
+`required="false"` too. The scanner screen is ZXing's `CaptureActivity`, landscape.
+
 **How the plugin behaves** (what the GDScript side can rely on):
 - Methods run on Godot's thread; Nearby answers on Android's main thread; every signal is handed
   back to Godot's render thread (`runOnRenderThread`), so it arrives between frames like any
@@ -175,6 +184,11 @@ not hide the game from a tablet without one of them.
   should check the permission name before it disconnects.
 - `acquire_multicast_lock()` / `release_multicast_lock()` work without Play services; the lock is
   released when the app closes.
+- Scanning works without Play services too: `can_scan()` (is there a camera), `camera_allowed()`,
+  `request_camera()` -> `camera_result(granted)`, and `scan_code(prompt)`, which opens ZXing's
+  scanner over the game -> `code_scanned(text)` (at most 512 characters) or `scan_cancelled`.
+  The game is paused while the scanner is up, and checks what the text says itself
+  (`LanLink.read_code`).
 
 ## Step 3 - the device
 

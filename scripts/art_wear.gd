@@ -65,6 +65,7 @@ const ASSETS := {
 	"icon_walk": {"pivot": "center", "look": "a red lead with a loop handle, and two paw prints"},
 	"icon_camera": {"pivot": "center", "look": "a chunky toy camera, big lens, a flash"},
 	"icon_friends": {"pivot": "center", "look": "two little phones leaning together, a heart hopping between them"},
+	"icon_code": {"pivot": "center", "look": "a swap code on a cream card: three corner squares, a sprinkle of blocks, a heart"},
 	"icon_rosette": {"pivot": "center", "look": "a rainbow rosette with a heart in the middle and two ribbon tails - for joining in, not winning"},
 	"icon_album": {"pivot": "center", "look": "a photo album open, two little photos in it"},
 	"icon_journal": {"pivot": "center", "look": "a diary with a heart on the cover and a ribbon bookmark"},
@@ -192,6 +193,8 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_icon_rosette(c)
 		"icon_friends":
 			_icon_friends(c)
+		"icon_code":
+			_icon_code(c)
 		"icon_album":
 			_icon_album(c)
 		"icon_journal":
@@ -1364,6 +1367,26 @@ static func _icon_friends(c: CanvasItem) -> void:
 		var at := Vector2(lerpf(170, 342, t), 150 - sin(t * PI) * 90.0)
 		c.draw_circle(at, 7.0, Color("#b48ad8"))
 	_mark(c, Crayon.heart(Vector2(256, 80), 110.0), Color("#f2557a"), 9920, 8.0)
+
+
+## Marker: a picture of a swap code - a cream card, the three corner squares, a sprinkle of blocks
+## and a heart. Only a picture: the real code a phone shows is drawn crisp by QrCode.
+static func _icon_code(c: CanvasItem) -> void:
+	var ink := Color("#6b6593")
+	var card := Color("#fffdf6")
+	_mark(c, Crayon.rounded_rect(Rect2(56, 56, 400, 400), 44), card, 9951, 10.0)
+	var corners := [Vector2(96, 96), Vector2(304, 96), Vector2(96, 304)]
+	for i in corners.size():
+		var at: Vector2 = corners[i]
+		_mark(c, Crayon.rounded_rect(Rect2(at, Vector2(112, 112)), 20), ink, 9952 + i * 3, 8.0)
+		_mark(c, Crayon.rounded_rect(Rect2(at + Vector2(24, 24), Vector2(64, 64)), 12), card, 9953 + i * 3, 6.0)
+		_mark(c, Crayon.rounded_rect(Rect2(at + Vector2(40, 40), Vector2(32, 32)), 8), ink, 9954 + i * 3, 5.0)
+	var blocks := [Vector2(236, 100), Vector2(250, 166), Vector2(110, 240), Vector2(176, 254), Vector2(320, 316),
+		Vector2(384, 330), Vector2(330, 384), Vector2(396, 396), Vector2(260, 392)]
+	for i in blocks.size():
+		var at: Vector2 = blocks[i]
+		_mark(c, Crayon.rounded_rect(Rect2(at - Vector2(20, 20), Vector2(40, 40)), 8), ink, 9970 + i, 5.0)
+	_mark(c, Crayon.heart(Vector2(256, 262), 96.0), Color("#f2557a"), 9990, 8.0)
 
 
 ## Marker: a rosette for joining in - rainbow petals round a heart, two ribbon tails. No number,

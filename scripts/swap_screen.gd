@@ -5,8 +5,10 @@ extends Control
 ##   2. "Found the Mango family!" and three pictures - the same on both phones - "Yes, that's them"
 ##   3. all of each family's pets hop across, and can visit the other family from then on
 ## The game picks the way: Nearby Connections where there are Google Play services, else the
-## same Wi-Fi or a hotspot (SwapLink). If something is off, a picture checklist says what to try.
-## A grown-up removes a friend family by holding its button.
+## same Wi-Fi or a hotspot (SwapLink). Or by code: one phone shows a swap code (QrCode) and the
+## other scans it - for a friend whose phone can't find this one (an iPhone, or Wi-Fi that won't
+## pass the call); scanning is the check, so no pictures. If something is off, a picture
+## checklist says what to try. A grown-up removes a friend family by holding its button.
 
 ## Check digits shown as pictures - things every kid can name.
 const PICTURES := [["kit_apple", "apple"], ["kit_fish", "fish"], ["kit_ball", "ball"], ["kit_duck", "duck"],
@@ -31,7 +33,10 @@ var _held := 0.0
 var _hold_bar: ProgressBar
 var _searcher: Searcher
 var _progress: ProgressBar
-var _wifi_way := false
+## How to find the friend: "auto" (Nearby, else the Wi-Fi), "wifi" (a broadcast) or "code".
+var _way := "auto"
+var _code_shown := ""
+var _refresh_in := 0.0
 
 
 func _ready() -> void:
@@ -46,7 +51,7 @@ func _swap(c: Control) -> void:
 	add_child(UI.full_rect(c))
 
 
-func _page(title: String, back := true) -> VBoxContainer:
+func _page(title: String, back := true, on_back := Callable()) -> VBoxContainer:
 	var root := Control.new()
 	root.add_child(UI.paper_background())
 	var col := VBoxContainer.new()
@@ -55,7 +60,7 @@ func _page(title: String, back := true) -> VBoxContainer:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
 	if back:
-		top.add_child(UI.icon_button("tool_back", "Back", go_back, 40, Vector2(100, 84)))
+		top.add_child(UI.icon_button("tool_back", "Back", on_back if on_back.is_valid() else go_back, 40, Vector2(100, 84)))
 	var t := UI.title(title, 40)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(t)
@@ -72,10 +77,14 @@ func _main() -> void:
 	var col := _page("Swap pets with a friend")
 	var me: Dictionary = Family.get_or_make(game.profile)
 	col.add_child(UI.label("Stand close together. You both tap the big button at the same time - then your pets can visit each other! You are %s." % Family.called(me["name"]), 24, true))
-	var go := UI.big_icon_button("icon_friends", "Swap pets with a friend", start)
+	var ways := HBoxContainer.new()
+	ways.alignment = BoxContainer.ALIGNMENT_CENTER
+	ways.add_theme_constant_override("separation", 20)
+	var go := UI.big_icon_button("icon_friends", "Swap pets with a friend", _use_way.bind("auto"))
 	go.custom_minimum_size = Vector2(520, 110)
-	go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	col.add_child(go)
+	ways.add_child(go)
+	ways.add_child(UI.icon_button("icon_code", "Swap with a code", _use_way.bind("code"), 56, Vector2(300, 110)))
+	col.add_child(ways)
 	var fams := Visitors.families(game.profile)
 	if fams.is_empty():
 		col.add_child(UI.label("No friends yet - swap with someone to make your first!", 22))
@@ -148,10 +157,19 @@ func _hold_end() -> void:
 
 # --- Swapping ---------------------------------------------------------------------------------
 
+func _use_way(way: String) -> void:
+	_way = way
+	start()
+
+
 ## The big button: permission first on a phone that needs it, then look for the friend.
 func start() -> void:
+	if _way == "code":
+		_stop_link()
+		_code_page()
+		return
 	var n := NearbyLink.plugin()
-	if not _wifi_way and NearbyLink.usable() and not n.missing_permissions().is_empty():
+	if _way == "auto" and NearbyLink.usable() and not n.missing_permissions().is_empty():
 		_ask_permission()
 		return
 	_search()
@@ -193,10 +211,15 @@ func _search() -> void:
 	_searcher.custom_minimum_size = Vector2(0, 300)
 	_searcher.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(_searcher)
-	var how := "Keep both phones close, with this screen open on both." if not _wifi_way \
+	var link: SwapLink = LanLink.new() if _way == "wifi" else SwapLink.best()
+	var how := "Keep both phones close, with this screen open on both." if link is NearbyLink \
 		else "Both phones need the same Wi-Fi - or one joins the other's hotspot."
 	col.add_child(UI.label(how, 24, true))
-	_link = LanLink.new() if _wifi_way else SwapLink.best()
+	_open(link)
+
+
+func _open(link: SwapLink) -> void:
+	_link = link
 	_link.check.connect(_on_check)
 	_link.linked.connect(_on_linked)
 	_link.received.connect(_on_received)
@@ -204,6 +227,129 @@ func _search() -> void:
 	_link.failed.connect(_on_failed)
 	add_child(_link)
 	_link.begin(Family.get_or_make(game.profile)["name"])
+
+
+# --- Swapping by code ---------------------------------------------------------------------------
+
+## This phone's swap code, big, and a button to scan the friend's - whichever kid scans, it works.
+## The code changes by itself if the phone joins a Wi-Fi or turns on a hotspot meanwhile.
+func _code_page(note := "") -> void:
+	if not (_link is LanLink and (_link as LanLink).by_code):
+		_stop_link()
+		_sent = false
+		_got = {}
+		_state = "code"  # so a link that cannot start shows the trouble page
+		var lan := LanLink.new()
+		lan.by_code = true
+		_open(lan)
+		if _link == null:
+			return  # it could not start, and the trouble page is up
+	_state = "code"
+	_refresh_in = 2.0
+	var col := _page("Swap with a code", true, _main)
+	if note != "":
+		var l := UI.label(note, 26, true)
+		l.add_theme_color_override("font_color", UI.ACCENT.darkened(0.25))
+		col.add_child(l)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 48)
+	col.add_child(row)
+	var mine := VBoxContainer.new()
+	mine.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(mine)
+	_code_shown = (_link as LanLink).code()
+	if _code_shown != "":
+		var card := CodeCard.new()
+		card.rows = QrCode.encode(_code_shown)
+		card.custom_minimum_size = Vector2(390, 390)
+		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		mine.add_child(card)
+		var l := UI.label("My code - my friend scans it", 22)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mine.add_child(l)
+	else:
+		var l := UI.label("This phone isn't on Wi-Fi. Join the same Wi-Fi as your friend - or turn on this phone's hotspot and let your friend join it.", 26, true)
+		l.custom_minimum_size = Vector2(440, 0)
+		mine.add_child(l)
+	if _can_scan():
+		var theirs := VBoxContainer.new()
+		theirs.alignment = BoxContainer.ALIGNMENT_CENTER
+		theirs.add_theme_constant_override("separation", 14)
+		theirs.add_child(UI.label("Or scan your friend's code:", 24))
+		var scan := UI.big_icon_button("icon_camera", "Scan my friend's code", _scan)
+		scan.custom_minimum_size = Vector2(420, 110)
+		theirs.add_child(scan)
+		row.add_child(theirs)
+	col.add_child(UI.label("Both phones need the same Wi-Fi - or one joins the other's hotspot.", 22, true))
+
+
+static func _can_scan() -> bool:
+	var n := NearbyLink.plugin()
+	return n != null and n.can_scan()
+
+
+func _scan() -> void:
+	var n := NearbyLink.plugin()
+	if n.camera_allowed():
+		_open_scanner()
+	else:
+		_ask_camera()
+
+
+func _ask_camera() -> void:
+	_state = "camera"
+	var col := _page("One quick thing", true, _code_page.bind(""))
+	col.add_child(UI.label("Your phone will ask if DrawPets can use the camera - just to read your friend's code. Tap ALLOW!\n\n(No pictures are taken or kept.)", 26, true))
+	var ok := UI.big_icon_button("tool_done", "OK, ask me", _request_camera)
+	ok.custom_minimum_size = Vector2(380, 100)
+	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(ok)
+
+
+func _request_camera() -> void:
+	var n := NearbyLink.plugin()
+	if not n.is_connected("camera_result", _on_camera):
+		n.connect("camera_result", _on_camera)
+	n.request_camera()
+
+
+func _on_camera(granted: bool) -> void:
+	if _state != "camera":
+		return
+	if granted:
+		_code_page()
+		_open_scanner()
+	else:
+		_trouble("camera")
+
+
+## The camera opens over the game until it reads a code, or the kid backs out (and is still on
+## the code page, with their own code showing).
+func _open_scanner() -> void:
+	var n := NearbyLink.plugin()
+	if not n.is_connected("code_scanned", _on_scanned):
+		n.connect("code_scanned", _on_scanned)
+	n.scan_code("Point at your friend's swap code")
+
+
+func _on_scanned(text: String) -> void:
+	if _state != "code" or not (_link is LanLink):
+		return
+	var scanned := LanLink.read_code(text)
+	if scanned.is_empty():
+		_code_page("That's not a DrawPets swap code. Scan the code on your friend's swap screen!")
+		return
+	_state = "dialing"
+	var col := _page("Found your friend's code!", true, _main)
+	_searcher = Searcher.new()
+	_searcher.custom_minimum_size = Vector2(0, 300)
+	_searcher.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(_searcher)
+	col.add_child(UI.label("Calling your friend's phone...", 26, true))
+	if not (_link as LanLink).dial(scanned):
+		_code_page()
 
 
 func _on_check(friend_name: String, digits: String) -> void:
@@ -263,6 +409,8 @@ func _not_them() -> void:
 func _on_linked() -> void:
 	_state = "sending"
 	var col := _page("Your pets are hopping over!", false)
+	if _link.friend_name != "":
+		col.add_child(UI.label("Swapping with %s!" % Family.called(_link.friend_name), 28))
 	col.add_child(UI.label("Keep the phones close for a moment...", 26))
 	_progress = ProgressBar.new()
 	_progress.max_value = 1.0
@@ -352,8 +500,14 @@ func _trouble(why: String) -> void:
 			tips = [["icon_heart", "Those pets got muddled on the way. Try again!"]]
 		"self":
 			tips = [["icon_heart", "That's this phone! Find your friend's phone and try again."]]
+		"camera":
+			tips = [["icon_camera", "DrawPets needs the camera to read your friend's code. Ask a grown-up to tap Settings, then Apps, then DrawPets, then Permissions - and allow Camera."],
+				["icon_code", "Or your friend can scan YOUR code instead!"]]
 		_:
-			if _wifi_way:
+			if _way == "code":
+				tips = [["icon_home", "Are both phones on the same Wi-Fi? (Or turn on one phone's hotspot and join it with the other.)"],
+					["icon_code", "Is your friend's code still on their screen? Scan it again."]]
+			elif _way == "wifi" or not NearbyLink.usable():
 				tips = [["icon_home", "Are both phones on the same Wi-Fi? (Or turn on one phone's hotspot and join it with the other.)"],
 					["icon_friends", "Is the swap screen open on both phones?"]]
 			else:
@@ -374,15 +528,14 @@ func _trouble(why: String) -> void:
 	var again := UI.big_icon_button("tool_undo", "Try again", start)
 	again.custom_minimum_size = Vector2(300, 96)
 	row.add_child(again)
-	if NearbyLink.usable():
-		row.add_child(UI.button("Try the Wi-Fi way" if not _wifi_way else "Try the Bluetooth way", _switch_way,
-			Vector2(300, 96), 24))
+	if _way == "code":
+		row.add_child(UI.button("Swap without a code", _use_way.bind("auto"), Vector2(280, 96), 24))
+	else:
+		row.add_child(UI.icon_button("icon_code", "Use a code", _use_way.bind("code"), 48, Vector2(240, 96)))
+		if NearbyLink.usable():
+			row.add_child(UI.button("Try the Wi-Fi way" if _way != "wifi" else "Try the Bluetooth way",
+				_use_way.bind("wifi" if _way != "wifi" else "auto"), Vector2(280, 96), 24))
 	col.add_child(row)
-
-
-func _switch_way() -> void:
-	_wifi_way = not _wifi_way
-	start()
 
 
 func _process(delta: float) -> void:
@@ -391,6 +544,12 @@ func _process(delta: float) -> void:
 		if _looking > PATIENCE and not _tips_shown:
 			_tips_shown = true
 			_trouble("lost")
+	elif _state == "code":
+		_refresh_in -= delta
+		if _refresh_in <= 0.0:
+			_refresh_in = 2.0
+			if _link is LanLink and (_link as LanLink).code() != _code_shown:
+				_code_page()
 	if _hold_fid != "":
 		_held += delta
 		if _hold_bar != null and is_instance_valid(_hold_bar):
@@ -417,6 +576,35 @@ func go_back() -> void:
 
 func _exit_tree() -> void:
 	_stop_link()
+
+
+## A swap code, drawn crisp in ink on a cream card - a camera has to read it, so no wobble -
+## with a quiet margin all round and a marker frame.
+class CodeCard extends Control:
+	var rows: Array = []
+
+	func _draw() -> void:
+		var n := rows.size()
+		if n == 0:
+			return
+		var cells := n + 8  # four quiet modules each side
+		var px := floorf(minf(size.x, size.y) / cells)
+		var side := px * cells
+		var at := ((size - Vector2(side, side)) / 2.0).floor()
+		draw_rect(Rect2(at - Vector2(6, 6), Vector2(side + 12, side + 12)), UI.ACCENT)
+		draw_rect(Rect2(at, Vector2(side, side)), Color("#fffdf6"))
+		for y in n:
+			var row: PackedByteArray = rows[y]
+			var x := 0
+			while x < n:
+				if row[x] == 1:
+					var run := 1
+					while x + run < n and row[x + run] == 1:
+						run += 1
+					draw_rect(Rect2(at + Vector2((x + 4) * px, (y + 4) * px), Vector2(run * px, px)), UI.INK)
+					x += run
+				else:
+					x += 1
 
 
 ## Looking for a friend: rings rippling out from a phone, and paw prints hopping round.

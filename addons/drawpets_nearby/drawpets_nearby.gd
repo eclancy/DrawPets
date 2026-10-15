@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 ## Puts the DrawPetsNearby Android plugin into Android exports: the AAR built from
-## android_plugin/ (copied into bin/ by its Gradle build) and the Google library it needs.
+## android_plugin/ (copied into bin/ by its Gradle build) and the libraries it needs.
 ## Editor only - the game reaches the plugin through Engine.get_singleton("DrawPetsNearby").
 ## Android plugins need "Use Gradle Build" on in the export preset (.ai/android.md).
 
@@ -23,6 +23,8 @@ class DrawPetsNearbyExport extends EditorExportPlugin:
 	## An AAR does not carry its dependencies, so the game's Gradle build fetches this itself.
 	## Keep in step with nearbyVersion in android_plugin/plugin/build.gradle.
 	const NEARBY := "com.google.android.gms:play-services-nearby:19.5.1"
+	## The swap-code scanner: ZXing's camera screen. Keep in step with scannerVersion.
+	const SCANNER := "com.journeyapps:zxing-android-embedded:4.3.0"
 
 	func _get_name() -> String:
 		return PLUGIN
@@ -36,4 +38,4 @@ class DrawPetsNearbyExport extends EditorExportPlugin:
 		return PackedStringArray(["drawpets_nearby/bin/%s-%s.aar" % [PLUGIN, variant]])
 
 	func _get_android_dependencies(_platform: EditorExportPlatform, _debug: bool) -> PackedStringArray:
-		return PackedStringArray([NEARBY])
+		return PackedStringArray([NEARBY, SCANNER])
