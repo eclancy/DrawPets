@@ -1,0 +1,61 @@
+plugins {
+    id "com.android.library"
+}
+
+// The singleton's name, as GDScript sees it: Engine.get_singleton("DrawPetsNearby").
+def pluginName = "DrawPetsNearby"
+// Keep in step with NEARBY in addons/drawpets_nearby/drawpets_nearby.gd, which adds the same
+// library to the game's Gradle build (an AAR does not carry its dependencies).
+def nearbyVersion = "19.5.1"
+
+android {
+    namespace "dev.ecec.drawpets.nearby"
+    compileSdk 35
+    // The build-tools already on this PC; AGP 8.6.1 would otherwise fetch its default.
+    buildToolsVersion "35.0.1"
+
+    defaultConfig {
+        minSdk 24
+        manifestPlaceholders = [godotPluginName: pluginName]
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig false
+    }
+}
+
+base {
+    archivesName = pluginName
+}
+
+dependencies {
+    // Godot provides itself at run time; this is only to compile against.
+    compileOnly "org.godotengine:godot:4.5.1.stable"
+    implementation "com.google.android.gms:play-services-nearby:$nearbyVersion"
+}
+
+// Every build copies its AAR into the Godot addon, which is committed so an export never needs
+// this project: addons/drawpets_nearby/bin/DrawPetsNearby-debug.aar and -release.aar.
+def addonBin = rootProject.file("../addons/drawpets_nearby/bin")
+
+["debug", "release"].each { variant ->
+    def copyTask = tasks.register("copy${variant.capitalize()}AarToAddon", Copy) {
+        from(layout.buildDirectory.dir("outputs/aar")) {
+            include "*-${variant}.aar"
+            rename { "${pluginName}-${variant}.aar" }
+        }
+        into addonBin
+    }
+    afterEvaluate {
+        tasks.named("assemble${variant.capitalize()}") { finalizedBy copyTask }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << "-Xlint:deprecation"
+}

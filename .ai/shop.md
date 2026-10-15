@@ -23,6 +23,7 @@ with a toast that says what it was for; a kid should always know what they did t
 | bath day (the whole routine) | 3 | once a day |
 | joining in a fun day (Beginner) | 3 | once a day |
 | two pets become friends / best friends | 3 / 5 | once per pair |
+| a first pet swap with a friend family | 3 | once per family |
 | a present from a walk, drawn | 1 | 3 a day |
 | a pet learns a trick | 3 | once per trick per pet |
 | a stat goes up a level | 3 per level | - (Advanced only) |

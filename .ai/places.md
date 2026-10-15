@@ -105,7 +105,6 @@ them, a giant one a 0.66x wide shot. The walking band stops above the drawer bar
 
 ## Planned
 
-- **Visiting**: friends' homes, through ecec.dev (`sharing.md`).
 - **Outings**: take a pet to one of your other homes for the afternoon.
 - **Seasons** from the device clock: snow in December, leaves in October.
 - **Place effects**: the Moon's low gravity (higher hops, floating toys), a bubble helmet for

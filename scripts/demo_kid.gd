@@ -24,6 +24,7 @@ func run() -> void:
 	await _play_at_home()
 	await _adopt()
 	await _friends()
+	await _swap()
 	await _let_go_pip()
 	await _settings()
 	await _shop()
@@ -308,6 +309,22 @@ func _friends() -> void:
 	await _wait(0.3)
 	await _shot("friends_card")
 	place._panel.visible = false
+
+
+## Friends from a swap: the demo cannot meet another phone, so it pretends a family swapped -
+## its own pets, unpacked as the Mango family - then shows the Friends page and a visitor.
+func _swap() -> void:
+	var pack := PetPack.unpack(PetPack.pack(game.profile))
+	pack["family"] = {"id": "0123456789abcdef", "name": "Mango"}
+	Visitors.save_family(game.profile, pack)
+	game.go_swap()
+	await _wait(1.0)
+	await _shot("friends_page")
+	var home_id: String = game.profile.homes()[0]["id"]
+	game.profile.today().erase("visitor_" + home_id)
+	game.go_place(home_id)
+	await _wait(3.0)
+	await _shot("visitor")
 
 
 ## Inside the item picker: draw a snack and give it words.

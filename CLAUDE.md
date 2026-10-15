@@ -36,7 +36,7 @@ decision; do not restate it here.
 - `.ai/audio-direction.md` - how every sound is made, pet voices and their variation, the mic,
   the mix. **Read before adding or changing any sound.**
 - `.ai/android.md` - building, installing and debugging on Android phones and tablets
-- `.ai/sharing.md` - ecec.dev sharing, and the child-privacy rules it must follow
+- `.ai/sharing.md` - swapping pets phone to phone, and the child-privacy rules it must follow
 - `.ai/roadmap.md` - milestones, the idea backlog, open questions with their defaults
 
 ## The rules that are not negotiable
@@ -54,8 +54,8 @@ decision; do not restate it here.
    baked from drawing code. Shine and sparkle (`Shiny`) are only for special, bought things.
 7. **No AI**, including speech recognition. The mic is loudness and playback only, and it is
    optional - every mic feature has a touch equivalent.
-8. **Nothing a child recorded leaves the device**, and nothing they drew is shared without a
-   parent and moderation (`.ai/sharing.md`).
+8. **Nothing a child recorded leaves the device**, and nothing they drew ever goes to a server:
+   pets travel only phone to phone, between kids who are together (`.ai/sharing.md`).
 
 ## Build & run
 

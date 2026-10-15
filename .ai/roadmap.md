@@ -102,6 +102,12 @@ Pets become friends and best friends by attitude (personality) and interest (fav
 preferences for kinds of pet (fliers, swimmers, wrigglers, walkers); hellos, nuzzles, chases,
 fetch together, sleeping side by side (`pet-life.md`).
 
+## M1.16 - Swapping pets with friends (built)
+
+Phone to phone, in person, no server: Nearby Connections (or the same Wi-Fi / a hotspot), the
+same three pictures on both phones, all of each family's pets swapped; friends' pets then visit
+(`sharing.md`).
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a
@@ -116,10 +122,10 @@ fetch together, sleeping side by side (`pet-life.md`).
 A Listen button: a clap or a shout - loudness only - and the pets come running, sleepers wake
 gently. Tapping the ground does the same (`pet-life.md`).
 
-## M5 - Visiting through ecec.dev
+## M5 - Friends far away (not planned)
 
-Only after the questions in `sharing.md` are answered: parent gate, moderation, share codes,
-taking a pet to visit, friendships, bringing gifts home, return visits.
+Would need a server holding children's content, so verifiable parental consent first
+(`sharing.md`).
 
 ## M6 - iOS
 

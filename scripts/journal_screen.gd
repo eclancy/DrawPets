@@ -102,6 +102,8 @@ func _facts() -> Array:
 func _friend(id: String) -> Dictionary:
 	if id.begins_with("rival_"):
 		return Rivals.build(id.trim_prefix("rival_"))
+	if id.begins_with("visit_"):
+		return Visitors.load_by_visit_id(game.profile, id)
 	return PetStore.load_pet(id)
 
 

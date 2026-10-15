@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+    Google Nearby Connections, on every Android version DrawPets runs on (API 24+). Gradle merges
+    these into the game's manifest. Only the "dangerous" ones are asked for at run time, by
+    DrawPetsNearby.request_permissions(), and only those this Android version needs:
+      API 24-28  ACCESS_COARSE_LOCATION
+      API 29-30  ACCESS_FINE_LOCATION
+      API 31-32  BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, ACCESS_FINE_LOCATION
+      API 33+    BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, NEARBY_WIFI_DEVICES
+    -->
+
+    <!-- Android 11 and older: the old Bluetooth pair, and location to scan with. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="32" />
+
+    <!-- Android 12+: Bluetooth by itself. The game never works out where anyone is. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Android 13+: Wi-Fi Direct / hotspot transfers without location. -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Every version: Nearby's Wi-Fi mediums, and the LAN fallback's UDP broadcast. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+    <!-- The permissions above would make each of these a requirement, and a store would hide the
+         game from a tablet without one. Swapping is optional, so none of them is required. -->
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
+    <application>
+        <!-- How Godot finds a v2 Android plugin: the singleton's name, then its class. -->
+        <meta-data
+            android:name="org.godotengine.plugin.v2.${godotPluginName}"
+            android:value="dev.ecec.drawpets.nearby.DrawPetsNearby" />
+    </application>
+
+</manifest>

@@ -22,7 +22,7 @@ need, stat, activity, reaction or reward.
 | call its name | tap the ground (always); optionally call or clap into the mic | built |
 | walks and presents | a walk through its place; presents are "draw what's inside!" prompts | built |
 | dogs that know each other | friendships between pets, by personality and favourites | built |
-| Bark Mode | visiting friends' homes through ecec.dev (`sharing.md`) | planned |
+| Bark Mode | swapping pets with a friend phone to phone; their pets visit yours (`sharing.md`) | built |
 
 ## Needs - gentle real time (decided)
 

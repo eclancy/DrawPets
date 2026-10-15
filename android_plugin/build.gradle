@@ -1,0 +1,5 @@
+// The same Android Gradle Plugin (and, in gradle/wrapper, the same Gradle) as Godot 4.5.1's
+// Android build template, so one download serves both builds.
+plugins {
+    id "com.android.library" version "8.6.1" apply false
+}

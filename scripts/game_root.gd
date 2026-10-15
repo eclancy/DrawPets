@@ -299,6 +299,13 @@ func go_bath(home_id: String, pet_id: String, spa := false) -> void:
 	show_screen(s)
 
 
+## Swapping pets with a friend, phone to phone (SwapScreen).
+func go_swap() -> void:
+	var s := SwapScreen.new()
+	s.game = self
+	show_screen(s)
+
+
 ## A Beginner fun day (FunDays): pick who's coming.
 func go_fun_day(event: Dictionary) -> void:
 	var s := FunDayScreen.new()

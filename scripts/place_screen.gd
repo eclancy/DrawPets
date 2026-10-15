@@ -47,7 +47,8 @@ var focus_id := ""
 var first_visit := false
 ## A Beginner fun day held here (FunDays): "party" (friends come to play) or "photo" (Photo Day).
 var fun_day := ""
-## Party guests: friendly pets who wander about, dance and say hello - just visiting.
+## Guests: party guests (friendly pets) and friends' pets visiting from a swap (Visitors) -
+## they wander about, dance, say hello and make friends, and go home when you leave.
 var guests: Array[Creature] = []
 
 var pets: Array = []
@@ -205,6 +206,7 @@ func _ready() -> void:
 				_go_to_bed(c, true)
 	_greet()
 	_start_fun_day()
+	_maybe_visitor()
 	print("[timing] home %d ms (%d pets)" % [(Time.get_ticks_usec() - t0) / 1000, creatures.size()])
 
 
@@ -472,6 +474,8 @@ func _press(at: Vector2) -> void:
 		_pet_dist = 0.0
 		_pet_moved = 0.0
 		_pet_hearts = 0
+	elif _tap_guest(at):
+		pass
 	elif at.y > Places.HORIZON and toy_state not in ["chase", "return"]:
 		var who := _focus_creature()
 		if who != null and who.action() == "sleep":
@@ -2004,16 +2008,8 @@ func _start_fun_day() -> void:
 		"party":
 			var friends := FunDays.friends(2)
 			for i in friends.size():
-				var c := Creature.new()
-				c.bounds = GROUND
-				c.in_water = _place.get("water", false)
-				c.position = Vector2(GROUND.end.x - 120.0 - i * 160.0, GROUND.position.y + 60.0 + i * 50.0)
-				world.add_child(c)
-				c.setup(friends[i])
-				c.audible = true
-				c.emote.connect(_on_emote)
+				var c := _add_guest(friends[i], Vector2(GROUND.end.x - 120.0 - i * 160.0, GROUND.position.y + 60.0 + i * 50.0))
 				c.perform("greet", 2.0)
-				guests.append(c)
 			var confetti := PlacePainter.Drift.new()
 			confetti.kind = "sprinkles"
 			add_child(confetti)
@@ -2024,6 +2020,48 @@ func _start_fun_day() -> void:
 		"photo":
 			open_tab("camera")
 			_show_hint("It's Photo Day! Pick a pose, then Snap! your pets.")
+
+
+func _add_guest(pet: Dictionary, at: Vector2) -> Creature:
+	Stats.ensure(pet)
+	var c := Creature.new()
+	c.bounds = GROUND
+	c.in_water = _place.get("water", false)
+	c.position = at
+	world.add_child(c)
+	c.setup(pet)
+	c.audible = true
+	c.emote.connect(_on_emote)
+	guests.append(c)
+	return c
+
+
+## A friend family's pet drops in (Visitors): the first time a home is opened each day, and now
+## and then after that. Not at night (it would be asleep at home), and not in the middle of a party.
+func _maybe_visitor() -> void:
+	if fun_day == "party" or Clock.is_night() or Visitors.families(game.profile).is_empty():
+		return
+	if not game.profile.count_today("visitor_" + home["id"], 1) and randf() > 0.3:
+		return
+	var pet := Visitors.pick(game.profile)
+	if pet.is_empty():
+		return
+	var c := _add_guest(pet, Vector2(GROUND.end.x, randf_range(GROUND.position.y + 30.0, GROUND.end.y - 20.0)))
+	c.go_to(Vector2(GROUND.end.x - 260.0, c.position.y), c.say.bind("hello"))
+	var fam: Dictionary = Visitors.families(game.profile).get(pet["_family"], {})
+	_show_hint("%s from %s came to visit!" % [pet["name"], Family.called(str(fam.get("name", "a friend's")))])
+
+
+## A tap on a guest: it looks up and says hello.
+func _tap_guest(at: Vector2) -> bool:
+	for g in guests:
+		if g.hit(at):
+			if g.action() == "":
+				g.perform("look", 0.9)
+				g.leap(g.height_px * 0.12, 0.3)
+			g.say("hello")
+			return true
+	return false
 
 
 ## Party guests now and then dance, or come and say hello to one of yours.
@@ -2520,6 +2558,8 @@ func _save_all() -> void:
 
 func _exit_tree() -> void:
 	_save_all()
+	for g in guests:
+		Visitors.save_friends(g.pet)  # a visitor remembers its new friends next time (others: no-op)
 	Sounds.listen_stop()
 	if _rain_loop >= 0:
 		Sounds.loop_stop(_rain_loop)

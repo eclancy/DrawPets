@@ -2,8 +2,9 @@
 
 The plan for getting DrawPets onto real phones and tablets and finding what breaks there.
 **In progress** (2026-10-11): everything on the PC is set up and both presets export signed APKs
-(`build/drawpets-debug.apk`, `build/drawpets-demo.apk`, ~49 MB) with the right manifest and every
-`pivots.json` and voice file inside. Next: a device. Nothing has run on a phone yet - everything
+(`build/drawpets-debug.apk`, `build/drawpets-demo.apk`; ~103 MB since 2026-10-15, when exports
+moved to Gradle for the Nearby plugin) with the right manifest and every `pivots.json` and voice
+file inside. Next: a device. Nothing has run on a phone yet - everything
 so far has been tested only on Windows with a mouse standing in for a finger.
 
 ## What is already in place
@@ -41,8 +42,9 @@ What was learned setting it up:
 - **The installed .NET export templates are Windows-only.** Android needs `android_debug.apk` from
   the Godot 4.5.1 .NET templates (`Godot_v4.5.1-stable_mono_export_templates.tpz`, 1.28 GB). It is
   the first file in that zip, so it can be fetched alone (~118 MB) with one byte-range request.
-  `android_release.apk` (~97 MB) waits for a release build; `android_source.zip` is only for
-  Gradle builds, which DrawPets does not use.
+  `android_release.apk` (~97 MB) waits for a release build. `android_source.zip` (the Gradle
+  build template, 210 MB, the third file; CRC `e92cef23`) was fetched the same way on 2026-10-15,
+  when exports moved to Gradle for the Nearby plugin (see "Phone-to-phone swapping" below).
 - **The .NET editor is fine** for a project without C#: the export only adds .NET when there is a
   C# project, and the game runs without it. The standard editor would also work; there is no
   reason to install a second one.
@@ -65,7 +67,9 @@ What was learned setting it up:
 - **Package** `dev.ecec.drawpets`, to match ecec.dev. Version 0.0.1, code 1.
 - **Architectures**: arm64-v8a (every phone from the last ~8 years); armeabi-v7a only if an old
   tablet needs it.
-- **Permissions**: `RECORD_AUDIO` only. No internet until sharing exists.
+- **Permissions**: `RECORD_AUDIO`, and `INTERNET` for the pet swap's LAN fallback (sockets on the
+  home Wi-Fi - nothing goes to a server). The Nearby plugin adds its own (see below).
+- **Gradle build** (`gradle_build/use_gradle_build=true`): needed for Android plugins.
 - **Include filter: `*.json, *.f32`** - critical. Godot only packs files it knows how to import;
   without this, `art/*/pivots.json` is missing (every drawing lands at the wrong spot) and
   `sfx/voices/*.f32` is missing (every pet is silent). Godot skips folders starting with a dot,
@@ -85,6 +89,94 @@ the demo plays on top of whatever save it finds - it redraws the first pet in th
 lets the last one go. As a separate package it has its own save and installs beside the real game,
 so it can never touch a kid's pets.
 
+## Phone-to-phone swapping: the DrawPetsNearby plugin (2026-10-15)
+
+Kids swap pets phone to phone over Google's Nearby Connections (Bluetooth and Wi-Fi Direct; no
+internet, no server). GDScript cannot reach it, so this is DrawPets' one piece of native code: a
+Godot v2 Android plugin in Java. The game finds it with `Engine.get_singleton("DrawPetsNearby")`
+(only on Android, and only in a Gradle export).
+
+- **Source** - `android_plugin/`, a small Gradle project (committed; `.gdignore` keeps Godot out
+  of it): `plugin/src/main/java/dev/ecec/drawpets/nearby/DrawPetsNearby.java` (every method and
+  signal) and `plugin/src/main/AndroidManifest.xml` (the permissions, and the
+  `org.godotengine.plugin.v2.DrawPetsNearby` entry Godot looks for). Gradle 8.11.1 (the wrapper)
+  and Android Gradle Plugin 8.6.1 - the same as Godot 4.5.1's build template, so one download
+  serves both. Java 17, minSdk 24, compileSdk 35, build-tools 35.0.1. It compiles against
+  `org.godotengine:godot:4.5.1.stable` (compileOnly - Godot is already in the app) and
+  `com.google.android.gms:play-services-nearby:19.5.1`.
+- **Building it** - only after changing the Java or its manifest:
+  ```
+  cd android_plugin
+  JAVA_HOME="C:/Users/ericc/AppData/Local/Programs/Eclipse Adoptium/jdk-17.0.20.1+1" \
+  ANDROID_HOME="C:/Users/ericc/Android/Sdk" ./gradlew assemble
+  ```
+  (from cmd: set the same two variables, then `gradlew.bat assemble`). It builds both variants and
+  copies them to `addons/drawpets_nearby/bin/DrawPetsNearby-debug.aar` and `-release.aar`, which
+  are **committed**, so an export never needs this step. The first run downloads Gradle into
+  `C:\Users\ericc\.gradle` and the Maven libraries (~7 minutes); after that ~1-2 minutes.
+- **How it gets into an export** - `addons/drawpets_nearby/` is an editor plugin, enabled in
+  `project.godot` (`[editor_plugins]`). Its `EditorExportPlugin`, for Android only, hands the
+  export the AAR (`_get_android_libraries`) and the Maven coordinate of play-services-nearby
+  (`_get_android_dependencies` - an AAR does not carry its dependencies, so the game's Gradle
+  build fetches it). Gradle merges the plugin's manifest into the game's. **The Nearby version is
+  written twice**: `nearbyVersion` in `android_plugin/plugin/build.gradle` and `NEARBY` in
+  `addons/drawpets_nearby/drawpets_nearby.gd` - change both.
+- **Exports now use Gradle.** Godot builds the APK from `android/build/` (gitignored: generated
+  on each machine from `android_source.zip`). Install it once with the first export:
+  `GRADLE_OPTS=-Dorg.gradle.daemon=false "$GODOT_BIN" --headless --path . --install-android-build-template --export-debug "Android" build/drawpets-debug.apk`
+  (in the editor: Project > Install Android Build Template). **The first Gradle export downloads**
+  Gradle, the Kotlin plugin, AndroidX, Play services and build-tools 35.0.0 (the template wants
+  exactly that version) - 10-15 minutes. Later exports take ~5 minutes. The NDK is not needed.
+  Reinstall the template after a Godot upgrade (`android/.build_version` must match).
+- **From the command line, turn Gradle's daemon off**: `GRADLE_OPTS=-Dorg.gradle.daemon=false
+  "$GODOT_BIN" --headless --path . --export-debug ...`. Otherwise the daemon Gradle leaves
+  running inherits the console's output, and `_console.exe` sits after `[ DONE ] export` (the
+  APK is already finished) until the daemon idles out hours later. The editor's own export is
+  not affected.
+- **APK size**: ~100 MB instead of ~49 MB, because Gradle stores `libgodot_android.so`
+  uncompressed (Android's recommended way: it loads straight from the APK, so the installed app
+  is no bigger). `gradle_build/compress_native_libraries=true` in a preset would shrink the
+  download back if that ever matters.
+
+**Permissions** (in the plugin's manifest; the dangerous ones are asked for by
+`request_permissions()`, only those this Android version needs):
+
+| Android | asked for at run time | declared only |
+|---|---|---|
+| 7-9 (API 24-28) | `ACCESS_COARSE_LOCATION` | `BLUETOOTH`, `BLUETOOTH_ADMIN`, Wi-Fi state |
+| 10-11 (29-30) | `ACCESS_FINE_LOCATION` (+ coarse) | the same |
+| 12-12L (31-32) | `BLUETOOTH_SCAN`, `_ADVERTISE`, `_CONNECT`, `ACCESS_FINE_LOCATION` (+ coarse) | Wi-Fi state |
+| 13+ (33+) | `BLUETOOTH_SCAN`, `_ADVERTISE`, `_CONNECT`, `NEARBY_WIFI_DEVICES` | Wi-Fi state |
+
+Location is declared only up to API 32; `BLUETOOTH_SCAN` and `NEARBY_WIFI_DEVICES` carry
+`neverForLocation`, so a phone on Android 13+ never asks a child for location at all. Also
+declared on every version: `ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`
+(the LAN fallback's UDP broadcast); play-services adds `ACCESS_NETWORK_STATE`. Bluetooth, BLE,
+Wi-Fi and location are `uses-feature required="false"` - swapping is optional, so a store must
+not hide the game from a tablet without one of them.
+
+**How the plugin behaves** (what the GDScript side can rely on):
+- Methods run on Godot's thread; Nearby answers on Android's main thread; every signal is handed
+  back to Godot's render thread (`runOnRenderThread`), so it arrives between frames like any
+  other signal - never in the middle of a GDScript function, never synchronously inside the call
+  that caused it (even `request_permissions()` with nothing missing answers a frame later).
+- `start()` advertises and discovers at once (`P2P_POINT_TO_POINT`) and is safe to call again.
+  **Once connected, the plugin stops advertising and discovering by itself** - one friend at a
+  time, and searching on would hold back Nearby's upgrade from Bluetooth to Wi-Fi. Call `start()`
+  again to look for someone else.
+- `send_bytes()` writes the bytes to `cache/nearby_out/` and sends them as a FILE payload (BYTES
+  payloads stop at ~32 KB); the file is deleted when the send ends either way. A received file is
+  read into memory and deleted at once, so nothing another child sent stays on the phone as a
+  file. Anything over 64 MB is refused (`error`). `transfer_progress` comes at most every 100 ms,
+  plus a final `done == total`.
+- `disconnect_endpoint()` and `stop()` are silent: `disconnected` is only for the other side
+  leaving or the link dropping (Nearby's own rule).
+- Android's permission answer also reaches `get_tree().on_request_permissions_result`, once per
+  permission (Godot forwards every answer), so a one-shot listener waiting for `RECORD_AUDIO`
+  should check the permission name before it disconnects.
+- `acquire_multicast_lock()` / `release_multicast_lock()` work without Play services; the lock is
+  released when the app closes.
+
 ## Step 3 - the device
 
 - Settings > About > tap Build number seven times; then Developer options > **USB debugging** on.
@@ -103,6 +195,7 @@ Monitors tab shows FPS, frame time, memory and draw calls live from the phone.
 
 From the command line (what Claude can run from here once the tools exist):
 ```
+export GRADLE_OPTS=-Dorg.gradle.daemon=false   # or the console export never returns (see above)
 "$GODOT_BIN" --headless --path . --export-debug "Android" build/drawpets-debug.apk
 adb install -r build/drawpets-debug.apk
 adb shell am start -n dev.ecec.drawpets/com.godot.game.GodotApp

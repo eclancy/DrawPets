@@ -2,7 +2,7 @@ class_name PetStore
 extends RefCounted
 ## Saving and loading pets. A pet is one folder - user://pets/<id>/pet.json plus the PNGs the
 ## kid drew - and nothing about it lives anywhere else. That is deliberate: a folder is exactly
-## what gets uploaded when a pet is shared through ecec.dev (see .ai/sharing.md).
+## what PetPack packs when a pet is swapped with a friend (see .ai/sharing.md).
 ##
 ## In memory a pet is a plain Dictionary, the same shape as its JSON, plus two keys that are
 ## never saved: "_img" (file name -> Image) and "_tex" (file name -> ImageTexture).

@@ -1,0 +1,6 @@
+# Gradle's working files - only the source and the wrapper are committed.
+.gradle/
+build/
+local.properties
+*.iml
+.idea/

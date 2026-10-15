@@ -39,6 +39,10 @@ window/handheld/orientation=4
 
 project/assembly_name="DrawPets"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/drawpets_nearby/plugin.cfg")
+
 [physics]
 
 2d/default_gravity=0.0

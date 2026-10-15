@@ -1,55 +1,66 @@
-# Online play through ecec.dev
+# Sharing pets with friends
 
-Kids' pets visiting each other - the Bark Mode idea - through the same server that already takes
-DrawFight submissions. **Not built.** This is the design, and the questions that must be
-answered before any of it ships.
+Kids swap pets **phone to phone, in person**, and from then on each family's pets drop in to
+visit the other's homes. **No server, no internet, no accounts.** Built (`SwapScreen`).
 
-## What it is (decided direction)
+## Why it is built this way (decided)
 
-- **Visiting**: a kid takes ONE of their pets to visit a friend's home. Their pet plays with
-  the friend's pets there - fetch, tug, chasing each other round the furniture.
-- **Learning from friends**: a visit can teach a pet a trick the friend's pet knows (once trick
-  cards exist), and gives a small boost to the stat the friend's pet is best at.
-- **Making friends**: pets that have met remember each other. A friendship meter goes up each
-  visit, and friends greet each other with hearts.
-- **Bringing things home**: a visiting pet comes back with a gift from the friend's family - a
-  copy of one of their drawn toys or snacks, which joins your toybox or pantry. (Kids' drawings
-  travelling between families is exactly why moderation matters, below.)
-- **Return visits**: sometimes, when the game starts, a pet you have visited is already in one
-  of your homes, playing with your pets. It stays for the session, then goes home.
+The players are 10-12 and DrawPets is made for them, so under COPPA (US), the UK Children's Code
+and Google Play's Families policy it is treated as a children's app **for every player** - an
+age gate or birth-date screen does not change that. Anything that stores children's content on
+a server and shows it to other families needs verifiable parental consent (a card payment, a
+signed form, an ID check, or a consent service), which this project does not do.
 
-## Why it needs care
+So nothing goes to a server. Pets travel only **directly between two phones that are together**,
+which collects nothing - the same as two kids swapping drawings at school. Friends are people
+you have met. (Not legal advice; revisit with a lawyer before adding anything online.)
 
-The players are 10-12: **under 13**. A service that collects personal information from children
-under 13 falls under COPPA in the US (and GDPR-K, the UK Children's Code elsewhere). A drawing is
-low-risk; a pet's name can contain a real name; **a child's voice is personal information.**
+## How a swap works
 
-## Rules
+1. Both kids open **Friends** (home screen) and tap **Swap pets with a friend** at the same time,
+   phones close together.
+2. The phones find each other (`SwapLink`):
+   - **Nearby Connections** (`NearbyLink`, the `DrawPetsNearby` Android plugin in
+     `addons/drawpets_nearby/`, source in `android_plugin/`) where Google Play services exist:
+     Bluetooth to find each other, then a direct Wi-Fi link Nearby makes itself. No Wi-Fi network,
+     no internet, no data plan.
+   - **The same Wi-Fi, or one phone's hotspot** (`LanLink`) everywhere else (e.g. Amazon Fire
+     tablets): a UDP broadcast on the room's network, then TCP straight between the phones. Also
+     offered as "Try the Wi-Fi way" when Nearby will not connect.
+3. Both screens say "Found the Mango family!" and show **the same three pictures** (from Nearby's
+   authentication digits, or from both phones' session numbers on Wi-Fi). Both kids tap **Yes,
+   that's them** - which also stops a phone in the next room joining by mistake.
+4. **All of each family's pets** hop across (`PetPack`), and are saved as visitors (`Visitors`).
+5. A first swap with a family: 3 stars, once.
 
-1. **Nothing goes up without a parent.** A parent gate (device PIN, or approval from the
-   parent's email) before anything is uploaded. No kid accounts, no kid logins.
-2. **Everything is moderated before anyone sees it.** Uploads land in a queue (like DrawFight's
-   `fighters/incoming/`) and Eric approves each one. Nothing is auto-published.
-3. **Drawings, words and layout only.** What travels is `pet.json`, its part PNGs, and the
-   drawn items it brings. **Never the voice recording** - visitors use the generated voice.
-   Never the album's photos or the pet's journal, which stay on the device. No free text beyond
-   the pet's name, shown only after moderation.
-4. **No contact between kids.** No messages, no chat, no names of kids - a visit is pets playing.
-5. **Friends, not strangers, first.** Start with share codes between families who know each
-   other (a code a parent passes on), not a public pool. Far lower risk and moderation load.
-6. **Removable.** A parent can delete anything uploaded; the server deletes it everywhere.
+Before Nearby's Android permission pop-up the game explains it in kid words ("Tap ALLOW!"). If
+anything goes wrong the kid sees a picture checklist (is the swap screen open on both? is
+Bluetooth on? same Wi-Fi?) - never an error message.
 
-## Shape
+## What travels (rules)
 
-- **Upload**: the pet folder (minus voice) plus any items it carries, zipped, posted to an
-  `intake/` endpoint with the parent's approval token.
-- **Visits**: the game fetches approved pets from friends' codes. Visiting is asynchronous - you
-  visit a copy of their home and pets, and they find out later that you came (and what you left).
-- **Postcards**: a photo of the two pets together, saved to both albums.
+1. **Drawings, words and layout only:** each pet's part drawings and layout, name, size,
+   favourite place, personality, coat, a generated voice recipe, clothes and favourites from the
+   game's own catalog.
+2. **Never** a voice recording (a recorded voice is swapped for the generated one), the journal,
+   photos, friends, stars, stats, or anything about the child (CLAUDE.md rule 8).
+3. **Everything received is untrusted** and checked field by field against the game's own
+   tables (`PetPack.unpack`): sizes capped, ids and file names restricted, every drawing
+   re-decoded and size-limited, names cut to 24 characters with control characters removed.
+4. **No contact between kids**: no messages, no chat, no kid names - families are "the Mango
+   family", a made-up nickname (`Family`). A visit is pets playing.
+5. **Removable**: a grown-up holds a family's button on the Friends page to remove it - its pets
+   are deleted from this phone, and your pets forget them.
 
-## Open questions
+## Visiting
 
-- Parent gate: device PIN, or an emailed approval link?
-- Share codes only, or eventually a moderated public pool of visitors?
-- Who moderates when Eric is away?
-- Is the server in EricClancyEngineeringAndCrafts ready for a second intake type?
+A friend family's pet drops into a home the first time it is opened each day, and now and then
+after (not at night, not during a party). It wanders, plays, makes friends with your pets
+(`Friends` - what it makes friends with is remembered for next time) and goes home when you
+leave. Tap it and it says hello. Its pets are as up to date as the last swap; swapping again
+refreshes them. Up to 30 friend families are kept.
+
+## Later, maybe
+
+Friends far away (pets updating over the internet) would need a server holding children's
+content, so verifiable parental consent first - see "Why it is built this way". Not planned.

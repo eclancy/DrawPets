@@ -64,6 +64,7 @@ const ASSETS := {
 	"icon_bath": {"pivot": "center", "look": "a little bathtub on feet, heaped with bubbles"},
 	"icon_walk": {"pivot": "center", "look": "a red lead with a loop handle, and two paw prints"},
 	"icon_camera": {"pivot": "center", "look": "a chunky toy camera, big lens, a flash"},
+	"icon_friends": {"pivot": "center", "look": "two little phones leaning together, a heart hopping between them"},
 	"icon_rosette": {"pivot": "center", "look": "a rainbow rosette with a heart in the middle and two ribbon tails - for joining in, not winning"},
 	"icon_album": {"pivot": "center", "look": "a photo album open, two little photos in it"},
 	"icon_journal": {"pivot": "center", "look": "a diary with a heart on the cover and a ribbon bookmark"},
@@ -189,6 +190,8 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_icon_camera(c)
 		"icon_rosette":
 			_icon_rosette(c)
+		"icon_friends":
+			_icon_friends(c)
 		"icon_album":
 			_icon_album(c)
 		"icon_journal":
@@ -1345,6 +1348,22 @@ static func _icon_bath(c: CanvasItem) -> void:
 		Crayon.marker_line(c, b, Color("#7fb7e6"), 9.0, 9340 + i)
 		Crayon.marker_line(c, PackedVector2Array([at + Vector2(-r * 0.55, -r * 0.1), at + Vector2(-r * 0.4, -r * 0.45),
 			at + Vector2(-r * 0.1, -r * 0.6)]), Color(1, 1, 1, 0.95), 8.0, 9350 + i, false)
+
+
+## Marker: two little phones leaning together - mint and pink - a heart hopping from one to the
+## other along a dotted arc. Swapping pets with a friend.
+static func _icon_friends(c: CanvasItem) -> void:
+	for p in [[Vector2(150, 300), -0.18, Color("#8fd8c0"), 9901], [Vector2(362, 300), 0.18, Color("#f7a6c8"), 9910]]:
+		var at: Vector2 = p[0]
+		var phone := _turn(Crayon.rounded_rect(Rect2(at - Vector2(80, 130), Vector2(160, 260)), 28), at, p[1])
+		_mark(c, phone, p[2], p[3])
+		var screen := _turn(Crayon.rounded_rect(Rect2(at - Vector2(58, 100), Vector2(116, 180)), 14), at, p[1])
+		_mark(c, screen, Color("#fffdf6"), p[3] + 1, 6.0)
+	for i in 7:
+		var t := (i + 0.5) / 7.0
+		var at := Vector2(lerpf(170, 342, t), 150 - sin(t * PI) * 90.0)
+		c.draw_circle(at, 7.0, Color("#b48ad8"))
+	_mark(c, Crayon.heart(Vector2(256, 80), 110.0), Color("#f2557a"), 9920, 8.0)
 
 
 ## Marker: a rosette for joining in - rainbow petals round a heart, two ribbon tails. No number,
