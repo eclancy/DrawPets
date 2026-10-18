@@ -109,7 +109,9 @@ same three pictures on both phones, all of each family's pets swapped; friends' 
 (`sharing.md`). Or with a code: one phone shows a QR code, the other scans it - the way an
 Android phone and an iPhone will swap, once there is an iOS version.
 
-Still to try on real phones: Nearby between two Android devices, and the camera scanner.
+Tried on a real phone (2026-10-18): the Pixel 9 scanned a code shown by the game on a PC on the
+same Wi-Fi - camera permission, the scanner, the swap both ways. Still to try: Nearby between two
+Android devices.
 
 ## M2 - On a real phone - see `android.md`
 
