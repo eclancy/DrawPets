@@ -113,6 +113,12 @@ Tried on a real phone (2026-10-18): the Pixel 9 scanned a code shown by the game
 same Wi-Fi - camera permission, the scanner, the swap both ways. Still to try: Nearby between two
 Android devices.
 
+## M1.17 - Downloads for Windows and Android (built, not live)
+
+An installer and a portable zip for Windows that update themselves, and a release-signed APK for
+Android that says when a new one is out; a download page at ecec.dev/drawpets/download
+(`releasing.md`). Going live: make the repo public, release 0.1.0, merge the site branch.
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a

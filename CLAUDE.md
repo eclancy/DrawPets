@@ -36,6 +36,7 @@ decision; do not restate it here.
 - `.ai/audio-direction.md` - how every sound is made, pet voices and their variation, the mic,
   the mix. **Read before adding or changing any sound.**
 - `.ai/android.md` - building, installing and debugging on Android phones and tablets
+- `.ai/releasing.md` - the Windows installer and Android APK, GitHub Releases, self-updating
 - `.ai/sharing.md` - swapping pets phone to phone, and the child-privacy rules it must follow
 - `.ai/roadmap.md` - milestones, the idea backlog, open questions with their defaults
 
@@ -85,6 +86,9 @@ decision; do not restate it here.
   `.shots/art_<group>_assembled.png` for any group with a ROSTER of creatures). Needs a window. Then run `--import` so Godot picks the
   PNGs up. Never hand-edit a baked PNG; change the drawing code.
 - **`python tools/app_icon.py`** - the app icon, cropped from a demo screenshot into `icon/`.
+- **`bash tools/release/release.sh X.Y.Z ["what changed"]`** - a GitHub Release with the
+  Windows installer, zips and the signed Android APK (`--build-only` builds them into
+  `build/release/` and publishes nothing). Needs the release key folder - `.ai/releasing.md`.
 - Android export, install and debugging: `.ai/android.md`. The demo has its own preset and
   package (`dev.ecec.drawpets.demo`) so it never plays on a real save.
 - `$GODOT_BIN` is set in `.claude/settings.json` (the .NET build, which runs GDScript fine).

@@ -3,7 +3,7 @@
 
 Run:
     "$GODOT_BIN" --path . -- --demo --quit     -> .shots/demo_NN_journal.png among the rest
-    python tools/app_icon.py                   -> icon/*.png
+    python tools/app_icon.py                   -> icon/*.png, icon/icon.ico
 
 IT IS A CROP OF A REAL FRAME OF THE GAME, not a drawing made for the icon (the DrawFight rule):
 an icon drawn separately is a second answer to "what does this game look like", and it drifts
@@ -69,6 +69,7 @@ def main():
         print("wrote icon/%s  %dx%d" % (name, img.size[0], img.size[1]))
 
     write("icon.png", pet.resize((256, 256), Image.LANCZOS))
+    write_ico(pet.resize((256, 256), Image.LANCZOS))
     write("android_main.png", pet.resize((192, 192), Image.LANCZOS))
 
     front = Image.new("RGBA", (ADAPTIVE, ADAPTIVE), (0, 0, 0, 0))
@@ -76,6 +77,16 @@ def main():
     front.paste(pet.resize((ADAPTIVE_ART, ADAPTIVE_ART), Image.LANCZOS), (at, at))
     write("android_front.png", front)
     write("android_back.png", Image.new("RGB", (ADAPTIVE, ADAPTIVE), PAPER))
+
+
+# The Windows icon - DrawPets.exe, the installer and the Start menu - at every size Windows asks
+# for, from the same crop as icon.png.
+ICO_SIZES = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+
+
+def write_ico(img256):
+    img256.save(os.path.join(OUT, "icon.ico"), sizes=ICO_SIZES)
+    print("wrote icon/icon.ico  %s" % ", ".join(str(w) for w, _h in ICO_SIZES))
 
 
 if __name__ == "__main__":

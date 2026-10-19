@@ -28,6 +28,12 @@ func _ready() -> void:
 	top.add_child(UI.icon_button("ui_settings", "Settings", func(): game.go_settings(), 48, Vector2(96, 96)))
 	col.add_child(top)
 
+	# On Android a new version cannot install itself (UpdateScreen): say where a grown-up gets it.
+	if UpdateScreen.newer != "":
+		var note := UI.label("A new DrawPets is out! Ask a grown-up to get it from %s" % UpdateScreen.DOWNLOAD_PAGE, 20)
+		note.add_theme_color_override("font_color", UI.INK_SOFT)
+		col.add_child(note)
+
 	var p := game.profile
 	if p.homes().is_empty():
 		var sub := UI.label("Build a home on a plot, then draw a pet - or adopt one in the shop!", 24)

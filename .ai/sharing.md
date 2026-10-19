@@ -69,6 +69,11 @@ Bluetooth on? same Wi-Fi?) - never an error message.
 5. **Removable**: a grown-up holds a family's button on the Friends page to remove it - its pets
    are deleted from this phone, and your pets forget them.
 
+## The only other thing that goes online
+
+The update check (`.ai/releasing.md`): a downloaded copy asks ecec.dev for `version.json` when it
+starts, with nothing about the player in the request. Nothing a kid made ever goes with it.
+
 ## Visiting
 
 A friend family's pet drops into a home the first time it is opened each day, and now and then

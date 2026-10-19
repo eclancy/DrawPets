@@ -294,7 +294,8 @@ debugging > Pair device; `adb mdns services` finds the phone's address and ports
 
 ## Later
 
-- A release keystore (kept out of git, like DrawFight's) and a release preset.
+- Done 2026-10-18: a release key (outside the repo) and a signed release APK in every GitHub
+  Release, downloaded from ecec.dev/drawpets/download - see `releasing.md`.
 - Sideloading for the family vs the Play Store: the Play Store means a developer account, a
   privacy policy and the Families policy (the players are under 13 - see `sharing.md`).
 - iOS: needs a Mac with Xcode and an Apple developer account.

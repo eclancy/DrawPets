@@ -16,6 +16,7 @@ extends Node
 ##   --screen=place|create|shop|calendar   boot straight into a screen
 ##   --shot=N        screenshot frame N to .shots/shot.png. F12 grabs a frame any time.
 ##   --hour=H        pretend it is H o'clock (0-24, e.g. 21.5) - to see dusk, night and morning
+##   --no-update     an exported Windows build skips its update check (UpdateScreen)
 
 var screen: Node
 var profile: Profile
@@ -48,6 +49,18 @@ func _ready() -> void:
 		profile.add_stars(int(dev["stars"]))
 	_build_toasts()
 
+	# A downloaded Windows copy updates itself before anything else (.ai/releasing.md); an
+	# Android one only finds out, in the background, for the home screen to mention.
+	if UpdateScreen.should_check() and not dev.has("demo"):
+		var u := UpdateScreen.new()
+		u.on_done = open_first_screen
+		show_screen(u)
+		return
+	UpdateScreen.check_quietly(self)
+	open_first_screen()
+
+
+func open_first_screen() -> void:
 	match dev.get("screen", ""):
 		"place":
 			if not profile.homes().is_empty():

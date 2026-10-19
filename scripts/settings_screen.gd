@@ -85,6 +85,13 @@ func _ready() -> void:
 	col.add_child(mode_row)
 	_refresh_mode()
 
+	var version := "DrawPets %s" % UpdateScreen.current_version()
+	if UpdateScreen.newer != "":
+		version += " - version %s is out: a grown-up can get it from %s" % [UpdateScreen.newer, UpdateScreen.DOWNLOAD_PAGE]
+	var vl := UI.label(version, 18)
+	vl.add_theme_color_override("font_color", UI.INK_SOFT)
+	col.add_child(vl)
+
 
 func _refresh_mode() -> void:
 	var adv := game.profile.advanced()
