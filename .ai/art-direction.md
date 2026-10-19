@@ -32,7 +32,9 @@ picture is one of them:
 Game art is outlined in a **darker shade of its own colour**, never black, and sits on an opaque
 paper-white base so nothing behind it shows through (a hat must hide the head under it). The
 **rival pets** are the one exception: they are drawn as if by other kids, so they get black
-marker outlines - creatures own black.
+marker outlines - creatures own black. So does the **mascot** on the app icon
+(`scripts/art_brand.gd`): a kid's drawn pet, close up and smiling, hugging its coloured pencil, on
+a light sky square.
 
 The art lives in `scripts/art_things.gd`, `art_wear.gd` and `art_rivals.gd` as drawing code, and
 is baked to `art/` by `tools/bake_art.gd`. Change the drawing code and re-bake; never edit a PNG.

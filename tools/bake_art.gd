@@ -16,7 +16,7 @@ extends SceneTree
 ##   "top"    - the middle of the ink's top  (things that hang: scarves, capes)
 ##   Vector2  - a point on the sheet         (creature parts: the red dot they grow from)
 
-const GROUPS := ["things", "wear", "ui", "homes", "rivals", "adopt_a", "adopt_b", "adopt_c", "adopt_d"]
+const GROUPS := ["things", "wear", "ui", "homes", "rivals", "adopt_a", "adopt_b", "adopt_c", "adopt_d", "brand"]
 const SHEET := 512
 
 var _painter: Painter

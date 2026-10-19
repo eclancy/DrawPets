@@ -79,13 +79,14 @@ decision; do not restate it here.
   those, since nobody here can listen. Then `--import`. Never hand-edit a sound. `tools/voice_check.gd`
   + `tools/audio/sheet.py` check the voice sliders the same way (`.ai/audio-direction.md`).
 - **`"$GODOT_BIN" --path . -s tools/bake_art.gd -- --group=<group> [--only=a,b]`** - groups:
-  things, wear, ui, homes, rivals, adopt_a, adopt_b, adopt_c, adopt_d (every
+  things, wear, ui, homes, rivals, adopt_a, adopt_b, adopt_c, adopt_d, brand (every
   `scripts/art_<group>.gd`) -
   bakes the game's drawings from `scripts/art_<group>.gd` into `art/<group>/*.png` and
   `pivots.json`, with a contact sheet in `.shots/art_<group>.png` (and the assembled rivals in
   `.shots/art_<group>_assembled.png` for any group with a ROSTER of creatures). Needs a window. Then run `--import` so Godot picks the
   PNGs up. Never hand-edit a baked PNG; change the drawing code.
-- **`python tools/app_icon.py`** - the app icon, cropped from a demo screenshot into `icon/`.
+- **`python tools/app_icon.py`** - the app icon (every size, `.ico` too) into `icon/`, from the
+  mascot drawn in `scripts/art_brand.gd` (bake the `brand` group first).
 - **`bash tools/release/release.sh X.Y.Z ["what changed"]`** - a GitHub Release with the
   Windows installer, zips and the signed Android APK (`--build-only` builds them into
   `build/release/` and publishes nothing). Needs the release key folder - `.ai/releasing.md`.

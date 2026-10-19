@@ -77,10 +77,11 @@ What was learned setting it up:
 - **Backup off** (`user_data_backup/allow=false`): Android's automatic backup would copy the
   saves - drawings and voice recordings - to the family's Google account. Nothing a child recorded
   leaves the device.
-- **Icon**: `python tools/app_icon.py` crops Zorp, the demo kid's creature, from its journal's
-  front page in a demo run (`.shots/demo_NN_journal.png`) into `icon/` - the project icon, the 192px launcher
-  icon, and the two 432px adaptive layers (the crop on paper). A real frame, never drawn
-  separately (the DrawFight rule).
+- **Icon**: DrawPets' mascot (since 2026-10-19, at Eric's ask - before that, a crop of a demo
+  screenshot): a pet a kid drew, close up and smiling, hugging its coloured pencil. Drawn in
+  `scripts/art_brand.gd`, baked (`--group=brand`), then `python tools/app_icon.py` writes the
+  project icon, the 192px launcher icon, the two 432px adaptive layers (a smaller pet in front,
+  so a round mask keeps its ears) and the Windows `icon.ico`.
 - Immersive (no status bar), and the boot splash is plain paper rather than Godot's dark grey.
 
 **Android Demo** - the same, with Extra Args `--demo --quit`: the scripted kid plays the whole game
