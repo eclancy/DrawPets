@@ -8,10 +8,9 @@ and how it stays up to date. The same design as DrawFight's, Wizard Wars' and Wi
 Windows copy starts it updates itself; an Android copy says on its home screen that a grown-up
 can get the new one.
 
-**Not live yet.** The repo is private, so release downloads are not public. Going live means:
-make `eclancy/DrawPets` public (check it for anything private first), run the release script,
-then merge the `drawpets-download` branch of EricClancyEngineeringAndCrafts (the download page,
-the nginx redirects, and DrawPets no longer "Coming soon" on its game page).
+**Live since 2026-10-19** with 0.1.0: the repo went public (its history checked for keys,
+passwords and personal details first), and the download page, the nginx redirects and the game
+page went out on ecec.dev.
 
 ## Where things live
 
