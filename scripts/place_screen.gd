@@ -1,7 +1,7 @@
 class_name PlaceScreen
 extends Node2D
 ## A home: a favourite place, the pets who live there, and whatever the kid has put in it.
-## The Nintendogs part of the game (.ai/pet-life.md).
+## The looking-after part of the game (.ai/pet-life.md).
 ##
 ##   Rub a pet         -> hearts, trust, charm. Its head: eyes shut, it leans into your finger.
 ##                        Its body: a happy wiggle - keep going and it rolls over for a belly rub.

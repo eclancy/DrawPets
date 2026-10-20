@@ -2,7 +2,7 @@
 
 A virtual-pet game where every pet is a creature a kid drew, part by part, inside the game.
 It walks, wags, blinks and plays because of the parts it has - and then they look after it,
-Nintendogs-style, in the place it loves most.
+like a real pet, in the place it loves most.
 
 ## The pitch
 

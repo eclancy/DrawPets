@@ -1,11 +1,11 @@
 # Pet life
 
-Everything a pet does once it exists - the Nintendogs half of the game. Read before adding any
+Everything a pet does once it exists - the looking-after half of the game. Read before adding any
 need, stat, activity, reaction or reward.
 
-## The Nintendogs mapping
+## Caring for a pet
 
-| Nintendogs | DrawPets | status |
+| a real pet | DrawPets | status |
 |---|---|---|
 | pet the dog | rub its head (eyes shut, leans in), its body (wiggles), a belly rub; tap to say hi | built |
 | food bowl | drag a snack out of the Food drawer; the hungriest pet munches it | built |

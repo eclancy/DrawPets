@@ -1,6 +1,6 @@
 # DrawPets - agent instructions
 
-A virtual-pet game (Nintendogs is the model) where every pet is a creature a kid drew, part by
+A virtual-pet game where every pet is a creature a kid drew, part by
 part, inside the game. Sibling of `../DrawFight`, built on its lessons but with no photos, no
 cutting and no AI: kids draw each part on its own sheet, drag the parts onto the body, and each
 part type's motion recipe brings it to life.

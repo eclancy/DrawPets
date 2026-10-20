@@ -32,7 +32,7 @@ with a toast that says what it was for; a kid should always know what they did t
 | practice at the Fun Fair, rematches | 1 | 3 a day |
 
 The daily caps exist so the fastest way to earn is to **come back tomorrow**, not to grind
-fetch for an hour - the same rhythm Nintendogs has.
+fetch for an hour - the rhythm of looking after a real pet.
 
 ## What is in the shop
 

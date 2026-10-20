@@ -6,7 +6,7 @@ Kids pick what their creature has - a head, eyes, legs, wings, a tail, tentacles
 draw each part on its own sheet, starting from a red dot that marks where it joins on. They
 drag the parts onto the body, and it comes alive: legs step, tails wag, eyes blink, wings flap.
 Then they name it, pick its size and the place it loves to live, and draw its favourite food
-and toy. And then they look after it, the way Nintendogs does: pet it, feed it, throw its toy,
+and toy. And then they look after it like a real pet: pet it, feed it, throw its toy,
 and visit it in its favourite place.
 
 Pets live together in homes the kid decorates - with furniture they draw or pick from a
