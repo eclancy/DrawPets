@@ -6,7 +6,7 @@ cutting and no AI: kids draw each part on its own sheet, drag the parts onto the
 part type's motion recipe brings it to life.
 
 Godot 4.5, **GDScript**, 2D, GL Compatibility renderer. **Android first**, iOS later, landscape.
-Players are 10-12. **M0 and M1 are built**: drawing and assembly; homes with several pets,
+Players are 7 and up (Beginner mode for younger kids, Advanced for about 10-12). **M0 and M1 are built**: drawing and assembly; homes with several pets,
 decorating, food/toys/clothes (drawn, starter kit or shop) described by preset words; six stats
 trained by play; gold stars and a shop; a weekly competition calendar with six events and eight
 rival pets. Since then: day and night from the clock, mud and the bath, walks with presents to

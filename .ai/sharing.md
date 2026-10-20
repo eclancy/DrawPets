@@ -5,7 +5,7 @@ visit the other's homes. **No server, no internet, no accounts.** Built (`SwapSc
 
 ## Why it is built this way (decided)
 
-The players are 10-12 and DrawPets is made for them, so under COPPA (US), the UK Children's Code
+The players are 7 and up - all of them under 13 - and DrawPets is made for them, so under COPPA (US), the UK Children's Code
 and Google Play's Families policy it is treated as a children's app **for every player** - an
 age gate or birth-date screen does not change that. Anything that stores children's content on
 a server and shows it to other families needs verifiable parental consent (a card payment, a

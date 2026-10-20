@@ -20,8 +20,10 @@ moves comes from a hand-written motion recipe for that kind of part.
 
 ## Who it is for
 
-Kids aged 10-12 (decided). Old enough to read short prompts and handle a real care routine,
-contests and unlocks; young enough that the drawing has to be fast and forgiving on a phone.
+Kids aged 7 and up (decided; widened from 10-12 once Beginner mode existed). Beginner is for
+kids old enough to read short prompts: care, play and a fun day every day, with no stats or
+contests. Advanced, aimed at about 10-12, adds the stats, contests and unlocks. Either way the
+drawing has to be fast and forgiving on a phone.
 The family plays on one shared Android phone or tablet first, iOS later.
 
 ## The five pillars
@@ -48,7 +50,7 @@ The family plays on one shared Android phone or tablet first, iOS later.
 | engine | Godot 4.5, **GDScript** (C# cannot export to iOS or web and is shaky on Android) |
 | platform | **Android first**, iOS later. Landscape. Touch first; mouse works for testing |
 | renderer | GL Compatibility - runs on cheap tablets |
-| age | 10-12 |
+| age | 7+ (Beginner from about 7; Advanced aimed at 10-12) |
 | assembly | draw each part on its own sheet, then **drag parts onto the body** |
 | care | **gentle real-time** - needs drift while the app is closed, with a floor |
 | microphone | record the creature's own voice (3 s at most), and call it by loudness - **all optional**, off unless turned on, with a button for everything the mic does |

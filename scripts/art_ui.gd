@@ -1,7 +1,7 @@
 class_name ArtUI
 extends RefCounted
 ## The pictures on the game's buttons: drawing tools, assembly edits, body-part icons, size
-## animals and a few actions. Kids are 10-12 but buttons should still read as pictures first
+## animals and a few actions. Players start at 7, so buttons should read as pictures first
 ## - an eraser button IS a picture of an eraser. Baked to res://art/ui/ by tools/bake_art.gd.
 ##
 ## House style (same as ArtWear - read scripts/art_wear.gd for examples): coloured pencil or
