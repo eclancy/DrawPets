@@ -438,6 +438,14 @@ func _music_for(node: Node) -> void:
 
 
 ## The settings screen, then back where the kid was.
+## Feedback for a grown-up (FeedbackScreen), from Settings.
+func go_feedback(back: Callable) -> void:
+	var s := FeedbackScreen.new()
+	s.game = self
+	s.on_back = back
+	show_screen(s)
+
+
 func go_settings(back := Callable()) -> void:
 	var s := SettingsScreen.new()
 	s.game = self

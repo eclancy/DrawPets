@@ -11,10 +11,12 @@ var game: GameRoot
 var on_back := Callable()
 
 var _mic: Button
-## Switching Beginner/Advanced is held for a moment, so a stray tap never changes the game.
+## The grown-up buttons - switching Beginner/Advanced, and feedback - are held for a moment, so a
+## stray tap never changes the game or opens a box to type in.
 const HOLD := 1.5
-var _holding := false
+var _holding := ""          # which held button is down: "mode", "feedback" or none
 var _held := 0.0
+var _bars := {}
 var _mode_bar: ProgressBar
 var _mode_label: Label
 var _mode_button: Button
@@ -73,24 +75,39 @@ func _ready() -> void:
 	mode_row.add_child(_mode_label)
 	var hold_col := VBoxContainer.new()
 	_mode_button = UI.button("", func(): pass, Vector2(300, 64), 22)
-	_mode_button.button_down.connect(func(): _holding = true)
-	_mode_button.button_up.connect(func(): _holding = false)
-	hold_col.add_child(_mode_button)
-	_mode_bar = ProgressBar.new()
-	_mode_bar.max_value = HOLD
-	_mode_bar.show_percentage = false
-	_mode_bar.custom_minimum_size = Vector2(0, 12)
-	hold_col.add_child(_mode_bar)
+	_mode_bar = _held_button(_mode_button, "mode", hold_col)
 	mode_row.add_child(hold_col)
 	col.add_child(mode_row)
 	_refresh_mode()
 
+	# The version, and feedback for a grown-up (FeedbackScreen) - held too.
+	var last := HBoxContainer.new()
+	last.add_theme_constant_override("separation", 16)
 	var version := "DrawPets %s" % UpdateScreen.current_version()
 	if UpdateScreen.newer != "":
 		version += " - version %s is out: a grown-up can get it from %s" % [UpdateScreen.newer, UpdateScreen.DOWNLOAD_PAGE]
-	var vl := UI.label(version, 18)
+	var vl := UI.label(version, 18, true)
 	vl.add_theme_color_override("font_color", UI.INK_SOFT)
-	col.add_child(vl)
+	vl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	last.add_child(vl)
+	var fb_col := VBoxContainer.new()
+	_held_button(UI.button("Grown-ups, hold: report a bug or idea", func(): pass, Vector2(420, 56), 20), "feedback", fb_col)
+	last.add_child(fb_col)
+	col.add_child(last)
+
+
+## A button that does its thing once held for HOLD, with a bar filling under it.
+func _held_button(b: Button, what: String, into: Container) -> ProgressBar:
+	b.button_down.connect(func(): _holding = what)
+	b.button_up.connect(func(): _holding = "")
+	into.add_child(b)
+	var bar := ProgressBar.new()
+	bar.max_value = HOLD
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 12)
+	into.add_child(bar)
+	_bars[what] = bar
+	return bar
 
 
 func _refresh_mode() -> void:
@@ -101,19 +118,25 @@ func _refresh_mode() -> void:
 
 
 func _process(delta: float) -> void:
-	if _mode_bar == null:
+	if _bars.is_empty():
 		return
-	if _holding:
+	if _holding != "":
 		_held += delta
 		if int(_held * 4.0) != int((_held - delta) * 4.0):
 			Sounds.play("ui_tap", 1.0 + _held * 0.3)
 	else:
 		_held = maxf(0.0, _held - delta * 3.0)
-	_mode_bar.value = _held
+	for what in _bars:
+		_bars[what].value = _held if what == _holding else 0.0
 	if _held >= HOLD:
+		var what := _holding
 		_held = 0.0
-		_holding = false
-		switch_mode()
+		_holding = ""
+		match what:
+			"mode":
+				switch_mode()
+			"feedback":
+				game.go_feedback(game.go_settings.bind(on_back))
 
 
 func switch_mode() -> void:

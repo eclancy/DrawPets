@@ -118,6 +118,11 @@ starts, with nothing about the player in the request. Nothing a kid made ever go
 web version is a web page: loading it is an ordinary visit to ecec.dev, and its saves stay in the
 browser.
 
+**Feedback** (`FeedbackScreen`, Settings): a grown-up holds a button to report a bug or send an
+idea, typed, to ecec.dev's intake, which saves it and emails it to Eric. No name field, a line
+asking for nothing personal, and only the message, its kind (bug, idea, other) and the game's
+version and platform are sent and kept - no address, nothing a kid drew or recorded.
+
 ## Visiting
 
 A friend family's pet drops into a home the first time it is opened each day, and now and then
