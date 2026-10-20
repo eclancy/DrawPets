@@ -70,7 +70,7 @@ decision; do not restate it here.
   competitions. **It plays on whatever save it finds**, so give it a fresh one that leaves the
   real save alone: `APPDATA=<an empty folder> "$GODOT_BIN" --path . -- --demo --quit` (Godot puts
   `user://` under `APPDATA`; the shots still go to `.shots/`).
-- `--screen=place|create|shop|calendar` boots straight into a screen; `--stars=N` adds stars;
+- `--screen=place|create|shop|calendar|swap` boots straight into a screen; `--stars=N` adds stars;
   `--shot=N` screenshots frame N; `--hour=21.5` pretends it is that time (night, dusk, morning);
   F12 grabs a frame.
 - **`python tools/audio/build.py --all --sheet`** - regenerates every sound effect
@@ -90,6 +90,9 @@ decision; do not restate it here.
 - **`bash tools/release/release.sh X.Y.Z ["what changed"]`** - a GitHub Release with the
   Windows installer, zips and the signed Android APK (`--build-only` builds them into
   `build/release/` and publishes nothing). Needs the release key folder - `.ai/releasing.md`.
+- **`bash tools/web_build.sh [--debug] [out-dir]`** - the web version into `build/web/`, with the
+  standard (non-.NET) Godot, which the web needs (`.ai/releasing.md`). Served locally it needs a
+  server that knows `.wasm`; swapping needs the meeting point (EricClancyEngineeringAndCrafts `meet/`).
 - Android export, install and debugging: `.ai/android.md`. The demo has its own preset and
   package (`dev.ecec.drawpets.demo`) so it never plays on a real save.
 - `$GODOT_BIN` is set in `.claude/settings.json` (the .NET build, which runs GDScript fine).

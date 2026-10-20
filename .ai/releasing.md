@@ -84,6 +84,33 @@ A phone with a **debug** build (from development, `.ai/android.md`) cannot insta
 APK over it - different key. Uninstalling the debug build deletes its pets; for testing, use the
 Android Demo package (`dev.ecec.drawpets.demo`) or a phone without DrawPets.
 
+## The web version
+
+Decided 2026-10-20: the whole game in a browser, at **ecec.dev/drawpets/play/** - how iPads,
+iPhones, Chromebooks and Macs play, with no store and no Apple account.
+
+- **Built by `tools/web_build.sh`** with the *standard* Godot 4.5.1 editor
+  (`C:\Users\ericc\Godot\Godot_v4.5.1-stable_win64\`, or `GODOT_WEB_BIN`): the .NET editor
+  refuses web exports even with no C# in the project. Its web templates are in
+  `%APPDATA%\Godot\export_templates\4.5.1.stable\`. Single-threaded (no special server headers),
+  installable as a home-screen app (PWA), landscape. `--debug` builds print their swap code to the
+  console, for testing two browsers without a camera.
+- **Beside the game:** `web/scanner.js` (the camera scanner) and jsQR (the decoder, kept as
+  `web/vendor/jsQR.js.txt`: a .js that big makes the .NET editor hang on exit, `.gdignore` or not).
+- **Served by ecec.dev itself**, not GitHub: the meeting point for swapping is there too, and a
+  browser's saves belong to the site they were made on - so the site must never move. The release
+  carries `DrawPets-web.zip`; the site's deploy (EricClancyEngineeringAndCrafts `deploy.yml`)
+  unpacks the newest one into `/drawpets/play/`, and release.sh starts that deploy. nginx serves
+  the folder with `no-cache` (the engine's files keep their names between releases).
+- **Saves live in the browser** (IndexedDB). The page asks the browser to keep them
+  (`navigator.storage.persist`). Safari deletes a site's storage after a week without a visit
+  unless it was added to the Home Screen - the download page tells grown-ups so.
+- **Swapping** is by code only, through the meeting point (`MeetLink`, `.ai/sharing.md`).
+- **No update check:** loading the page is getting the newest version.
+- **Tested** in Chrome (headless, two windows at once - a hidden browser stops animating, which
+  freezes Godot): the whole demo, and a swap with a drawn pet between two browsers. Not yet on a
+  real iPad or with a real camera.
+
 ## Making a release
 
 ```sh
@@ -91,7 +118,7 @@ bash tools/release/release.sh 0.2.0 "A new pet food: noodles. Walks find more pr
 bash tools/release/release.sh 0.2.0 --build-only     # build into build/release/, nothing else
 ```
 
-The quoted text is what players see under "What's new" on `ecec.dev/games/drawpets` - write it
+Every release also builds the web version and redeploys ecec.dev for it (above). The quoted text is what players see under "What's new" on `ecec.dev/games/drawpets` - write it
 for them, one change a line. It needs a clean working tree (not for `--build-only`). The script
 sets the version, exports Windows and Android, packages, compiles the installer, commits
 "Release v0.2.0", tags it, pushes, and runs `gh release create`. About ten minutes; the Android

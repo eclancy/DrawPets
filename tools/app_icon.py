@@ -67,6 +67,9 @@ def main():
     write("android_main.png", full.resize((192, 192), Image.LANCZOS))
     write("android_front.png", round_pet.resize((ADAPTIVE, ADAPTIVE), Image.LANCZOS))
     write("android_back.png", back.convert("RGB").resize((ADAPTIVE, ADAPTIVE), Image.LANCZOS))
+    # The web version's home-screen icons (an installed web app on a phone, tablet or computer).
+    for size in (144, 180, 512):
+        write("pwa_%d.png" % size, full.resize((size, size), Image.LANCZOS))
     full.resize((256, 256), Image.LANCZOS).save(os.path.join(OUT, "icon.ico"), sizes=ICO_SIZES)
     print("wrote icon/icon.ico  %s" % ", ".join(str(w) for w, _h in ICO_SIZES))
 

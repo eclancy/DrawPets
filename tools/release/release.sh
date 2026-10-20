@@ -10,11 +10,12 @@
 # "What's new". The download instructions are always appended below it, and must keep starting
 # with "Download **": that page strips the paragraph that starts that way.
 #
-# Commits the version bump, tags it, exports Windows and Android, and makes a GitHub Release with
-# the installer (DrawPets-Setup.exe, Inno Setup, installer.iss), the full zip (the portable
-# version), the small patch zip, the Android APK (DrawPets.apk, signed with the release key) and
-# version.json. ecec.dev/drawpets/version.json redirects to the newest release's version.json, so
-# nothing on ecec.dev needs deploying. See .ai/releasing.md. Ported from Wizard Survivors'.
+# Commits the version bump, tags it, exports Windows, Android and the web, and makes a GitHub
+# Release with the installer (DrawPets-Setup.exe, Inno Setup, installer.iss), the full zip (the
+# portable version), the small patch zip, the Android APK (DrawPets.apk, signed with the release
+# key), the web version (DrawPets-web.zip) and version.json. ecec.dev/drawpets/version.json
+# redirects to the newest release's version.json; the web version needs ecec.dev redeployed, which
+# the script starts at the end. See .ai/releasing.md. Ported from Wizard Survivors'.
 set -euo pipefail
 
 VERSION="${1:-}"
@@ -24,7 +25,7 @@ if [ "$CHANGES" = "--build-only" ]; then
 	BUILD_ONLY=1
 	CHANGES=""
 fi
-HOW_TO="Download **DrawPets-Setup.exe** and run it, then play from the Start menu or the desktop. It keeps itself up to date from then on. No installer? DrawPets-windows.zip is the portable version: unzip it anywhere you can write to and run DrawPets.exe. On an Android phone or tablet, download **DrawPets.apk** and open it (a grown-up allows the install). Download page: https://ecec.dev/drawpets/download"
+HOW_TO="Download **DrawPets-Setup.exe** and run it, then play from the Start menu or the desktop. It keeps itself up to date from then on. No installer? DrawPets-windows.zip is the portable version: unzip it anywhere you can write to and run DrawPets.exe. On an Android phone or tablet, download **DrawPets.apk** and open it (a grown-up allows the install). On an iPad, iPhone, Chromebook or Mac, play in the browser at https://ecec.dev/drawpets/play/ - and add it to the Home Screen. Download page: https://ecec.dev/drawpets/download"
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "usage: bash tools/release/release.sh X.Y.Z [\"what changed\" | --build-only]" >&2
 	exit 1
@@ -56,6 +57,11 @@ set -a
 . "$KEYS"
 set +a
 [ -f "${GODOT_ANDROID_KEYSTORE_RELEASE_PATH:-}" ] || { echo "the release keystore named in $KEYS is missing" >&2; exit 1; }
+
+# The web version needs the standard (non-.NET) Godot of the same version (tools/web_build.sh).
+WEB_BIN="${GODOT_WEB_BIN:-/c/Users/ericc/Godot/Godot_v4.5.1-stable_win64/Godot_v4.5.1-stable_win64_console.exe}"
+[ -f "$WEB_BIN" ] || { echo "the standard Godot editor for the web build is not at $WEB_BIN - set GODOT_WEB_BIN" >&2; exit 1; }
+export GODOT_WEB_BIN="$WEB_BIN"
 
 ANDROID_HOME="${ANDROID_HOME:-$LOCALAPPDATA/Android/Sdk}"
 [ -d "$ANDROID_HOME" ] || ANDROID_HOME="$HOME/Android/Sdk"
@@ -113,6 +119,8 @@ case "$CERT" in
 	*"Android Debug"*|"") echo "DrawPets.apk is not signed with the release key: $CERT" >&2; undo; exit 1 ;;
 esac
 
+bash tools/web_build.sh build/web || { undo; exit 1; }
+
 python tools/release/package.py "$VERSION"
 # The installer: build/release/DrawPets-Setup.exe, from the same export. The MSYS variables stop
 # Git Bash rewriting ISCC's /Q and /D switches into Windows paths.
@@ -133,10 +141,17 @@ git push -q origin HEAD "v$VERSION"
 
 gh release create "v$VERSION" --repo eclancy/DrawPets \
 	build/release/DrawPets-Setup.exe build/release/DrawPets-windows.zip \
-	build/release/DrawPets-patch.zip build/release/DrawPets.apk build/release/version.json \
+	build/release/DrawPets-patch.zip build/release/DrawPets.apk build/release/DrawPets-web.zip \
+	build/release/version.json \
 	--title "DrawPets $VERSION" \
 	--notes "${CHANGES:+$CHANGES
 
 }$HOW_TO"
+
+# The web version is served from ecec.dev itself (same site as the meeting point), so the site's
+# deploy fetches the newest DrawPets-web.zip; start it now.
+gh workflow run deploy.yml --repo eclancy/EricClancyEngineeringAndCrafts \
+	&& echo "Started ecec.dev's deploy - /drawpets/play/ gets v$VERSION in a few minutes." \
+	|| echo "Could not start ecec.dev's deploy - run its Deploy workflow by hand for the web version." >&2
 
 echo "Released v$VERSION - every Windows copy updates the next time it starts."

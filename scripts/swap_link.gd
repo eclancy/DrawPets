@@ -5,6 +5,8 @@ extends Node
 ##   NearbyLink  Google's Nearby Connections (Bluetooth and a direct Wi-Fi link it makes itself)
 ##   LanLink     the fallback: the same Wi-Fi, or one phone's hotspot - found by a broadcast, or
 ##               by scanning a swap code (QR) one phone shows
+##   MeetLink    in a browser (the web version): a swap code, a meeting point on ecec.dev to
+##               introduce the two devices, then WebRTC straight between them
 ## They go: begin -> check (show the same pictures on both phones) -> confirm -> linked ->
 ## send / received -> finish. A scanned code needs no check: begin -> linked.
 
@@ -21,6 +23,8 @@ signal failed(why: String)
 var my_name := ""
 ## The friend family's nickname, once their phone has said hello.
 var friend_name := ""
+## Finds the friend by a swap code one device shows and the other scans (set before begin).
+var by_code := false
 
 
 func begin(_name: String) -> void:
@@ -39,8 +43,34 @@ func finish() -> void:
 	pass
 
 
+## Swapping by code: what this device's code says ("" while it has none to show)...
+func code() -> String:
+	return ""
+
+
+## ...whether a scanned code is one this link can call...
+func understands(_text: String) -> bool:
+	return false
+
+
+## ...and calling it. False if this link is busy.
+func dial_code(_text: String) -> bool:
+	return false
+
+
 ## Which link this phone can use: Nearby when Google Play services are there, else the Wi-Fi one.
 static func best() -> SwapLink:
+	if OS.has_feature("web"):
+		return MeetLink.new()
 	if NearbyLink.usable():
 		return NearbyLink.new()
 	return LanLink.new()
+
+
+## The link for swapping by code: a browser meets through ecec.dev, an app calls over the Wi-Fi.
+static func for_code() -> SwapLink:
+	if OS.has_feature("web"):
+		return MeetLink.new()
+	var lan := LanLink.new()
+	lan.by_code = true
+	return lan

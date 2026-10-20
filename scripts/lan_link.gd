@@ -32,9 +32,6 @@ enum { HELLO = 1, YES = 2, NO = 3, PACK = 4, BYE = 5 }
 ## Where to listen: everywhere on a phone; tests on one PC set "127.0.0.1" (no firewall prompt).
 static var bind_host := "*"
 
-## Find each other by a swap code instead of a broadcast (set before begin).
-var by_code := false
-
 var _udp := PacketPeerUDP.new()
 var _server := TCPServer.new()
 var _tcp_port := 0
@@ -175,6 +172,15 @@ static func _new_secret() -> int:
 	while s == 0:
 		s = randi()
 	return s
+
+
+func understands(text: String) -> bool:
+	return not read_code(text).is_empty()
+
+
+func dial_code(text: String) -> bool:
+	var scanned := read_code(text)
+	return not scanned.is_empty() and dial(scanned)
 
 
 ## A scanned code, checked: {secret, port, ips} - or {} if it is not a DrawPets swap code. A code

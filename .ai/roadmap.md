@@ -119,6 +119,13 @@ An installer and a portable zip for Windows that update themselves, and a releas
 Android that says when a new one is out; a download page at ecec.dev/drawpets/download
 (`releasing.md`).
 
+## M1.18 - The web version (built 2026-10-20)
+
+The whole game in a browser at ecec.dev/drawpets/play/ - iPads, iPhones, Chromebooks, Macs - and
+swapping between browsers by code through a meeting point that only introduces the two devices
+(`sharing.md`, `releasing.md`). Next: try it on a real iPad; then WebRTC in the apps (the
+webrtc-native add-on), so an app and a browser can swap too.
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a

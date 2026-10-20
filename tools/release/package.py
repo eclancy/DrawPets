@@ -9,6 +9,8 @@ Writes build/release/:
                          installer is what a new player downloads)
   DrawPets-patch.zip     just DrawPets.pck: every script, picture and sound. A fraction of the
                          full zip, because the engine only changes when Godot is upgraded.
+  DrawPets-web.zip       the web version (build/web/, made by tools/web_build.sh): ecec.dev's
+                         deploy unpacks the newest release's copy into /drawpets/play/
   version.json           what the game's update check reads (scripts/update_screen.gd)
 
 release.sh adds the other two files from the same commit: DrawPets-Setup.exe (Inno Setup,
@@ -28,6 +30,7 @@ import zipfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 EXPORT = os.path.join(ROOT, "build", "windows")
+WEB = os.path.join(ROOT, "build", "web")
 OUT = os.path.join(ROOT, "build", "release")
 REPO = "eclancy/DrawPets"
 NAME = "DrawPets"
@@ -35,6 +38,7 @@ FULL_ZIP = NAME + "-windows.zip"
 PATCH_ZIP = NAME + "-patch.zip"
 INSTALLER = NAME + "-Setup.exe"
 APK = NAME + ".apk"
+WEB_ZIP = NAME + "-web.zip"
 
 # The engine the export was made with. A patch is only offered to a copy on the same engine;
 # anything else downloads the full zip. Read from the editor binary's name rather than
@@ -93,6 +97,8 @@ def main(argv):
     for rel in PATCH + [NAME + ".exe"]:
         if not os.path.isfile(os.path.join(EXPORT, rel)):
             raise SystemExit("no %s in build/windows - run the Godot export first" % rel)
+    if not os.path.isfile(os.path.join(WEB, "index.pck")):
+        raise SystemExit("no web build in build/web - run tools/web_build.sh first")
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
 
@@ -108,6 +114,12 @@ def main(argv):
         z.write(os.path.join(EXPORT, rel), rel)
     z.close()
 
+    # The web version, files at the top of the zip: they go straight into /drawpets/play/.
+    web = os.path.join(OUT, WEB_ZIP)
+    z = zipfile.ZipFile(web, "w", zipfile.ZIP_DEFLATED, allowZip64=True)
+    add_tree(z, WEB, "")
+    z.close()
+
     base = "https://github.com/%s/releases/download/v%s/" % (REPO, version)
     info = {
         "version": version,
@@ -118,11 +130,12 @@ def main(argv):
         # are there for anything that wants this release's installer or APK by URL.
         "installer": base + INSTALLER,
         "android": base + APK,
+        "web": base + WEB_ZIP,
     }
     with io.open(os.path.join(OUT, "version.json"), "w", encoding="utf-8") as f:
         f.write(unicode(json.dumps(info, indent=2, sort_keys=True)) + u"\n")
 
-    for name in (FULL_ZIP, PATCH_ZIP, "version.json"):
+    for name in (FULL_ZIP, PATCH_ZIP, WEB_ZIP, "version.json"):
         print("%-30s %6.1f MB" % (name, os.path.getsize(os.path.join(OUT, name)) / 1048576.0))
     return 0
 

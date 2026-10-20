@@ -37,6 +37,10 @@ var _progress: ProgressBar
 var _way := "auto"
 var _code_shown := ""
 var _refresh_in := 0.0
+## The web version: the browser's camera scanner (web/scanner.js) answers through these.
+var _js_code: JavaScriptObject
+var _js_close: JavaScriptObject
+var _camera_explained := false
 
 
 func _ready() -> void:
@@ -80,10 +84,12 @@ func _main() -> void:
 	var ways := HBoxContainer.new()
 	ways.alignment = BoxContainer.ALIGNMENT_CENTER
 	ways.add_theme_constant_override("separation", 20)
-	var go := UI.big_icon_button("icon_friends", "Swap pets with a friend", _use_way.bind("auto"))
+	# In a browser the code is the only way (MeetLink).
+	var go := UI.big_icon_button("icon_friends", "Swap pets with a friend", _use_way.bind("code" if _web() else "auto"))
 	go.custom_minimum_size = Vector2(520, 110)
 	ways.add_child(go)
-	ways.add_child(UI.icon_button("icon_code", "Swap with a code", _use_way.bind("code"), 56, Vector2(300, 110)))
+	if not _web():
+		ways.add_child(UI.icon_button("icon_code", "Swap with a code", _use_way.bind("code"), 56, Vector2(300, 110)))
 	col.add_child(ways)
 	var fams := Visitors.families(game.profile)
 	if fams.is_empty():
@@ -157,6 +163,10 @@ func _hold_end() -> void:
 
 # --- Swapping ---------------------------------------------------------------------------------
 
+static func _web() -> bool:
+	return OS.has_feature("web")
+
+
 func _use_way(way: String) -> void:
 	_way = way
 	start()
@@ -164,6 +174,8 @@ func _use_way(way: String) -> void:
 
 ## The big button: permission first on a phone that needs it, then look for the friend.
 func start() -> void:
+	if _web():
+		_way = "code"
 	if _way == "code":
 		_stop_link()
 		_code_page()
@@ -234,14 +246,12 @@ func _open(link: SwapLink) -> void:
 ## This phone's swap code, big, and a button to scan the friend's - whichever kid scans, it works.
 ## The code changes by itself if the phone joins a Wi-Fi or turns on a hotspot meanwhile.
 func _code_page(note := "") -> void:
-	if not (_link is LanLink and (_link as LanLink).by_code):
+	if _link == null or not is_instance_valid(_link) or not _link.by_code:
 		_stop_link()
 		_sent = false
 		_got = {}
 		_state = "code"  # so a link that cannot start shows the trouble page
-		var lan := LanLink.new()
-		lan.by_code = true
-		_open(lan)
+		_open(SwapLink.for_code())
 		if _link == null:
 			return  # it could not start, and the trouble page is up
 	_state = "code"
@@ -259,7 +269,7 @@ func _code_page(note := "") -> void:
 	var mine := VBoxContainer.new()
 	mine.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(mine)
-	_code_shown = (_link as LanLink).code()
+	_code_shown = _link.code()
 	if _code_shown != "":
 		var card := CodeCard.new()
 		card.rows = QrCode.encode(_code_shown)
@@ -286,11 +296,21 @@ func _code_page(note := "") -> void:
 
 
 static func _can_scan() -> bool:
+	if _web():
+		var scanner := JavaScriptBridge.get_interface("drawpetsScanner")
+		return scanner != null and bool(scanner.available())
 	var n := NearbyLink.plugin()
 	return n != null and n.can_scan()
 
 
 func _scan() -> void:
+	if _web():
+		# The browser asks for the camera itself; say why first, once.
+		if _camera_explained:
+			_open_scanner()
+		else:
+			_ask_camera()
+		return
 	var n := NearbyLink.plugin()
 	if n.camera_allowed():
 		_open_scanner()
@@ -301,7 +321,7 @@ func _scan() -> void:
 func _ask_camera() -> void:
 	_state = "camera"
 	var col := _page("One quick thing", true, _code_page.bind(""))
-	col.add_child(UI.label("Your phone will ask if DrawPets can use the camera - just to read your friend's code. Tap ALLOW!\n\n(No pictures are taken or kept.)", 26, true))
+	col.add_child(UI.label(("This browser" if _web() else "Your phone") + " will ask if DrawPets can use the camera - just to read your friend's code. Tap ALLOW!\n\n(No pictures are taken or kept.)", 26, true))
 	var ok := UI.big_icon_button("tool_done", "OK, ask me", _request_camera)
 	ok.custom_minimum_size = Vector2(380, 100)
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -309,6 +329,11 @@ func _ask_camera() -> void:
 
 
 func _request_camera() -> void:
+	if _web():
+		_camera_explained = true
+		_code_page()
+		_open_scanner()
+		return
 	var n := NearbyLink.plugin()
 	if not n.is_connected("camera_result", _on_camera):
 		n.connect("camera_result", _on_camera)
@@ -328,18 +353,40 @@ func _on_camera(granted: bool) -> void:
 ## The camera opens over the game until it reads a code, or the kid backs out (and is still on
 ## the code page, with their own code showing).
 func _open_scanner() -> void:
+	if _web():
+		var scanner := JavaScriptBridge.get_interface("drawpetsScanner")
+		if scanner == null:
+			return
+		_js_code = JavaScriptBridge.create_callback(_on_js_code)
+		_js_close = JavaScriptBridge.create_callback(_on_js_close)
+		scanner.start("Point at your friend's swap code", _js_code, _js_close)
+		return
 	var n := NearbyLink.plugin()
 	if not n.is_connected("code_scanned", _on_scanned):
 		n.connect("code_scanned", _on_scanned)
 	n.scan_code("Point at your friend's swap code")
 
 
+func _on_js_code(args: Array) -> void:
+	if not args.is_empty():
+		_on_scanned(str(args[0]))
+
+
+func _on_js_close(args: Array) -> void:
+	if not args.is_empty() and str(args[0]) == "camera" and _state == "code":
+		_trouble("camera")
+
+
 func _on_scanned(text: String) -> void:
-	if _state != "code" or not (_link is LanLink):
+	if _state != "code" or _link == null or not is_instance_valid(_link):
 		return
-	var scanned := LanLink.read_code(text)
-	if scanned.is_empty():
-		_code_page("That's not a DrawPets swap code. Scan the code on your friend's swap screen!")
+	if not _link.understands(text):
+		var note := "That's not a DrawPets swap code. Scan the code on your friend's swap screen!"
+		if text.begins_with(MeetLink.TAG + "|"):
+			note = "That code is from DrawPets on the web. For now, the app swaps with other apps - and the web version with the web version."
+		elif text.begins_with(LanLink.TAG + "|"):
+			note = "That code is from the DrawPets app. For now, the web version swaps with the web version - and the app with other apps."
+		_code_page(note)
 		return
 	_state = "dialing"
 	var col := _page("Found your friend's code!", true, _main)
@@ -348,7 +395,7 @@ func _on_scanned(text: String) -> void:
 	_searcher.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(_searcher)
 	col.add_child(UI.label("Calling your friend's phone...", 26, true))
-	if not (_link as LanLink).dial(scanned):
+	if not _link.dial_code(text):
 		_code_page()
 
 
@@ -501,8 +548,15 @@ func _trouble(why: String) -> void:
 		"self":
 			tips = [["icon_heart", "That's this phone! Find your friend's phone and try again."]]
 		"camera":
-			tips = [["icon_camera", "DrawPets needs the camera to read your friend's code. Ask a grown-up to tap Settings, then Apps, then DrawPets, then Permissions - and allow Camera."],
-				["icon_code", "Or your friend can scan YOUR code instead!"]]
+			if _web():
+				tips = [["icon_camera", "DrawPets needs the camera to read your friend's code. Tap the little camera or lock next to the web address and allow the camera - then try again."],
+					["icon_code", "Or your friend can scan YOUR code instead!"]]
+			else:
+				tips = [["icon_camera", "DrawPets needs the camera to read your friend's code. Ask a grown-up to tap Settings, then Apps, then DrawPets, then Permissions - and allow Camera."],
+					["icon_code", "Or your friend can scan YOUR code instead!"]]
+		"offline":
+			tips = [["icon_home", "Is this device on the internet? In a browser, DrawPets uses it to find your friend's device. (Your pets still go straight across - never through the internet.)"],
+				["icon_friends", "Are you both on the same Wi-Fi? (Or one on the other's hotspot.)"]]
 		_:
 			if _way == "code":
 				tips = [["icon_home", "Are both phones on the same Wi-Fi? (Or turn on one phone's hotspot and join it with the other.)"],
@@ -528,7 +582,9 @@ func _trouble(why: String) -> void:
 	var again := UI.big_icon_button("tool_undo", "Try again", start)
 	again.custom_minimum_size = Vector2(300, 96)
 	row.add_child(again)
-	if _way == "code":
+	if _web():
+		pass  # the code is the only way in a browser
+	elif _way == "code":
 		row.add_child(UI.button("Swap without a code", _use_way.bind("auto"), Vector2(280, 96), 24))
 	else:
 		row.add_child(UI.icon_button("icon_code", "Use a code", _use_way.bind("code"), 48, Vector2(240, 96)))
@@ -548,7 +604,7 @@ func _process(delta: float) -> void:
 		_refresh_in -= delta
 		if _refresh_in <= 0.0:
 			_refresh_in = 2.0
-			if _link is LanLink and (_link as LanLink).code() != _code_shown:
+			if _link != null and is_instance_valid(_link) and _link.code() != _code_shown:
 				_code_page()
 	if _hold_fid != "":
 		_held += delta

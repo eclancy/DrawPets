@@ -13,7 +13,7 @@ extends Node
 ##                   shops and competes, screenshotting every step into .shots/demo_*.png
 ##   --quit          with --demo, quit when it is done
 ##   --stars=N       start with N gold stars (for trying the shop)
-##   --screen=place|create|shop|calendar   boot straight into a screen
+##   --screen=place|create|shop|calendar|swap   boot straight into a screen
 ##   --shot=N        screenshot frame N to .shots/shot.png. F12 grabs a frame any time.
 ##   --hour=H        pretend it is H o'clock (0-24, e.g. 21.5) - to see dusk, night and morning
 ##   --no-update     an exported Windows build skips its update check (UpdateScreen)
@@ -62,6 +62,8 @@ func _ready() -> void:
 
 func open_first_screen() -> void:
 	match dev.get("screen", ""):
+		"swap":
+			go_swap()
 		"place":
 			if not profile.homes().is_empty():
 				go_place(profile.homes()[0]["id"])
