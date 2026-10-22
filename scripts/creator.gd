@@ -1,46 +1,34 @@
 class_name Creator
 extends Control
-## Making a new pet, in stages (.ai/creature-pipeline.md):
-##   how many heads, arms and legs?
-##   -> draw the body's shape, adding what grows on it (wings, a tail, fins...)
-##   -> draw a head's shape, adding what goes on it (eyes, a mouth, horns, ears...)
-##   -> draw an arm, adding a hand or claws -> draw a leg, adding a foot or claws
-##   -> put it together -> name, size, favourite place -> two personality words -> its voice
+## Making a new pet (.ai/creature-pipeline.md):
+##   draw the whole creature on one sheet, part by part (CreatureSheet) - tap Wings, draw the
+##   wings where they go, "Done with the wings" and watch them flap
+##   -> name, size, favourite place -> two personality words -> its coat -> its voice
 ##   -> favourite food and toy (pick or draw) -> where it will live -> meet it at home.
 ##
-## While a host (body, head, arm, leg) is being drawn, tapping an add-on first asks where it
-## goes - the kid taps their drawing once for each one - then opens that add-on's sheet zoomed
-## in on the first tap, with the host faint on it; finishing it comes back to the host with the
-## add-on shown in place. The host's sheet is kept, not redrawn, while the add-on is drawn.
-##
-## Every drawing step has Back (the step before, drawing and all) and Stop (save it for later,
-## or throw it away). A pet half made is a DRAFT in user://draft: saved at every step, and with
-## the page as it is when the kid chooses to save. Starting a new pet offers to finish it. A
-## shiny marker used anywhere in the pet lasts until the pet is finished, and is used up then.
+## Stop (on the sheet, and on the steps after it) offers to save it for later or throw it away.
+## A pet half made is a DRAFT in user://draft: every layer of the drawing, saved each time a part
+## is put down, and with the page as it is when the kid chooses to save. Starting a new pet offers
+## to finish it. A shiny marker used anywhere in the pet lasts until the pet is finished, and is
+## used up then.
 
-const HOST_LABELS := {"body": "the body", "head": "the head", "arm": "each arm", "leg": "each leg"}
 const DRAFT_DIR := "user://draft"
+const DRAFT_VERSION := 2
 
 var game: GameRoot
 var pet := PetBuilder.new_pet()
-var counts := PartPickerScreen.START.duplicate()
 var current: Control
+var sheet: CreatureSheet
 
-## Hosts still to draw, in order; the ones finished ({type, image, pivot, shine, pending}), in
-## order - the pet is rebuilt from these, so going back is just taking one off; and drawings of
-## hosts the kid went back past, kept for when they come forward again.
-var _hosts: Array = []
-var _done_hosts: Array = []
-var _carry := {}
-var _host_type := ""
-var _host_screen: DrawScreen
-## The add-ons on the host being drawn: type -> {count, image, pivot, shine, spots (sheet px)}.
-var _pending := {}
-var _addon_type := ""
-var _addon_spots: Array = []
+## The drawing, a layer per part type (CreatureSheet), and the part being drawn.
+var _layers := {}
+var _shines := {}
+var _active := "body"
 ## Shiny markers used in this pet: mode -> true. Used up when it is finished.
 var _markers_used := {}
 var _after_drawing := false
+## The pictures in the draft folder now: file -> the Image written there.
+var _saved := {}
 var _dialog: Control
 ## Stop, for the steps after drawing (name, personality, voice, favourites, its home) - they are
 ## shared screens with no Stop of their own.
@@ -59,17 +47,12 @@ func _ready() -> void:
 	if has_draft():
 		_offer_draft()
 	else:
-		_pick_parts()
+		_open_sheet()
 
 
-## Shows a step. With `keep`, the current step is hidden rather than thrown away - the head's
-## sheet waits, drawing and all, while its horns are drawn.
-func _show(screen: Control, keep := false) -> void:
+func _show(screen: Control) -> void:
 	if current != null and current != screen:
-		if keep:
-			current.visible = false
-		else:
-			UI.retire(current)
+		UI.retire(current)
 	current = screen
 	if screen.get_parent() == null:
 		add_child(UI.full_rect(screen))
@@ -78,23 +61,15 @@ func _show(screen: Control, keep := false) -> void:
 		move_child(_stop_button, -1)
 
 
-## Stop shows on the steps after drawing - not on Put it together (it has its own) and not while
-## a favourite snack or toy is being drawn, where it would sit on the prompt.
+## Stop shows on the steps after drawing - not while a favourite snack or toy is being drawn,
+## where it would sit on the prompt.
 func _process(_delta: float) -> void:
 	if _stop_button == null:
 		return
-	var show := _after_drawing and not (current is AssembleScreen)
+	var show := _after_drawing
 	if current is ItemPickerScreen and (current as ItemPickerScreen)._content is ItemMaker:
 		show = false
 	_stop_button.visible = show
-
-
-func _pick_parts() -> void:
-	var s := PartPickerScreen.new()
-	s.counts = counts
-	s.on_done = _on_parts_picked
-	s.on_cancel = _cancel_from_picker
-	_show(s)
 
 
 func _markers() -> Dictionary:
@@ -106,342 +81,44 @@ func _markers() -> Dictionary:
 	return out
 
 
-## Notes the shiny marker a drawing was made with: it lasts for the whole pet, and is used up
-## when the pet is finished (_finish).
-func _spend_marker(r: Dictionary) -> Dictionary:
-	var used: String = r.get("used_marker", "")
-	if used != "":
-		_markers_used[used] = true
-	return r.get("shine", {})
+# --- Drawing it ------------------------------------------------------------------------------
 
-
-func _on_parts_picked(picked: Dictionary) -> void:
-	counts = picked
-	_hosts = ["body"]
-	for t in PartTypes.MAIN:
-		if int(counts.get(t, 0)) > 0:
-			_hosts.append(t)
-	_done_hosts.clear()
-	_rebuild_pet()
-	_next_host()
-
-
-## Eyes and a mouth go on the head - or on the body when there is no head.
-func _face_host() -> String:
-	return "head" if int(counts.get("head", 0)) > 0 else "body"
-
-
-# --- Drawing a host and its add-ons ----------------------------------------------------------
-
-func _next_host() -> void:
-	if _hosts.is_empty():
-		_host_screen = null
-		_assemble()
-		return
-	_host_type = _hosts.pop_front()
-	var saved: Dictionary = _carry.get(_host_type, {})
-	_carry.erase(_host_type)
-	_open_host(saved)
-	_autosave()
-
-
-## Opens the sheet for `_host_type` - blank, or `saved` ({image, pivot, shine, pending}) when
-## the kid comes back to it.
-func _open_host(saved: Dictionary) -> void:
+func _open_sheet() -> void:
 	_after_drawing = false
-	_pending = (saved.get("pending", {}) as Dictionary).duplicate(true)
-	var info := PartTypes.info(_host_type)
-	var n := 1 if _host_type == "body" else int(counts[_host_type])
-	var s := DrawScreen.new()
-	s.subject = _host_type
-	s.prompt = info["prompt"] + (" You'll get %d of them." % n if n > 1 else "")
-	s.step_text = "Step %d of %d" % [_done_hosts.size() + 1, _done_hosts.size() + 1 + _hosts.size()]
-	if _host_type == "body":
-		s.dot = PartTypes.BODY["dot"]
-		s.show_dot = false
-	else:
-		s.ghost = PetBuilder.ghost(pet, _host_type, "body")
-		s.dot = info["dot"]
-		s.show_dot = true
+	var s := CreatureSheet.new()
+	s.layers = _layers
+	s.shines = _shines
+	s.start = _active
 	s.markers = _markers()
-	s.host_label = HOST_LABELS[_host_type]
-	s.addons = PartTypes.addons_for(_host_type, int(counts.get("head", 0)) > 0)
-	s.required = PartTypes.REQUIRED if _host_type == _face_host() else []
-	s.on_addon = _place_addon
-	s.on_placed = _start_addon
-	s.on_remove_addon = _remove_addon
-	s.on_done = _host_done
-	s.on_back = _back
-	s.on_quit = _ask_quit
-	if saved.has("image"):
-		s.start_image = saved["image"]
-		s.start_pivot = saved["pivot"]
-		s.start_shine = saved.get("shine", {})
-	var old := current
-	_host_screen = s
-	if old != null:
-		UI.retire(old)
-		current = null
+	s.markers_used = _markers_used
+	s.on_stop = _ask_quit
+	s.on_change = _autosave
+	s.on_finished = _drawn
+	sheet = s
 	_show(s)
-	if not _pending.is_empty():
-		_refresh_host.call_deferred()
 
 
-## Tapping an add-on: first, where does it go? (Its earlier spots, if it is already on.)
-func _place_addon(type: String) -> void:
-	var spots: Array = _pending[type].get("spots", []) if _pending.has(type) else []
-	_host_screen.begin_placing(type, spots)
+func _drawn(built: Dictionary) -> void:
+	_take_parts(built)
+	sheet = null
+	_details()
 
 
-## Where the parts of a type would go by themselves, in sheet pixels - for the demo kid, who
-## taps where a kid most likely would.
-func suggest_spots(type: String) -> Array:
-	var snap := await _host_screen.canvas.finish()
-	if snap.is_empty():
-		return []
-	var origin: Vector2 = _host_screen.canvas.dot - snap["pivot"]
-	var spots := PetBuilder.layout_on_host(type, _host_type, int(PartTypes.info(type).get("count", 1)),
-		snap["image"], Transform2D(0.0, Vector2.ONE, 0.0, origin), 1.0, _face_host() == "body")
-	var out := []
-	for sp in spots:
-		out.append(sp["pos"])
-	return out
-
-
-## The spots are tapped: open the add-on's sheet, zoomed in on the first one.
-func _start_addon(type: String, spots: Array) -> void:
-	var snap := await _host_screen.canvas.finish()
-	if snap.is_empty():
-		_host_screen._say("Draw %s first, then add things to it!" % HOST_LABELS[_host_type].trim_prefix("each "))
-		return
-	var origin: Vector2 = _host_screen.canvas.dot - snap["pivot"]
-	var info := PartTypes.info(type)
-	var s := DrawScreen.new()
-	s.subject = type
-	s.prompt = info["prompt"] + (" It goes on all %d spots." % spots.size() if spots.size() > 1 else "")
-	s.step_text = "Adding to %s" % HOST_LABELS[_host_type]
-	s.ghost = PetBuilder.ghost_on(snap["image"], 1.0 / float(PartTypes.info(_host_type)["zoom"]), type,
-		_host_type, _face_host() == "body", (spots[0] as Vector2) - origin)
-	s.dot = info["dot"]
-	s.show_dot = true
-	s.can_skip = true
-	s.skip_text = "Back"
-	s.markers = _markers()
-	s.on_quit = _ask_quit
-	if _pending.has(type):
-		# Moving or changing one already drawn: its drawing comes back to work on.
-		s.start_image = _pending[type]["image"]
-		s.start_pivot = _pending[type]["pivot"]
-		s.start_shine = _pending[type].get("shine", {})
-	s.on_done = _addon_done.bind(type, spots)
-	_addon_type = type
-	_addon_spots = spots
-	_show(s, true)
-
-
-func _addon_done(r: Dictionary, type: String, spots: Array) -> void:
-	_addon_type = ""
-	if r.is_empty():
-		_back_to_host()
-		return
-	_pending[type] = {"count": spots.size(), "image": r["image"], "pivot": r["pivot"],
-		"shine": _spend_marker(r), "spots": spots}
-	_autosave()
-	_preview_addon(type)
-
-
-func _back_to_host() -> void:
-	_addon_type = ""
-	if current != null and current != _host_screen:
-		UI.retire(current)
-	current = _host_screen
-	_host_screen.visible = true
-	_refresh_host()
-
-
-func _remove_addon(type: String) -> void:
-	_pending.erase(type)
-	_refresh_host()
-
-
-## Updates the add-on buttons and shows each add-on in place on the drawing so far.
-func _refresh_host() -> void:
-	if _host_screen == null or not is_instance_valid(_host_screen):
-		return
-	var added := {}
-	for type in _pending:
-		added[type] = {"count": _pending[type]["count"], "image": _pending[type]["image"]}
-	_host_screen.added = added
-	_host_screen.refresh_addons()
-	var snap := await _host_screen.canvas.finish()
-	if snap.is_empty():
-		_host_screen.set_previews([])
-		return
-	# The cropped drawing's top-left on the sheet: finish() gives the dot in crop pixels.
-	var origin: Vector2 = _host_screen.canvas.dot - snap["pivot"]
-	var host_zoom := float(PartTypes.info(_host_type)["zoom"])
-	var previews := []
-	for type in _pending:
-		var a: Dictionary = _pending[type]
-		var tex := ImageTexture.create_from_image(a["image"])
-		var spots := PetBuilder.layout_on_host(type, _host_type, int(a["count"]), snap["image"],
-			Transform2D(0.0, Vector2.ONE, 0.0, origin), 1.0, _face_host() == "body", _spots_layout(a, origin))
-		for spot in spots:
-			previews.append({"texture": tex, "pos": spot["pos"], "pivot": a["pivot"],
-				"scale": host_zoom / float(PartTypes.info(type)["zoom"]), "behind": spot["behind"]})
-	_host_screen.set_previews(previews)
-
-
-## An add-on's tapped spots as a layout for PetBuilder, in the host drawing's own pixels.
-func _spots_layout(a: Dictionary, origin: Vector2) -> Dictionary:
-	var spots: Array = a.get("spots", [])
-	if spots.is_empty():
-		return {}
-	var px := []
-	for sp in spots:
-		px.append((sp as Vector2) - origin)
-	return {"spots": px}
-
-
-func _host_done(r: Dictionary) -> void:
-	var origin: Vector2 = _host_screen.canvas.dot - r["pivot"]
-	var pending := _pending.duplicate(true)
-	for type in pending:
-		pending[type]["layout"] = _spots_layout(pending[type], origin)
-	_done_hosts.append({"type": _host_type, "image": r["image"], "pivot": r["pivot"],
-		"shine": _spend_marker(r), "pending": pending})
-	_rebuild_pet()
-	_preview_part(_host_type, pet, _next_host)
-
-
-## The pet from the finished hosts, in order - the body, then each head, arm and leg with
-## everything added to it.
-func _rebuild_pet() -> void:
-	pet["parts"] = []
-	pet["_img"] = {}
+## The parts of a pet built from the drawing, into the pet being made (its name and the rest stay).
+func _take_parts(built: Dictionary) -> void:
+	pet["parts"] = built["parts"]
+	pet["_img"] = built["_img"]
 	pet["_tex"] = {}
-	for e in _done_hosts:
-		_add_host(pet, e, int(counts.get(e["type"], 1)))
 
 
-## Adds one finished host (`n` copies of it - four legs) and everything drawn on it.
-static func _add_host(p: Dictionary, e: Dictionary, n: int) -> void:
-	var type: String = e["type"]
-	if type == "body":
-		PetBuilder.set_body(p, e["image"], e["shine"])
-	else:
-		PetBuilder.add_parts(p, type, n, e["image"], e["pivot"], e["shine"], "body")
-	var pending: Dictionary = e["pending"]
-	for t in PartTypes.ORDER:
-		if pending.has(t):
-			var a: Dictionary = pending[t]
-			PetBuilder.add_parts(p, t, int(a["count"]), a["image"], a["pivot"], a["shine"], type,
-				a.get("layout", {}))
+# --- Stop, and saving for later --------------------------------------------------------------
 
-
-## An add-on is not on the pet until its host is done, so its preview is a copy of the pet with
-## the host as drawn so far and every add-on on it - this one included.
-func _preview_addon(type: String) -> void:
-	var snap := await _host_screen.canvas.finish()
-	if snap.is_empty():
-		_back_to_host()
-		return
-	var origin: Vector2 = _host_screen.canvas.dot - snap["pivot"]
-	var pending := _pending.duplicate(true)
-	for t in pending:
-		pending[t]["layout"] = _spots_layout(pending[t], origin)
-	var show_pet: Dictionary = pet.duplicate(true)
-	_add_host(show_pet, {"type": _host_type, "image": snap["image"], "pivot": snap["pivot"], "shine": {},
-		"pending": pending}, 1 if _host_type == "body" else int(counts[_host_type]))
-	_preview_part(type, show_pet, _back_to_host)
-
-
-## The creature so far shows off the part just drawn - legs walk, a tail wags - then carries on.
-func _preview_part(type: String, show_pet: Dictionary, then: Callable) -> void:
-	var p := PartPreview.new()
-	p.pet = show_pet
-	p.part_type = type
-	p.on_done = then
-	add_child(UI.full_rect(p))
-
-
-# --- Back, stop, and saving for later ---------------------------------------------------------
-
-## Back a step: to the host drawn before this one, with its drawing and add-ons - or, from the
-## body, to the parts picker. This host's drawing is kept for when the kid comes forward again.
-func _back() -> void:
-	if _host_screen == null or not is_instance_valid(_host_screen):
-		return
-	_carry[_host_type] = await _host_state()
-	_hosts.push_front(_host_type)
-	if _done_hosts.is_empty():
-		_host_screen = null
-		_pick_parts()
-		_autosave()
-		return
-	var e: Dictionary = _done_hosts.pop_back()
-	_rebuild_pet()
-	_host_type = e["type"]
-	var pending: Dictionary = e["pending"]
-	for t in pending:
-		pending[t].erase("layout")
-	_open_host({"image": e["image"], "pivot": e["pivot"], "shine": e["shine"], "pending": pending})
-	_autosave()
-
-
-## Back from putting it together: to the last thing drawn, drawing and add-ons and all. (Moving
-## parts about here is not kept - they are laid out afresh when the kid comes back.)
-func _back_from_assemble() -> void:
-	if _done_hosts.is_empty():
-		return
-	var e: Dictionary = _done_hosts.pop_back()
-	_rebuild_pet()
-	_host_type = e["type"]
-	var pending: Dictionary = e["pending"]
-	for t in pending:
-		pending[t].erase("layout")
-	_open_host({"image": e["image"], "pivot": e["pivot"], "shine": e["shine"], "pending": pending})
-	_autosave()
-
-
-## The host sheet as it is now: {image, pivot, shine, pending} - or just its add-ons when the
-## page is empty. An add-on sheet that is open is folded in as it is.
-func _host_state() -> Dictionary:
-	if _addon_type != "" and current is DrawScreen and current != _host_screen:
-		var a := await (current as DrawScreen).canvas.finish()
-		if not a.is_empty():
-			_pending[_addon_type] = {"count": _addon_spots.size(), "image": a["image"], "pivot": a["pivot"],
-				"shine": _spend_marker(a), "spots": _addon_spots}
-	var state := {"pending": _pending.duplicate(true)}
-	var snap := await _host_screen.canvas.finish()
-	if not snap.is_empty():
-		state["image"] = snap["image"]
-		state["pivot"] = snap["pivot"]
-		state["shine"] = _spend_marker(snap)
-	return state
-
-
-## Android's back gesture: the same as the Back button (or closing whatever is open).
+## Android's back gesture: closes whatever is open, or asks whether to stop.
 func go_back() -> void:
 	if _dialog != null and is_instance_valid(_dialog):
 		_close_dialog()
-	elif current is DrawScreen and current == _host_screen:
-		if _host_screen.is_placing():
-			_host_screen.end_placing()
-		else:
-			_back()
-	elif current is DrawScreen:
-		_back_to_host()
-	elif current is PartPickerScreen:
-		_cancel_from_picker()
-	else:
-		_ask_quit()
-
-
-func _cancel_from_picker() -> void:
-	if _done_hosts.is_empty() and _carry.is_empty():
-		delete_draft()
-		game.go_home()
+	elif sheet != null and is_instance_valid(sheet) and sheet.skip_preview():
+		return
 	else:
 		_ask_quit()
 
@@ -502,36 +179,52 @@ func save_now() -> void:
 
 ## Saves the pet as it is now into user://draft, with whatever is on the page.
 func save_draft() -> void:
-	var current_state := {"pending": _pending.duplicate(true)}
-	if not _after_drawing and _host_screen != null and is_instance_valid(_host_screen):
-		current_state = await _host_state()
-	_write_draft(current_state)
+	if not _after_drawing and sheet != null and is_instance_valid(sheet):
+		await sheet.state()
+	_write_draft()
 
 
-## Saves between steps, without waiting for the page to be read back.
+## Saves when a part is put down - the layers are all up to date then.
 func _autosave() -> void:
-	if _host_screen == null or _after_drawing:
-		_write_draft({})
-	else:
-		_write_draft({"pending": _pending.duplicate(true)})
+	_write_draft()
 
 
-func _write_draft(current_state: Dictionary) -> void:
-	delete_draft()
+## Each layer is a PNG beside draft.json, written only when it has changed - a part put down
+## saves that part, not the whole creature again.
+func _write_draft() -> void:
 	DirAccess.make_dir_recursive_absolute(DRAFT_DIR)
-	var files := {"n": 0}
-	var done := []
-	for e in _done_hosts:
-		done.append(_pack(e, files))
-	var carry := {}
-	for k in _carry:
-		carry[k] = _pack(_carry[k], files)
-	var data := {"version": 1, "counts": counts, "host": _host_type, "hosts": _hosts, "done": done,
-		"carry": carry, "current": _pack(current_state, files), "markers": _markers_used.keys(),
-		"after": _after_drawing}
+	if sheet != null and is_instance_valid(sheet):
+		_active = sheet.active
+	var layers := {}
+	var shines := {}
+	var keep := ["draft.json"]
+	for type in _layers:
+		layers[type] = {"_png": _save_png("layer_" + type, _layers[type])}
+		keep.append(layers[type]["_png"])
+		if _shines.has(type):
+			shines[type] = {"mode": _shines[type]["mode"],
+				"mask": {"_png": _save_png("shine_" + type, _shines[type]["mask"])}}
+			keep.append(shines[type]["mask"]["_png"])
+	var data := {"version": DRAFT_VERSION, "layers": layers, "shines": shines, "active": _active,
+		"markers": _markers_used.keys(), "after": _after_drawing}
 	var f := FileAccess.open(DRAFT_DIR + "/draft.json", FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(data))
+		f.close()
+	var d := DirAccess.open(DRAFT_DIR)
+	if d != null:
+		for file in d.get_files():
+			if not keep.has(file):
+				d.remove(file)
+
+
+## "<stem>.png" in the draft, unless that very picture is already there.
+func _save_png(stem: String, img: Image) -> String:
+	var file := stem + ".png"
+	if _saved.get(file) != img or not FileAccess.file_exists(DRAFT_DIR + "/" + file):
+		img.save_png(DRAFT_DIR + "/" + file)
+		_saved[file] = img
+	return file
 
 
 static func has_draft() -> bool:
@@ -547,29 +240,8 @@ static func delete_draft() -> void:
 	DirAccess.remove_absolute(DRAFT_DIR)
 
 
-## Images become PNG files beside draft.json, Vector2s become {"_v2": [x, y]} - so a draft is
-## plain JSON plus pictures, and nothing the kid drew is lost.
-static func _pack(v: Variant, files: Dictionary) -> Variant:
-	if v is Image:
-		files["n"] = int(files["n"]) + 1
-		var name := "img_%d.png" % int(files["n"])
-		(v as Image).save_png(DRAFT_DIR + "/" + name)
-		return {"_png": name}
-	if v is Vector2:
-		return {"_v2": [v.x, v.y]}
-	if v is Dictionary:
-		var out := {}
-		for k in v:
-			out[k] = _pack(v[k], files)
-		return out
-	if v is Array:
-		var out := []
-		for x in v:
-			out.append(_pack(x, files))
-		return out
-	return v
-
-
+## {"_png": file} in draft.json is a picture beside it, {"_v2": [x, y]} a Vector2 - so a draft
+## is plain JSON plus pictures, and nothing the kid drew is lost.
 static func _unpack(v: Variant) -> Variant:
 	if v is Dictionary:
 		if v.has("_png"):
@@ -623,65 +295,76 @@ func _offer_draft() -> void:
 	_show(root)
 
 
-## The latest thing drawn in the draft, for its picture.
+## The draft's drawing so far, for its picture.
 func _draft_picture() -> Image:
+	var d := _read_draft()
+	var layers: Dictionary = d.get("layers", {})
+	if layers.is_empty():
+		return null
+	var all := Image.create(CreatureSheet.SIZE.x, CreatureSheet.SIZE.y, false, Image.FORMAT_RGBA8)
+	for type in CreatureSheet.stack_order():
+		if layers.has(type):
+			var img: Image = layers[type]
+			all.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i.ZERO)
+	var used := all.get_used_rect()
+	return all.get_region(used) if used.size.x > 1 else null
+
+
+## The draft as saved - and a draft from before the one-sheet creature (version 1), whose body
+## is all that carries over: it goes in the middle of the sheet to be drawn on.
+static func _read_draft() -> Dictionary:
 	var data = JSON.parse_string(FileAccess.get_file_as_string(DRAFT_DIR + "/draft.json"))
 	if typeof(data) != TYPE_DICTIONARY:
-		return null
+		return {}
 	var d: Dictionary = _unpack(data)
-	var cur: Dictionary = d.get("current", {})
-	if cur.has("image"):
-		return cur["image"]
-	var done: Array = d.get("done", [])
-	return done[done.size() - 1]["image"] if not done.is_empty() else null
+	if int(d.get("version", 1)) >= DRAFT_VERSION:
+		return d
+	var body: Image
+	for e in d.get("done", []):
+		if e.get("type", "") == "body":
+			body = e["image"]
+	if body == null and str(d.get("host", "")) == "body":
+		body = d.get("current", {}).get("image")
+	var out := {"layers": {}, "shines": {}, "active": "body", "markers": d.get("markers", [])}
+	if body != null:
+		var page := Image.create(CreatureSheet.SIZE.x, CreatureSheet.SIZE.y, false, Image.FORMAT_RGBA8)
+		var at := (CreatureSheet.SIZE - body.get_size()) / 2
+		body.convert(Image.FORMAT_RGBA8)
+		page.blit_rect(body, Rect2i(Vector2i.ZERO, body.get_size()), at.max(Vector2i.ZERO))
+		out["layers"]["body"] = page
+	return out
 
 
 func _start_fresh() -> void:
 	delete_draft()
-	_pick_parts()
+	_saved.clear()
+	_open_sheet()
 
 
 ## Picks the draft up where it was left: the page it was on, drawing and all.
 func resume_draft() -> void:
-	var data = JSON.parse_string(FileAccess.get_file_as_string(DRAFT_DIR + "/draft.json"))
-	if typeof(data) != TYPE_DICTIONARY:
+	var d := _read_draft()
+	if d.is_empty():
 		_start_fresh()
 		return
-	var d: Dictionary = _unpack(data)
-	counts = {}
-	for k in d.get("counts", {}):
-		counts[k] = int(d["counts"][k])
-	_hosts = d.get("hosts", [])
-	_done_hosts = d.get("done", [])
-	_carry = d.get("carry", {})
+	_layers = d.get("layers", {})
+	_shines = d.get("shines", {})
+	_active = str(d.get("active", "body"))
 	_markers_used = {}
 	for m in d.get("markers", []):
 		_markers_used[m] = true
-	_host_type = str(d.get("host", ""))
-	_rebuild_pet()
-	if bool(d.get("after", false)) or _host_type == "":
-		if _hosts.is_empty() and not _done_hosts.is_empty():
-			_assemble()
-		else:
-			_pick_parts()
+	if bool(d.get("after", false)) and _layers.has("body"):
+		_take_parts(PartCutter.build(_layers, _shines))
+		_details()
 		return
-	_open_host(d.get("current", {}))
+	_open_sheet()
 
 
 # --- After drawing ---------------------------------------------------------------------------
 
-func _assemble() -> void:
+func _details() -> void:
 	_after_drawing = true
 	_autosave()
-	var s := AssembleScreen.new()
-	s.pet = pet
-	s.on_done = _details
-	s.on_back = _back_from_assemble
-	s.on_quit = _ask_quit
-	_show(s)
-
-
-func _details() -> void:
 	var s := DetailsScreen.new()
 	s.pet = pet
 	s.profile = game.profile

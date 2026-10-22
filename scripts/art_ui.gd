@@ -22,6 +22,11 @@ const ASSETS := {
 	"tool_done": {"pivot": "center", "look": "a big green tick / check mark"},
 	"tool_back": {"pivot": "center", "look": "a thick arrow pointing LEFT"},
 	"tool_skip": {"pivot": "center", "look": "an arrow hopping over a little line, to the RIGHT"},
+	# Looking round a big drawing (CreatureSheet): zoom in and out, see it all, slide it about.
+	"tool_zoom_in": {"pivot": "center", "look": "a magnifying glass with a plus in its lens"},
+	"tool_zoom_out": {"pivot": "center", "look": "a magnifying glass with a minus in its lens"},
+	"tool_fit": {"pivot": "center", "look": "a picture frame with an arrow pointing out of each corner - see the whole page"},
+	"tool_hand": {"pivot": "center", "look": "an open hand, fingers spread - slide the page about"},
 	# Assembly edits.
 	"edit_turn_left": {"pivot": "center", "look": "a curved arrow turning anticlockwise round a dot"},
 	"edit_turn_right": {"pivot": "center", "look": "a curved arrow turning clockwise round a dot"},
@@ -69,6 +74,8 @@ const ASSETS := {
 	"ui_let_go": {"pivot": "center", "look": "an open garden gate with a little heart floating out of it - letting a pet go off to live in the wild"},
 	"ui_move_home": {"pivot": "center", "look": "a little house with a curved arrow swooping into its door"},
 	"ui_settings": {"pivot": "center", "look": "a friendly gear / cog"},
+	# How to play (HowTo): a hand that shows the gesture - its pivot is the fingertip.
+	"ui_point": {"pivot": Vector2(222, 40), "look": "a hand pointing straight UP with its index finger, the rest curled, a sleeve cuff at the wrist"},
 	# Sound buttons.
 	"snd_play": {"pivot": "center", "look": "a big play triangle inside a circle"},
 	"snd_record": {"pivot": "center", "look": "an old round microphone on a little stand, with a red record dot"},
@@ -147,6 +154,14 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_tool_back(c)
 		"tool_skip":
 			_tool_skip(c)
+		"tool_zoom_in":
+			_tool_zoom(c, true)
+		"tool_zoom_out":
+			_tool_zoom(c, false)
+		"tool_fit":
+			_tool_fit(c)
+		"tool_hand":
+			_tool_hand(c)
 		"edit_turn_left":
 			_turn_arrow(c, false)
 		"edit_turn_right":
@@ -217,6 +232,8 @@ static func draw(id: String, c: CanvasItem) -> void:
 			_dino(c)
 		"ui_adopt":
 			_adopt(c)
+		"ui_point":
+			_point(c)
 		"ui_build":
 			_hammer(c)
 		"ui_sign":
@@ -413,6 +430,71 @@ static func _tool_undo(c: CanvasItem) -> void:
 	var arrow := _union([_arrow(path, 94.0, 128.0, 240.0), Crayon.ellipse(path[0], Vector2(47, 47), 20)])
 	_mark(c, arrow, orange, 771, 12.0)
 	_shine(c, _offset(path.slice(12, 29), -24.0), 12.0, 772)
+
+
+## Marker: a magnifying glass - a pale blue lens in a lavender rim, a stubby orange handle, and a
+## plus (or a minus) in the lens.
+static func _tool_zoom(c: CanvasItem, plus: bool) -> void:
+	var at := Vector2(214, 214)
+	var handle := PackedVector2Array([Vector2(318, 286), Vector2(286, 318), Vector2(420, 452), Vector2(452, 420)])
+	_mark(c, _round_poly(handle, 22.0), Color("#f7a04a"), 3101, 11.0)
+	_mark(c, Crayon.ellipse(at, Vector2(156, 156), 36), Color("#b9a6f0"), 3102, 11.0)
+	_mark(c, Crayon.ellipse(at, Vector2(112, 112), 32), Color("#e4f2fd"), 3103, 8.0)
+	var sign := Color("#3b6fd6")
+	_mark(c, _round_poly(PackedVector2Array([Vector2(150, 196), Vector2(278, 196), Vector2(278, 232),
+		Vector2(150, 232)]), 14.0), sign, 3104, 8.0)
+	if plus:
+		_mark(c, _round_poly(PackedVector2Array([Vector2(196, 150), Vector2(232, 150), Vector2(232, 278),
+			Vector2(196, 278)]), 14.0), sign, 3105, 8.0)
+	_shine(c, PackedVector2Array([Vector2(150, 160), Vector2(176, 132), Vector2(210, 118)]), 12.0, 3106)
+
+
+## Marker: a picture frame - see the whole page - with a fat orange arrow out of each corner.
+static func _tool_fit(c: CanvasItem) -> void:
+	_mark(c, _round_poly(PackedVector2Array([Vector2(146, 166), Vector2(366, 166), Vector2(366, 346),
+		Vector2(146, 346)]), 18.0), Color("#b9a6f0"), 3201, 11.0)
+	_mark(c, _round_poly(PackedVector2Array([Vector2(184, 202), Vector2(328, 202), Vector2(328, 310),
+		Vector2(184, 310)]), 10.0), Color("#fffdf6"), 3202, 7.0)
+	var corners := [[Vector2(150, 170), Vector2(-1, -1)], [Vector2(362, 170), Vector2(1, -1)],
+		[Vector2(362, 342), Vector2(1, 1)], [Vector2(150, 342), Vector2(-1, 1)]]
+	for i in corners.size():
+		var from: Vector2 = corners[i][0]
+		var d: Vector2 = (corners[i][1] as Vector2).normalized()
+		var path := PackedVector2Array([from - d * 6.0, from + d * 40.0, from + d * 74.0])
+		_mark(c, _arrow(path, 26.0, 44.0, 74.0), Color("#f7a04a"), 3210 + i, 8.0)
+
+
+## Marker: an open hand, fingers spread - for sliding the page about.
+static func _tool_hand(c: CanvasItem) -> void:
+	var skin := Color("#f6c7a1")
+	var bits := [_round_poly(PackedVector2Array([Vector2(160, 250), Vector2(352, 250), Vector2(340, 430),
+		Vector2(186, 440)]), 60.0)]
+	var fingers := [[Vector2(190, 320), Vector2(168, 150)], [Vector2(230, 300), Vector2(226, 96)],
+		[Vector2(276, 300), Vector2(284, 106)], [Vector2(318, 310), Vector2(338, 156)]]
+	for f in fingers:
+		bits.append(_capsule(f[0], f[1], 46.0))
+	bits.append(_capsule(Vector2(320, 380), Vector2(438, 290), 50.0))
+	_mark(c, _union(bits), skin, 3301, 11.0)
+
+
+## Marker: a hand pointing up - one finger out, the others curled into the palm, the thumb across
+## them, and a blue sleeve cuff. Its fingertip is the pivot, so it can touch exactly where to tap.
+static func _point(c: CanvasItem) -> void:
+	var skin := Color("#f6c7a1")
+	var cuff := Color("#8fc4ee")
+	_mark(c, _round_poly(PackedVector2Array([Vector2(206, 400), Vector2(386, 396), Vector2(392, 492),
+		Vector2(200, 496)]), 18.0), cuff, 3401, 10.0)
+	var hand := [_round_poly(PackedVector2Array([Vector2(184, 250), Vector2(372, 262), Vector2(384, 380),
+		Vector2(352, 420), Vector2(224, 424), Vector2(184, 360)]), 50.0)]
+	hand.append(_capsule(Vector2(226, 300), Vector2(222, 76), 76.0))
+	_mark(c, _union(hand), skin, 3402, 11.0)
+	var line := skin.darkened(0.5)
+	# The curled fingers folded into the palm, and the thumb tucked across them.
+	for i in 2:
+		var y := 316.0 + i * 40.0
+		Crayon.marker_line(c, PackedVector2Array([Vector2(384, y), Vector2(336, y + 4)]), line, 9.0, 3403 + i, false)
+	Crayon.marker_line(c, PackedVector2Array([Vector2(196, 344), Vector2(240, 360), Vector2(300, 352)]), line, 9.0, 3407, false)
+	Crayon.line(c, Vector2(206, 110), Vector2(206, 210), SHINE, 10.0, 3408)
 
 
 ## Pencil: a crumpled ball of paper - a jagged round lump, creases criss-crossing it, a shaded side.

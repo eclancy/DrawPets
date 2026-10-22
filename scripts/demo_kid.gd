@@ -66,23 +66,17 @@ func _build_first_home() -> void:
 
 # --- Making a pet ----------------------------------------------------------------------------
 
-## What the demo adds while drawing each host.
-const ADDONS := {"body": ["wing", "tail"], "head": ["eye", "mouth", "ear"], "arm": ["hand"],
-	"leg": ["foot"]}
+## The parts the demo draws on its creature, in the order it taps them (after the body).
+const PARTS := ["head", "eye", "mouth", "ear", "leg", "foot", "tail", "wing", "arm", "hand"]
 
 
 ## Starts a pet, draws its body, stops with "Save it for later" - then starts a new pet from
 ## home and picks the saved one up again, body and all. Returns the creator carrying on.
 func _draft_round_trip() -> Creator:
 	var creator := game.start_creator()
-	await _wait(0.5)
-	var picker := creator.current as PartPickerScreen
-	picker.change("arm", 2)
-	await _shot("parts")
-	picker.press_next()
-	await _wait(0.5)
-	var body := creator.current as DrawScreen
-	await _draw("body", body.canvas)
+	await _wait(0.6)
+	await _shot("sheet_start")
+	await _draw_part("body", creator.sheet.canvas)
 	await _wait(0.3)
 	creator.on_quit_for_demo()
 	await _wait(0.4)
@@ -97,70 +91,56 @@ func _draft_round_trip() -> Creator:
 	return creator
 
 
+## The whole creature on its one sheet: Done with the body (it bounces), then each part picked,
+## drawn where it goes and shown off - zoomed in for the eyes - then back to the head to add to
+## it, and "It's finished!".
+func _draw_creature(sheet: CreatureSheet) -> void:
+	await _shot("draft_resumed")
+	await sheet.press_done()
+	await _through_preview(sheet, "preview_body")
+	await _wait(0.3)
+	await _shot("sheet_next_head")
+	for type in PARTS:
+		if sheet.active != type:
+			await sheet.pick(type)
+		await _wait(0.2)
+		if type == "eye":
+			# Closer, for something small.
+			var c := sheet.canvas
+			c.zoom_at(2.6, c._sheet.position + Vector2(745, 290) * c._sheet.scale.x)
+			await _wait(0.2)
+		await _draw_part(type, sheet.canvas)
+		await _wait(0.2)
+		if type in ["head", "eye", "leg", "wing"]:
+			await _shot("sheet_" + type)
+		if type == "eye":
+			sheet.canvas.reset_view()
+		await sheet.press_done()
+		await _through_preview(sheet, "preview_" + type if type in ["eye", "leg", "wing", "tail"] else "")
+		await _wait(0.3)
+	# Back to the head, to give it a spot - its lines come back to draw on.
+	await sheet.pick("head")
+	await _wait(0.3)
+	_line(sheet.canvas, PackedVector2Array([Vector2(660, 230), Vector2(664, 232)]), UI.PALETTE[11], 30.0, 40)
+	await _shot("back_to_head")
+	await sheet.press_done()
+	await _through_preview(sheet)
+	await _wait(0.4)
+	await _shot("sheet_done")
+	await sheet.press_finished()
+
+
 func _make_pet(creator: Creator) -> void:
 	var food_drawn := false
-	var shot_addon := false
-	var shot_place := false
-	var went_back := false
-	var shot_back := false
+	var drawn := false
 	while is_instance_valid(creator) and creator.is_inside_tree():
 		await _wait(0.4)
 		if not is_instance_valid(creator):
 			break
 		var s := creator.current
-		if s is DrawScreen:
-			var d := s as DrawScreen
-			var host := d.subject
-			if host == "head" and d.start_image != null:
-				# Back here from the arm: the head is all there, add-ons and all. On again.
-				await _wait(0.4)
-				if not shot_back:
-					shot_back = true
-					await _shot("back_to_head")
-				await d.press_done()
-				await _through_preview(creator)
-				continue
-			if d.start_image == null:
-				await _draw(host, d.canvas)
-			else:
-				await _wait(0.4)
-				await _shot("draft_resumed")
-			for type in ADDONS.get(host, []):
-				# Tap where it goes - one tap each - then draw it.
-				d.on_addon.call(type)
-				for spot in await creator.suggest_spots(type):
-					d.place_at(spot)
-				await _wait(0.2)
-				if not shot_place:
-					shot_place = true
-					await _shot("place_" + type)
-				d.press_place_done()
-				await _wait(0.6)
-				var a := creator.current as DrawScreen
-				await _draw(type, a.canvas)
-				if not shot_addon:
-					shot_addon = true
-					await _shot("draw_addon_" + type)
-				await a.press_done()
-				await _through_preview(creator, "preview_" + type if type == "wing" else "")
-				await _wait(0.5)
-			await _wait(0.3)
-			await _shot("draw_" + host)
-			await d.press_done()
-			await _through_preview(creator, "preview_" + host if host == "leg" else "")
-			if host == "head" and not went_back:
-				# Changed its mind: Back from the arm sheet to the head, then on again.
-				went_back = true
-				await _wait(0.5)
-				var arm := creator.current as DrawScreen
-				if arm != null:
-					arm.on_back.call()
-					await _wait(0.8)
-		elif s is AssembleScreen:
-			var a := s as AssembleScreen
-			a.select(PetBuilder.find(a.pet, "leg_0").get("id", ""))
-			await _shot("assemble")
-			a.press_done()
+		if s is CreatureSheet and not drawn:
+			drawn = true
+			await _draw_creature(s as CreatureSheet)
 		elif s is DetailsScreen:
 			var d := s as DetailsScreen
 			d.set_pet_name("Zorp")
@@ -875,60 +855,65 @@ func _play(kind: String, comp: CompetitionScreen) -> void:
 
 # --- The drawings ----------------------------------------------------------------------------
 
-func _draw(subject: String, c: DrawCanvas) -> void:
-	match subject:
+## A part of the creature, drawn where it goes on the one sheet (CreatureSheet.SIZE), facing right.
+func _draw_part(type: String, c: DrawCanvas) -> void:
+	match type:
 		"body":
-			_line(c, _ellipse(Vector2(256, 280), Vector2(200, 120)), UI.PALETTE[0], 12.0, 1)
-			await _fill(c, Vector2(256, 280), UI.PALETTE[3])
-			for spot in [Vector2(180, 250), Vector2(300, 320), Vector2(330, 230)]:
-				_line(c, PackedVector2Array([spot, spot + Vector2(6, 3)]), UI.PALETTE[11], 30.0, 2)
+			_line(c, _ellipse(Vector2(470, 470), Vector2(230, 140)), UI.PALETTE[0], 14.0, 1)
+			await _fill(c, Vector2(470, 470), UI.PALETTE[3])
+			for spot in [Vector2(380, 430), Vector2(500, 530), Vector2(560, 420)]:
+				_line(c, PackedVector2Array([spot, spot + Vector2(6, 3)]), UI.PALETTE[11], 34.0, 2)
 		"head":
-			_line(c, _ellipse(Vector2(250, 318), Vector2(105, 100)), UI.PALETTE[0], 12.0, 3)
-			await _fill(c, Vector2(250, 318), UI.PALETTE[4])
+			_line(c, _ellipse(Vector2(730, 300), Vector2(120, 108)), UI.PALETTE[0], 14.0, 3)
+			await _fill(c, Vector2(750, 280), UI.PALETTE[4])
 		"eye":
-			_line(c, _ellipse(Vector2(256, 256), Vector2(70, 72)), UI.PALETTE[0], 10.0, 5)
-			await _fill(c, Vector2(220, 256), UI.PALETTE[1])
-			_line(c, PackedVector2Array([Vector2(282, 256), Vector2(286, 258)]), UI.PALETTE[0], 54.0, 6)
+			for e in [[Vector2(712, 280), 24.0, 5], [Vector2(790, 272), 20.0, 6]]:
+				_line(c, _ellipse(e[0], Vector2(e[1], e[1] * 1.1)), UI.PALETTE[0], 6.0, e[2])
+				await _fill(c, e[0] - Vector2(e[1] * 0.5, 0), UI.PALETTE[1])
+				_line(c, PackedVector2Array([e[0] + Vector2(5, 2), e[0] + Vector2(7, 3)]), UI.PALETTE[0], e[1], e[2] + 10)
 		"mouth":
 			# Wide open - the game closes it.
-			_line(c, _ellipse(Vector2(256, 256), Vector2(110, 80)), UI.PALETTE[0], 12.0, 16)
-			await _fill(c, Vector2(256, 230), UI.PALETTE[2])
-			_line(c, PackedVector2Array([Vector2(200, 300), Vector2(256, 285), Vector2(312, 300)]), UI.PALETTE[10], 30.0, 17)
+			_line(c, _ellipse(Vector2(790, 350), Vector2(42, 26)), UI.PALETTE[0], 7.0, 16)
+			await _fill(c, Vector2(790, 342), UI.PALETTE[2])
+			_line(c, PackedVector2Array([Vector2(768, 362), Vector2(790, 356), Vector2(812, 362)]), UI.PALETTE[10], 12.0, 17)
 		"ear":
-			_line(c, PackedVector2Array([Vector2(196, 444), Vector2(250, 190), Vector2(316, 444),
-				Vector2(196, 444)]), UI.PALETTE[0], 11.0, 7)
-			await _fill(c, Vector2(256, 380), UI.PALETTE[10])
+			_line(c, PackedVector2Array([Vector2(632, 240), Vector2(606, 112), Vector2(696, 206),
+				Vector2(632, 240)]), UI.PALETTE[0], 10.0, 7)
+			await _fill(c, Vector2(636, 196), UI.PALETTE[10])
 		"leg":
-			_line(c, PackedVector2Array([Vector2(224, 50), Vector2(222, 300), Vector2(290, 300),
-				Vector2(288, 50)]), UI.PALETTE[0], 11.0, 8)
-			await _fill(c, Vector2(256, 200), UI.PALETTE[3])
+			for i in 4:
+				var x := 320.0 + i * 100.0
+				_line(c, PackedVector2Array([Vector2(x, 570), Vector2(x - 2, 720), Vector2(x + 46, 720),
+					Vector2(x + 44, 570)]), UI.PALETTE[0], 11.0, 8 + i)
+				await _fill(c, Vector2(x + 22, 690), UI.PALETTE[3])
 		"foot":
-			_line(c, PackedVector2Array([Vector2(160, 120), Vector2(160, 250), Vector2(380, 256),
-				Vector2(392, 214), Vector2(238, 196), Vector2(226, 120), Vector2(160, 120)]), UI.PALETTE[0], 14.0, 18)
-			await _fill(c, Vector2(220, 210), UI.PALETTE[11])
-		"arm":
-			_line(c, PackedVector2Array([Vector2(238, 50), Vector2(236, 250), Vector2(280, 250),
-				Vector2(276, 50)]), UI.PALETTE[0], 10.0, 19)
-			await _fill(c, Vector2(256, 150), UI.PALETTE[3])
-		"hand":
-			_line(c, _ellipse(Vector2(256, 190), Vector2(80, 90)), UI.PALETTE[0], 14.0, 20)
-			await _fill(c, Vector2(256, 190), UI.PALETTE[13])
-		"horn":
-			_line(c, PackedVector2Array([Vector2(226, 445), Vector2(240, 300), Vector2(262, 200), Vector2(300, 150),
-				Vector2(290, 230), Vector2(286, 330), Vector2(290, 445), Vector2(226, 445)]), UI.PALETTE[0], 10.0, 21)
-			await _fill(c, Vector2(262, 360), UI.PALETTE[13])
+			for i in 4:
+				var x := 320.0 + i * 100.0
+				_line(c, _ellipse(Vector2(x + 34, 732), Vector2(36, 15)), UI.PALETTE[0], 9.0, 18 + i)
+				await _fill(c, Vector2(x + 44, 734), UI.PALETTE[11])
 		"tail":
 			var wave := PackedVector2Array()
 			for i in 18:
 				var t := i / 17.0
-				wave.append(Vector2(450 - t * 330, 256 - t * 90 - sin(t * TAU) * 40))
-			_line(c, wave, UI.PALETTE[0], 36.0, 9)
-			_line(c, wave, UI.PALETTE[3], 18.0, 9)
+				wave.append(Vector2(270 - t * 200, 450 - t * 120 - sin(t * TAU) * 30))
+			_line(c, wave, UI.PALETTE[0], 34.0, 9)
+			_line(c, wave, UI.PALETTE[3], 16.0, 9)
 		"wing":
-			_line(c, PackedVector2Array([Vector2(300, 452), Vector2(170, 330), Vector2(140, 170),
-				Vector2(230, 222), Vector2(270, 120), Vector2(340, 232), Vector2(392, 170),
-				Vector2(366, 452), Vector2(300, 452)]), UI.PALETTE[0], 10.0, 10)
-			await _fill(c, Vector2(280, 320), UI.PALETTE[7])
+			_line(c, PackedVector2Array([Vector2(420, 362), Vector2(360, 230), Vector2(380, 130),
+				Vector2(450, 200), Vector2(500, 110), Vector2(540, 220), Vector2(560, 352),
+				Vector2(420, 362)]), UI.PALETTE[0], 10.0, 10)
+			await _fill(c, Vector2(470, 260), UI.PALETTE[7])
+		"arm":
+			var arm := PackedVector2Array([Vector2(640, 470), Vector2(700, 520), Vector2(760, 548)])
+			_line(c, arm, UI.PALETTE[0], 30.0, 19)
+			_line(c, arm, UI.PALETTE[3], 16.0, 19)
+		"hand":
+			_line(c, _ellipse(Vector2(782, 556), Vector2(24, 22)), UI.PALETTE[0], 8.0, 20)
+			await _fill(c, Vector2(782, 556), UI.PALETTE[13])
+
+
+func _draw(subject: String, c: DrawCanvas) -> void:
+	match subject:
 		"card":
 			var swirl := PackedVector2Array()
 			for i in 40:

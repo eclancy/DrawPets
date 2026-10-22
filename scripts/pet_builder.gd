@@ -3,8 +3,7 @@ extends RefCounted
 ## Turns a kid's drawings into a creature layout, and edits that layout.
 ##
 ## Every part is stored in BODY SPACE: its joint's position and rotation in the body drawing's
-## pixels, with the body's middle at (0, 0). That is the rest pose exactly as it looked in the
-## assembly screen. Creature turns it into a joint hierarchy (eyes ride on the head) when it
+## pixels, with the body's middle at (0, 0). That is the rest pose exactly as it was drawn. Creature turns it into a joint hierarchy (eyes ride on the head) when it
 ## builds the rig, so the layout never has to know about parent-relative maths.
 ##
 ## A part's drawing is cropped to its own ink. "pivot" is the red dot - where the kid started
@@ -143,34 +142,6 @@ static func anchor_px(img: Image, uv: Vector2, edge: Vector2) -> Vector2:
 	return last - edge * 8.0
 
 
-## The host's drawing shown faintly on the sheet while a part is drawn, placed so the anchor
-## sits on the red dot at the sheet's zoom. Draw a leg over this and it comes out the right
-## size, in the right place, first time. Empty for the body.
-static func ghost(pet: Dictionary, type: String, host := "") -> Dictionary:
-	if type == "body" or not PartTypes.TYPES.has(type):
-		return {}
-	if host == "":
-		host = default_host(pet, type)
-	var hosts := parts_of(pet, host)
-	if hosts.is_empty() or hosts[0].is_empty():
-		return {}
-	var hp: Dictionary = hosts[0]
-	return ghost_on(pet["_img"][hp["image"]], float(hp["draw_scale"]) * float(hp["scale"]), type, host,
-		not has_type(pet, "head"))
-
-
-## The same, from a host drawing that is not on the pet yet - the head still being drawn when
-## the kid adds its horns. `at` (host image pixels), when given, is the spot the kid tapped for
-## it, which goes on the dot instead of where it would go by itself.
-static func ghost_on(host_img: Image, host_scale: float, type: String, host: String,
-		headless := false, at := Vector2(-1, -1)) -> Dictionary:
-	var info := PartTypes.info(type)
-	var a := at if at.x >= 0.0 else anchor_px(host_img, anchor_uv(type, host, headless), info.get("edge", Vector2.ZERO))
-	var gs := float(info["zoom"]) * host_scale
-	var dot: Vector2 = info["dot"]
-	return {"image": host_img, "rect": Rect2(dot - a * gs, Vector2(host_img.get_size()) * gs)}
-
-
 ## Adds `count` copies of one drawn part to EVERY part of the host type, laid out where they
 ## most likely go: legs fanned along the bottom of the body in near/far pairs, eyes side by side
 ## on each head, a hand on the end of each arm. The kid can move all of it in the assembly
@@ -279,14 +250,6 @@ static func children(pet: Dictionary, id: String) -> Array:
 	return out
 
 
-## A part and everything riding on it.
-static func group(pet: Dictionary, id: String) -> Array:
-	var out := [find(pet, id)]
-	for k in children(pet, id):
-		out.append_array(group(pet, k["id"]))
-	return out
-
-
 ## Back to front. A part's behind-children, then the part, then its front-children - so a far
 ## ear sits behind the head but still in front of the body the head sits on.
 static func draw_order(pet: Dictionary) -> Array:
@@ -327,77 +290,7 @@ static func rest_bounds(pet: Dictionary) -> Rect2:
 	return r
 
 
-## True when `point` (body space) lands on the part's ink.
-static func ink_at(pet: Dictionary, p: Dictionary, point: Vector2) -> bool:
-	var img: Image = pet["_img"].get(p["image"])
-	if img == null:
-		return false
-	var local := sprite_xform(p).affine_inverse() * point
-	var x := int(local.x)
-	var y := int(local.y)
-	if x < 0 or y < 0 or x >= img.get_width() or y >= img.get_height():
-		return false
-	return img.get_pixel(x, y).a > 0.3
-
-
-# --- Edits (the assembly screen) -------------------------------------------------------------
-# Each edit moves a part together with everything riding on it, about the part's own joint.
-
-static func move_group(pet: Dictionary, id: String, delta: Vector2) -> void:
-	for p in group(pet, id):
-		p["pos"] = arr(v2(p["pos"]) + delta)
-
-
-static func rotate_group(pet: Dictionary, id: String, angle: float) -> void:
-	var pivot := v2(find(pet, id)["pos"])
-	for p in group(pet, id):
-		p["pos"] = arr(pivot + (v2(p["pos"]) - pivot).rotated(angle))
-		p["rot"] = float(p["rot"]) + angle
-
-
-static func scale_group(pet: Dictionary, id: String, k: float) -> void:
-	var pivot := v2(find(pet, id)["pos"])
-	for p in group(pet, id):
-		p["pos"] = arr(pivot + (v2(p["pos"]) - pivot) * k)
-		p["scale"] = clampf(float(p["scale"]) * k, 0.15, 6.0)
-
-
-static func flip_group(pet: Dictionary, id: String) -> void:
-	var px := v2(find(pet, id)["pos"]).x
-	for p in group(pet, id):
-		var q := v2(p["pos"])
-		p["pos"] = arr(Vector2(2.0 * px - q.x, q.y))
-		p["rot"] = -float(p["rot"])
-		p["flip"] = not p["flip"]
-
-
-## After a drop: an add-on whose joint lands on a head's, arm's or leg's ink rides on that part
-## from then on; dropped anywhere else it rides on the body. Main parts always ride on the body.
-static func reattach(pet: Dictionary, id: String) -> void:
-	var p := find(pet, id)
-	if p.is_empty() or p["type"] == "body" or PartTypes.MAIN.has(p["type"]):
-		return
-	var at := v2(p["pos"])
-	var order := draw_order(pet)
-	order.reverse()
-	for h in order:
-		if PartTypes.MAIN.has(h["type"]) and h["id"] != id and ink_at(pet, h, at):
-			p["parent"] = h["id"]
-			return
-	p["parent"] = "body"
-
-
-static func copy_part(pet: Dictionary, id: String) -> Dictionary:
-	var src := find(pet, id)
-	if src.is_empty() or src["type"] == "body":
-		return {}
-	var p: Dictionary = src.duplicate(true)
-	p["id"] = "%s_%d" % [src["type"], _next_index(pet, src["type"])]
-	p["pos"] = arr(v2(src["pos"]) + Vector2(24, 0))
-	p["pair"] = int(src["pair"]) + 1
-	pet["parts"].append(p)
-	return p
-
+# --- Files -----------------------------------------------------------------------------------
 
 ## "<stem>.png", or "<stem>_2.png" and so on if that is taken - a second, different drawing of
 ## horns added later must not paint over the first.
@@ -408,12 +301,3 @@ static func unused_file(pet: Dictionary, stem: String) -> String:
 		file = "%s_%d.png" % [stem, n]
 		n += 1
 	return file
-
-
-static func remove_part(pet: Dictionary, id: String) -> void:
-	var p := find(pet, id)
-	if p.is_empty() or p["type"] == "body":
-		return
-	for k in children(pet, id):
-		k["parent"] = "body"
-	pet["parts"].erase(p)

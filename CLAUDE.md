@@ -2,8 +2,8 @@
 
 A virtual-pet game where every pet is a creature a kid drew, part by
 part, inside the game. Sibling of `../DrawFight`, built on its lessons but with no photos, no
-cutting and no AI: kids draw each part on its own sheet, drag the parts onto the body, and each
-part type's motion recipe brings it to life.
+cutting and no AI: kids draw the whole creature on one sheet, a part at a time, each part where
+it goes, and each part type's motion recipe brings it to life.
 
 Godot 4.5, **GDScript**, 2D, GL Compatibility renderer. **Android first**, iOS later, landscape.
 Players are 7 and up (Beginner mode for younger kids, Advanced for about 10-12). **M0 and M1 are built**: drawing and assembly; homes with several pets,
@@ -25,8 +25,9 @@ own steps the same way. Gold stars are only ever paid through `GameRoot.reward`,
 decision; do not restate it here.
 
 - `.ai/project-overview.md` - the pitch, the five pillars, every decision made so far
-- `.ai/creature-pipeline.md` - the red dot, the ghost, auto-layout, body space, motion recipes,
-  parts-decide-abilities. **Read before touching DrawCanvas, PetBuilder, Creature or any part.**
+- `.ai/creature-pipeline.md` - the one-sheet creator, cutting it into parts, body space, motion
+  recipes, parts-decide-abilities. **Read before touching DrawCanvas, CreatureSheet, PartCutter,
+  PetBuilder, Creature or any part.**
 - `.ai/pet-life.md` - needs, stats, trust, describing words, favourites, the optional mic.
   **Read before adding any need, stat, word, reaction or reward.**
 - `.ai/places.md` - the fourteen places, homes, decorating and furniture behaviour

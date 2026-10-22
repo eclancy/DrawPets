@@ -6,10 +6,9 @@ like a real pet, in the place it loves most.
 
 ## The pitch
 
-A kid picks what their creature has - a head, two eyes, six legs, wings, a tail - and draws
-each part on its own sheet, starting from a red dot that marks where it joins on. The game
-lays the parts out on the body, the kid drags them where they want them, and the creature
-comes alive. Then they name it, pick how big it is and where it loves to live, and draw its
+A kid draws their creature on one big sheet, a part at a time - tap Wings, draw the wings
+right where they go - and each part comes alive as it is done: wings flap, legs walk, eyes
+blink. A head, two eyes, six legs, wings, a tail: whatever they draw, it has. Then they name it, pick how big it is and where it loves to live, and draw its
 favourite food and favourite toy. Then they visit it, pet it, feed it, throw its toy, and come
 back tomorrow to see it again.
 

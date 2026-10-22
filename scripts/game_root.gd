@@ -535,8 +535,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		capture("f12_%d" % _frame)
 
 
+## A minimised window draws no frames, so this never waits on one for long: after a moment it
+## draws one itself (or the demo would sit silent forever).
 func capture(shot_name: String) -> void:
-	await RenderingServer.frame_post_draw
+	var drawn := [false]
+	var mark := func(): drawn[0] = true
+	RenderingServer.frame_post_draw.connect(mark, CONNECT_ONE_SHOT)
+	var waited := 0
+	while not drawn[0] and waited < 120:
+		await get_tree().process_frame
+		waited += 1
+	if not drawn[0]:
+		RenderingServer.frame_post_draw.disconnect(mark)
+		print("capture: no frame drawn (window hidden?) - drawing one for %s" % shot_name)
+		RenderingServer.force_draw()
 	var img := get_viewport().get_texture().get_image()
 	# res:// is read-only in an exported game (a phone): there, shots go to user://shots, and come
 	# off the device with adb (.ai/android.md).

@@ -1,54 +1,84 @@
 # Creature pipeline
 
 How a kid's drawings become a creature that moves. Read before touching `DrawCanvas`,
-`PartTypes`, `PetBuilder`, `Creature` or `CreaturePart`.
+`CreatureSheet`, `PartCutter`, `PartTypes`, `PetBuilder`, `Creature` or `CreaturePart`.
 
-## The flow - in stages (decided)
+## The flow - one sheet (decided)
 
-Only a few things are asked up front; everything else is added while drawing the part it goes
-on, so a kid is never asked about horns before there is a head to put them on.
+The whole creature is drawn on **one big sheet**, part by part, each part right where it goes
+(`CreatureSheet`). Eric: "Drawing pets is confusing ... when they click on wings, it shouldn't
+immediately change the UI a whole bunch. It should just let them draw wings and then animate it."
+It replaced a staged flow (how many heads/arms/legs, a sheet per host, tap where each add-on goes,
+a zoomed sheet per add-on, then an assembly screen), which kids found hard to follow.
 
-1. **How many heads, arms and legs?** (`PartPickerScreen`, a picture for each). These are the
-   MAIN parts. Defaults: one head, no arms, four legs. Zero is fine everywhere.
-2. **Draw the body's SHAPE**, facing right - the prompt says so: legs, wings and the rest come
-   next. Its add-on buttons: wings, tail, fins, spikes, tentacles, other - plus every face part
-   when there is no head.
-3. **Draw a head's shape**, then each arm, then each leg (`Creator._next_host`). Each is a HOST
-   with its own add-ons (`PartTypes.ADDONS`):
-   - head: eyes, mouth, ears, horns, antennae, hair, nose, spikes
-   - arm: hand, claws
-   - leg: foot, claws
-   **Tapping an add-on first asks where it goes** (`DrawScreen.begin_placing`): the kid taps
-   their drawing once for each copy - two eyes, one mouth, an ear each side - and taps a ring
-   again to take it away. "Draw it!" opens the add-on's sheet zoomed in on the first tap, with
-   the host faint on it; the copies go exactly where they were tapped (`layout_on_host`'s
-   "spots"; tapped pairs go near-far from left to right). Done (or Back) returns to the host,
-   where the add-on now shows in place (`DrawCanvas.set_previews`) and its button shows the
-   kid's drawing, how many, and a cross to take it off. Tapping it again moves it and reopens
-   its drawing. The host's sheet is kept, not redrawn, while an add-on is drawn.
-4. **Eyes and a mouth are required** on the face host (the head, or the body with no head);
-   Done says so and wiggles their buttons until they are there.
-5. **Every Done shows the part off** (`PartPreview`, about 3 s, tap to carry on): the creature
-   so far does what that part does - legs walk, a tail wags, eyes blink, a mouth chomps, wings
-   fly, fins swim, springy parts wobble as it hops. It is the real rig and the real recipes, not
-   a canned animation; an add-on's preview is a copy of the pet with the host as drawn so far.
-6. **Back and Stop, on every drawing step.** Back reopens the step before - its drawing and
-   add-ons as they were - and from the body goes back to the parts picker; the drawing being
-   left is kept for when the kid comes forward again (`Creator._carry`). The pet is rebuilt from
-   the finished hosts each time (`_done_hosts`), so going back is just taking one off. Stop asks
-   "Save it for later / Throw it away / Keep drawing". A saved pet is a **draft** in
-   `user://draft/` (draft.json plus a PNG per drawing): written at every step, and with the page
-   as it is on Save or when the app goes to the background. Starting a new pet offers to finish
-   it. Android's back gesture does what Back does, never dropping a half-drawn pet.
-7. **Put it together** (`AssembleScreen`) - drag, turn, resize, flip, layer, copy, remove.
-   Back reopens the last thing drawn (parts moved here are laid out afresh); Stop as above.
-   The steps after it carry a Stop the creator floats top-right (hidden while a favourite
-   snack or toy is being drawn).
-   Dropping an add-on on a head's, arm's or leg's ink re-hangs it there.
-8. Name, size, favourite place; two personality words; favourite food and toy; where it lives.
+1. **The screen never changes shape.** Tools down the left (crayon, bucket, eraser, hand; undo,
+   clear; zoom in, zoom out, whole sheet; Stop), the sheet as big as the screen allows
+   (`CreatureSheet.SIZE`, 1024 x 896), and on the right the prompt, a button for every part type
+   (`PartTypes.SHEET_PARTS`), the crayons and brush sizes, and the Done button.
+2. **Tap a part, draw it in place.** Tapping Wings lights that button, the prompt says what to
+   draw ("Draw its WINGS, touching the body..." - `PartTypes.DRAW`) and Done reads "Done with the
+   wings". Nothing else moves. The rest of the creature shows around it, a little faint
+   (`OTHERS_ALPHA`), stacked as the creature will be - the tail behind the body, the face on the
+   head - so it is clear which lines are this part's; the eraser and undo only touch them.
+3. **Done with a part shows it off** (`PartPreview`, about 3 s, tap to carry on): wings flap,
+   legs walk, eyes blink - the real rig and the real recipes. Then straight back to the sheet,
+   with the next suggested part (`PartTypes.SUGGESTED`: body, head, eyes, mouth, legs) already
+   picked and gently glowing, and a tick on every part drawn. Tapping another part instead of
+   Done puts this one down without the show.
+4. **Any part can be picked again** and its lines come back to draw on and rub out
+   (`DrawCanvas.load_drawing`; undo stops there).
+5. **The body comes first** - the other buttons are faded until there is one, and say so.
+   **"It's finished!"** appears once there is a body, eyes and a mouth (`PartTypes.NEEDED`) and
+   goes on to the name, size and favourite place; personality; coat; voice; favourite food and
+   toy; where it lives. Those steps carry a Stop the creator floats top-right (hidden while a
+   favourite snack or toy is being drawn).
+6. **Zoom** for small things: pinch or the wheel, or the buttons; two fingers, the hand tool or a
+   right-drag slide the sheet about. A pinch that starts with a finger already drawing takes that
+   stroke back, and the bucket pours when the finger lifts, so zooming never leaves marks.
+7. **Stop** asks "Save it for later / Throw it away / Keep drawing". A saved pet is a **draft**
+   in `user://draft/` (draft.json plus a PNG per part layer, `layer_<type>.png`), written each
+   time a part is put down - only the layers that changed - and with the page as it is on Save or
+   when the app goes to the background. Starting a new pet offers to finish it. A version 1
+   draft (the staged flow) carries its body over, in the middle of the sheet. Android's back
+   gesture skips a part's show, closes the Stop box, or asks to stop - never dropping a pet.
 
-Each type is drawn **once** per host: the kid gets as many copies as they asked for, and every
-copy of a host gets every add-on - four legs drawn once, each with the one foot drawn once.
+Every part TYPE is its own layer. **They draw each one** (decided): two eyes drawn are two eyes,
+four legs drawn are four legs. A single wing, ear, horn, antenna, leg, arm or tentacle still gets
+a matching one behind it (below).
+
+## Cutting the creature into parts (`PartCutter`)
+
+When a part is done (and when the creature is finished) the layers are cut into parts. Nothing
+is redrawn: every part is exactly the kid's pixels, cut out.
+
+- **Pieces.** A layer's separate blobs of ink are separate parts. Ink within `GROUP_GAP` (6 px)
+  is one piece, and blobs whose boxes overlap are one piece - a pupil inside its eye, a highlight
+  drawn just beside it. Specks under `SPECK` pixels are dropped. Each layer's pieces are cached
+  until it changes, so a Done only cuts the layer just drawn.
+- **Hosts.** The body carries everything; a head carries the face parts drawn on it (the body
+  does, with no head); an arm carries hands; a leg (or an arm) carries feet and claws. A piece
+  goes on the allowed host its ink overlaps most - a head over the body for an eye on both.
+- **Joints.** Eyes, mouths and noses blink, open and twitch about their middle. Everything else
+  hangs from where it touches its host: the middle of the ink they share - a leg swings from
+  where it meets the body, an ear wobbles from its base. A piece touching nothing hangs from its
+  point nearest the nearest host.
+- **The rest pose is the drawing.** A leg drawn hanging down hangs down, a tail drawn out to the
+  left points back - the motion recipes swing about that.
+- **Twins.** A paired type drawn just once gets a far-side copy: behind, darkened, moved `far`
+  along the host (the other way if that is off the host), and walked onto the host's outline the
+  way the part grows (`edge`) - so a far ear sits on the head, not in the air. What rides on it
+  comes too: a lone arm's twin has a copy of its hand.
+- **Behind.** Tails, spikes and fins tuck behind what they grow from (`PartCutter.BEHIND`); the
+  sheet shows them behind as they are drawn. Hair drawn in place is drawn ON the head, so it
+  stays in front.
+- **The bucket only sees the part being drawn** (Eric: "the paint bucket should treat the wing as
+  its own layer"). A wing drawn over the body fills right across the body's outline under it,
+  the way the kid sees it.
+- **The bucket closes open shapes.** A tap that would colour the whole page - inside a C, a leg
+  drawn as a U, between two lines - closes the shape it is in with a straight edge across its
+  opening and fills inside that, as if the kid had drawn the edge (`DrawCanvas.close_around`:
+  look out from the tap every way, take the lines met nearest, and close their convex hull). A
+  tap beside a single line, or on empty paper, still says "Tap INSIDE something you drew".
 
 ## Faces turn three-quarters to the right (decided)
 
@@ -64,53 +94,22 @@ kid who taps nothing still gets this face, and the ready-made creatures follow i
 drawn in true profile (a long snout or beak, one eye), where the far ear sits just behind the
 near one instead. The nose sheet's dot is in the middle: a nose is drawn around it.
 
-## The red dot
+## Ready-made creatures: hosts and add-ons
 
-Every part sheet has a red **"attach here" dot**, and the prompt says which way to draw from it
-("ONE leg hanging DOWN from the red dot"). The dot does three jobs at once:
-
-- **It is the joint.** The part rotates about it. DrawFight's hardest step - placing pivots on
-  a photo - does not exist here, because the kid drew the pivot first.
-- **It fixes the rest pose.** A leg drawn down from a dot at the top of the sheet hangs down;
-  a tail drawn left from a dot on the right points backwards. The motion recipes assume that
-  canonical direction, so no rotation-guessing is needed.
-- **It is where the part lands on the body.** See the ghost, below.
-
-The kid can move the dot with **Move dot** if they drew somewhere else.
-
-## The ghost
-
-While a part is drawn, the body (or the head, for face parts) shows faintly on the sheet, placed
-so the spot the part attaches to sits on the dot, at the sheet's zoom. So the kid draws a leg
-**at the right size, already in place** - no resizing afterwards. Eyes, mouths and noses are
-drawn on a zoomed sheet (2.5-3x) so a thumb can manage them; they come out at true size.
-
-The bucket treats the ghost as a wall - for a fill that starts OFF the ghost. A leg drawn as an
-open outline - the top left open where it meets the body, which is how everyone draws a leg -
-fills cleanly and the colour stops at the body. A fill that starts ON the ghost ignores it:
-eyes, mouths and noses are drawn on top of the head, whose ghost covers the whole zoomed sheet,
-so inside an eye it is the kid's own outline that holds the colour (before this, the bucket did
-nothing on those sheets).
-
-## Hosts and add-ons
-
-`PetBuilder.add_parts(pet, type, count, image, pivot, shine, host)` puts `count` copies on EVERY
-part of type `host` (`parts_of`), mapping each anchor through that host's own transform - so a
-hand lands on the end of each arm wherever the arm is. A far-side host's add-ons are far-side too
-(shaded with it). The default host is the type's `host` (face parts fall back to the body when
-there is no head). `layout_on_host` is the same layout without a pet, which is how the drawing
-sheet previews add-ons on a host still being drawn.
-
-New add-on types: **hand** (rides its arm on a stiff spring), **foot** and **claw** (ride their
-leg rigidly). Roster creatures (rivals, adoptables) use the same pipeline (`Roster.assemble`);
-a roster part key `claw_on_arm` puts claws on arms instead of legs, and a roster entry's
-`layout` overrides where a part goes (anchor, edge, spread, far - `PetBuilder.layout_on_host`),
-so the ready-made creatures do not all have their eyes, mouth and head in the same spot. Each
-one has its own eyes, mouth and neck too - never one shared eye drawing.
+Rivals and adoptables are still built the older way, from a drawing per part
+(`Roster.assemble`): `PetBuilder.add_parts(pet, type, count, image, pivot, shine, host)` puts
+`count` copies on EVERY part of type `host` (`parts_of`), mapping each anchor through that host's
+own transform - so a hand lands on the end of each arm wherever the arm is. A far-side host's
+add-ons are far-side too. A part's `pivot` there is the red dot it was drawn from (`PartTypes`
+"dot", on a 512 px sheet zoomed by "zoom"), which is its joint and fixes its rest direction. A
+roster part key `claw_on_arm` puts claws on arms instead of legs, and a roster entry's `layout`
+overrides where a part goes (anchor, edge, spread, far - `PetBuilder.layout_on_host`), so the
+ready-made creatures do not all have their eyes, mouth and head in the same spot. Each one has
+its own eyes, mouth and neck too - never one shared eye drawing.
 
 ## Auto-layout (`PetBuilder.add_parts`)
 
-Parts start where they most likely go, so "It's alive!" is one tap away if the kid is happy:
+For ready-made creatures, parts go where they most likely would:
 
 - an **anchor** on the reference drawing, as a fraction of its ink box (eye: 2/3 across the head);
 - with an **edge** direction, the anchor walks to the last ink that way and tucks 8 px inside -
@@ -125,10 +124,10 @@ Parts start where they most likely go, so "It's alive!" is one tap away if the k
 ## Storage
 
 All layout is in **body space**: body-drawing pixels, body centre at (0, 0). Each part stores its
-joint's `pos`, `rot`, `scale`, `flip`, `behind`, `parent` (body or head), the sheet `draw_scale`
-(1/zoom), and its `pivot` in its own cropped image. That is exactly what the assembly screen
-shows. `Creature` converts it to a joint hierarchy at build time - a part dropped on the head's
-ink becomes a child of the head and rides along when it nods.
+joint's `pos`, `rot`, `scale`, `flip`, `behind`, `parent` (the part it rides on), `draw_scale`
+(1 for a part drawn in place; 1/zoom for a ready-made one drawn on a zoomed sheet), and its
+`pivot` in its own cropped image. A kid's pet at rest is exactly the sheet they drew. `Creature`
+converts it to a joint hierarchy at build time - an eye on the head rides along when it nods.
 
 Draw order everywhere is `PetBuilder.draw_order`: a part's behind-children, the part, its
 front-children.
@@ -173,9 +172,9 @@ zoom in its place, toy and food scale, and - when voices land - pitch.
 ## Once it is made
 
 A pet's drawings are final once it is finished - there is no redrawing, adding or taking off
-parts later (`pet-life.md`). Back and drafts during making reopen a step with
-`DrawCanvas.load_drawing`, which starts a sheet from the drawing as it was (undo stops at it),
-placed so its red dot - its joint - lands on the sheet's dot.
+parts later (`pet-life.md`). While it is being made, picking a part again (or a draft) reopens
+its layer with `DrawCanvas.load_drawing`, which starts from the drawing as it was (undo stops
+at it).
 
 ## Clothes
 
@@ -186,16 +185,17 @@ nods with its head. Capes and wings hang behind the body. One item per place.
 
 ## Shiny strokes
 
-A stroke drawn with a shiny marker is mirrored into a mask (`DrawCanvas`), saved beside the part
-as `<type>_shine.png`, and only those pixels shine in the game.
+A stroke drawn with a shiny marker is mirrored into a mask (`DrawCanvas`), cut out with its part
+(`PartCutter`), saved beside the part as `<type>_shine.png`, and only those pixels shine in the
+game.
 
 ## Not yet
 
 - **Redraw a part** from the pet's page, keeping its layout.
 - **Bendy parts**: a `Polygon2D` skinned along a tentacle or long tail, still the kid's
   pixels, so it curls instead of swinging stiffly.
-- **Multiple heads** (face parts currently attach to the one head).
-- **Pinch to rotate/scale** in assembly, alongside the buttons.
+- **Faster cutting** on the cheapest tablets: `PartCutter.pieces` is GDScript (0.1-0.3 s a
+  layer on a PC); a slow phone may want it in a GDExtension.
 - **Stroke texture**: a crayon-grain brush beside the solid one.
 - Flood fill is GDScript; if it is slow on the cheapest tablet, move it to a compute shader or a
   GDExtension before shrinking the sheet.

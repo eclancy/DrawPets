@@ -126,6 +126,14 @@ swapping between browsers by code through a meeting point that only introduces t
 (`sharing.md`, `releasing.md`). Next: try it on a real iPad; then WebRTC in the apps (the
 webrtc-native add-on), so an app and a browser can swap too.
 
+## M1.19 - The whole creature on one sheet (built)
+
+Kids found drawing a pet in stages confusing, so the creature is drawn on one big sheet, part by
+part, each part where it goes: tap Wings, draw the wings on the creature, "Done with the wings"
+and they flap, then back to the sheet with the next part glowing. Zoom (pinch, wheel, buttons)
+and slide the sheet for small things. No parts picker, no placing taps, no assembly screen: the
+game cuts the drawing into parts itself (`creature-pipeline.md`). Next: watch a kid use it.
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a

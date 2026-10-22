@@ -1,27 +1,30 @@
 class_name DrawCanvas
 extends Control
-## One sheet of paper a kid draws one thing on: a body, a leg, a favourite food.
+## One sheet of paper a kid draws one thing on: a whole creature, part by part (CreatureSheet),
+## or a favourite food, a toy, a hat (DrawScreen).
 ##
-## The sheet is 512 px square whatever size it shows at. Every stroke and fill is its own node
+## The sheet is `sheet_size` pixels (512 square unless set before it enters the tree) whatever
+## size it shows at, and it can be looked at closer: pinch or the mouse wheel to zoom, two fingers
+## (or the hand tool, or a right-drag) to slide it about. Every stroke and fill is its own node
 ## inside a SubViewport, back to front, so undo is "delete the last node" and the drawing is
 ## never flattened until it is finished. Then it is cropped to its ink and becomes the part.
 ##
-## Two things on the sheet are not the kid's drawing and never end up in it:
-##   the ghost - the body (or head) drawn so far, faint, so a leg is drawn at the right size;
-##   the dot   - red, where the part joins on. The kid starts drawing there, and it becomes
-##               the joint the part swings about. Its position also fixes the part's rest
-##               direction: a leg drawn down from a dot at the top hangs down.
+## On a creature sheet the rest of the creature shows around the part being drawn
+## (set_previews), but it is never part of this drawing - and the bucket never sees it: a wing
+## drawn over the body fills right across the body's outline, the way the kid sees it.
 ##
 ## Nothing here smooths, straightens or tidies a stroke. Wobbly is the point.
 
 signal message(text: String)
-## While `placing`, a tap on the sheet does not draw: it says where (sheet pixels) - the kid is
-## showing where the eyes, mouth or ears go before drawing them.
+## While `placing`, a tap on the sheet does not draw: it just says where (sheet pixels).
 signal tapped(at: Vector2)
 
 const SHEET := PartTypes.SHEET
 
-enum Tool { PEN, FILL, ERASER, DOT }
+enum Tool { PEN, FILL, ERASER, HAND }
+
+const MIN_ZOOM := 1.0
+const MAX_ZOOM := 5.0
 
 ## Wipes to transparent: a canvas_item that writes alpha 0 instead of blending.
 const ERASE_SHADER := "
@@ -83,12 +86,18 @@ void fragment() {
 
 ## How wide a gap in an outline the bucket will jump. Thumbs on glass leave gaps.
 const FILL_GAP := 4
+## How many ways the bucket looks out from a tap for the lines of an open shape (close_around).
+const RAYS := 48
 
 var tool := Tool.PEN
+## The sheet's size in pixels. Set before it enters the tree.
+var sheet_size := Vector2i(SHEET, SHEET)
+## How much closer than "the whole sheet fits" it is being looked at.
+var zoom := 1.0
 var color: Color = UI.PALETTE[0]
 var brush := 12.0
+## The drawing's middle: finish() gives it back in the cropped drawing's pixels, as its pivot.
 var dot := Vector2(256, 256)
-var show_dot := true
 ## "" for ordinary crayon, or a Shiny mode while a shiny marker is in hand.
 var shine := ""
 
@@ -96,15 +105,10 @@ var _viewport: SubViewport
 var _ops: Node2D
 var _sheet: Control
 var placing := false
-var _marks: MarkLayer
-var _ghost: TextureRect
 var _ink: TextureRect
-var _dot_layer: DotLayer
 var _previews_behind: PreviewLayer
 var _previews_front: PreviewLayer
 var _stroke: Line2D
-var _ghost_image: Image
-var _ghost_rect := Rect2()
 var _busy := false
 var _erase_material: ShaderMaterial
 var _fill_shader: Shader
@@ -121,6 +125,17 @@ var _scratch_speed := 0.0
 var used_marker := ""
 ## Ops at the bottom that undo never removes: a drawing loaded to be fixed.
 var _base_ops := 0
+## Looking round the sheet: the scale at zoom 1, and the fingers on it (index -> where).
+var _fit_scale := 1.0
+var _touches := {}
+var _gesture := false
+var _pinch_dist := 0.0
+var _pinch_mid := Vector2.ZERO
+var _panning := false
+var _fill_at := Vector2(-1, -1)
+## Counts every change, so a caller can tell whether anything was drawn since it last looked.
+var _edits := 0
+var _seen_edits := 0
 
 
 func _ready() -> void:
@@ -128,7 +143,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	_viewport = SubViewport.new()
-	_viewport.size = Vector2i(SHEET, SHEET)
+	_viewport.size = sheet_size
 	_viewport.transparent_bg = true
 	_viewport.disable_3d = true
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
@@ -136,7 +151,7 @@ func _ready() -> void:
 	_ops = Node2D.new()
 	_viewport.add_child(_ops)
 	_mask_viewport = SubViewport.new()
-	_mask_viewport.size = Vector2i(SHEET, SHEET)
+	_mask_viewport.size = sheet_size
 	_mask_viewport.transparent_bg = true
 	_mask_viewport.disable_3d = true
 	_mask_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
@@ -144,45 +159,29 @@ func _ready() -> void:
 	_mask_ops = Node2D.new()
 	_mask_viewport.add_child(_mask_ops)
 
+	var sheet := Vector2(sheet_size)
 	_sheet = Control.new()
-	_sheet.size = Vector2(SHEET, SHEET)
+	_sheet.size = sheet
 	_sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Smooth when looked at closely, not blocky.
+	_sheet.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(_sheet)
 
-	_ghost = TextureRect.new()
-	_ghost.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_ghost.stretch_mode = TextureRect.STRETCH_SCALE
-	_ghost.modulate = Color(0.55, 0.6, 0.9, 0.22)
-	_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ghost.visible = false
-	_sheet.add_child(_ghost)
-
 	_previews_behind = PreviewLayer.new()
-	_previews_behind.size = Vector2(SHEET, SHEET)
+	_previews_behind.size = sheet
 	_previews_behind.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(_previews_behind)
 
 	_ink = TextureRect.new()
 	_ink.texture = _viewport.get_texture()
-	_ink.size = Vector2(SHEET, SHEET)
+	_ink.size = sheet
 	_ink.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(_ink)
 
 	_previews_front = PreviewLayer.new()
-	_previews_front.size = Vector2(SHEET, SHEET)
+	_previews_front.size = sheet
 	_previews_front.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(_previews_front)
-
-	_dot_layer = DotLayer.new()
-	_dot_layer.canvas = self
-	_dot_layer.size = Vector2(SHEET, SHEET)
-	_dot_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sheet.add_child(_dot_layer)
-
-	_marks = MarkLayer.new()
-	_marks.size = Vector2(SHEET, SHEET)
-	_marks.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sheet.add_child(_marks)
 
 	_erase_material = ShaderMaterial.new()
 	var erase := Shader.new()
@@ -198,31 +197,64 @@ func _ready() -> void:
 
 
 func _fit() -> void:
-	_sheet.scale = Vector2.ONE * (size.x / SHEET)
+	var sheet := Vector2(sheet_size)
+	_fit_scale = minf(size.x / sheet.x, size.y / sheet.y)
+	_apply_view(size / 2.0 - sheet * _fit_scale * zoom / 2.0 if zoom == 1.0 else _sheet.position)
+
+
+## Puts the sheet at `top_left` (local pixels) at the current zoom - kept so it never slides off:
+## centred while it fits, and its edges never inside the view once it is bigger.
+func _apply_view(top_left: Vector2) -> void:
+	var k := _fit_scale * zoom
+	var shown := Vector2(sheet_size) * k
+	var p := top_left
+	for axis in 2:
+		if shown[axis] <= size[axis]:
+			p[axis] = (size[axis] - shown[axis]) / 2.0
+		else:
+			p[axis] = clampf(p[axis], size[axis] - shown[axis], 0.0)
+	_sheet.scale = Vector2(k, k)
+	_sheet.position = p
 	queue_redraw()
 
 
+## Closer (factor > 1) or further, keeping the spot under `around` (local pixels) where it is.
+func zoom_at(factor: float, around: Vector2) -> void:
+	var at := _to_sheet(around)
+	zoom = clampf(zoom * factor, MIN_ZOOM, MAX_ZOOM)
+	_apply_view(around - at * _fit_scale * zoom)
+
+
+func zoom_in() -> void:
+	zoom_at(1.5, size / 2.0)
+
+
+func zoom_out() -> void:
+	zoom_at(1.0 / 1.5, size / 2.0)
+
+
+## The whole sheet again.
+func reset_view() -> void:
+	zoom = 1.0
+	_fit()
+
+
+func pan_by(delta: Vector2) -> void:
+	_apply_view(_sheet.position + delta)
+
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2(4, 6), size), Color(0.23, 0.21, 0.4, 0.12))
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#fffdf6"))
+	# A little darker round the sheet, so its edges show when it is not filling the view.
+	draw_rect(Rect2(Vector2.ZERO, size), UI.PAPER.darkened(0.04))
+	var r := Rect2(_sheet.position, Vector2(sheet_size) * _sheet.scale.x)
+	draw_rect(Rect2(r.position + Vector2(4, 6), r.size), Color(0.23, 0.21, 0.4, 0.12))
+	draw_rect(r, Color("#fffdf6"))
 	draw_rect(Rect2(Vector2.ZERO, size), UI.INK, false, 3.0)
 
 
-## Shows a drawing faintly under the sheet, at `rect` in sheet pixels. The bucket treats it as
-## a wall too: a leg is drawn as an outline left open where it meets the body, and the fill
-## should stop at the body rather than leak out of the top.
-func set_ghost(image: Image, rect: Rect2) -> void:
-	_ghost_image = image
-	_ghost_rect = rect
-	_ghost.texture = ImageTexture.create_from_image(image)
-	_ghost.position = rect.position
-	_ghost.size = rect.size
-	_ghost.visible = true
-
-
-## Shows already-drawn add-ons in place on this drawing - the horns on the head being drawn.
-## Each is {texture, pos (sheet px of its joint), pivot, scale, flip, behind}. Not part of the
-## drawing; they just show what it will look like.
+## Shows other drawings on the sheet - the rest of the creature, around the part being drawn.
+## Each is {texture, pos (sheet px of its pivot), pivot, scale, flip, behind (under this drawing
+## rather than over it), alpha}. Not part of the drawing; they just show what it will look like.
 func set_previews(list: Array) -> void:
 	_previews_behind.items = []
 	_previews_front.items = []
@@ -232,16 +264,24 @@ func set_previews(list: Array) -> void:
 	_previews_front.queue_redraw()
 
 
-## Numbered rings where the kid has tapped for a part (sheet pixels). Empty to clear.
-func set_marks(spots: Array) -> void:
-	_marks.spots = spots
-	_marks.queue_redraw()
+## Starts the sheet empty again - the next part of the creature. Undo starts afresh.
+func restart() -> void:
+	for n in _ops.get_children():
+		_ops.remove_child(n)
+		n.queue_free()
+	for n in _mask_ops.get_children():
+		_mask_ops.remove_child(n)
+		n.queue_free()
+	_base_ops = 0
+	_stroke = null
+	_shine_mode = ""
+	_ink.material = null
+	used_marker = ""
+	_changed()
 
 
-func set_dot(at: Vector2, visible_dot := true) -> void:
+func set_dot(at: Vector2) -> void:
 	dot = at
-	show_dot = visible_dot
-	_dot_layer.queue_redraw()
 
 
 # --- Input -----------------------------------------------------------------------------------
@@ -251,25 +291,116 @@ func set_dot(at: Vector2, visible_dot := true) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if _busy:
 		return
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			zoom_at(1.15, event.position)
+			accept_event()
+			return
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			zoom_at(1.0 / 1.15, event.position)
+			accept_event()
+			return
+		if event.button_index in [MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
+			_panning = event.pressed
+			accept_event()
+			return
+	if _gesture:
+		# Two fingers are zooming or sliding the page; the mouse a phone makes of the first one
+		# must not draw meanwhile.
+		accept_event()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var at := _to_sheet(event.position)
 		if placing:
 			if event.pressed:
-				tapped.emit(at.clamp(Vector2.ZERO, Vector2(SHEET, SHEET)))
+				tapped.emit(at.clamp(Vector2.ZERO, Vector2(sheet_size)))
 			accept_event()
 			return
 		if event.pressed:
-			_press(at)
+			if tool == Tool.HAND:
+				_panning = true
+			else:
+				_press(at)
 			if _stroke != null:
 				_scratch = Sounds.loop_start("eraser" if tool == Tool.ERASER else "crayon", -40.0)
 		else:
+			_panning = false
 			_stroke = null
 			_stop_scratch()
+			# The bucket pours when the finger lifts - so a pinch that starts with this finger
+			# never colours anything.
+			if _fill_at.x >= 0.0:
+				var spot := _fill_at
+				_fill_at = Vector2(-1, -1)
+				fill_at(spot)
 		accept_event()
-	elif event is InputEventMouseMotion and _stroke != null:
-		_extend(_to_sheet(event.position))
-		_scratch_speed = maxf(_scratch_speed, event.velocity.length())
-		accept_event()
+	elif event is InputEventMouseMotion:
+		if _panning:
+			pan_by(event.relative)
+			accept_event()
+		elif _stroke != null:
+			_extend(_to_sheet(event.position))
+			_scratch_speed = maxf(_scratch_speed, event.velocity.length())
+			accept_event()
+
+
+## Two fingers: pinch to zoom, slide to move the page. Read straight from the touches (the mouse
+## Godot makes from a finger only knows about one). A stroke the first finger had just begun is
+## taken back - it was the start of a pinch, not a line.
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventScreenTouch or event is InputEventScreenDrag) or not is_visible_in_tree():
+		return
+	var local: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if not Rect2(Vector2.ZERO, size).has_point(local):
+				return
+			_touches[event.index] = local
+			if _touches.size() == 2 and not _gesture:
+				_gesture = true
+				_take_back_stroke()
+				_fill_at = Vector2(-1, -1)
+				_start_pinch()
+		else:
+			_touches.erase(event.index)
+			if _touches.size() == 1 and _gesture:
+				_start_pinch()
+			if _touches.is_empty():
+				_gesture = false
+	elif _touches.has(event.index):
+		_touches[event.index] = local
+		if _gesture and _touches.size() >= 2:
+			var pts: Array = _touches.values()
+			var mid: Vector2 = (pts[0] + pts[1]) / 2.0
+			var dist: float = (pts[0] as Vector2).distance_to(pts[1])
+			if _pinch_dist > 1.0 and dist > 1.0:
+				zoom_at(dist / _pinch_dist, mid)
+			pan_by(mid - _pinch_mid)
+			_pinch_dist = dist
+			_pinch_mid = mid
+
+
+func _start_pinch() -> void:
+	var pts: Array = _touches.values()
+	if pts.size() >= 2:
+		_pinch_mid = (pts[0] + pts[1]) / 2.0
+		_pinch_dist = (pts[0] as Vector2).distance_to(pts[1])
+	else:
+		_pinch_dist = 0.0
+
+
+## Takes back the stroke in progress, quietly (it was a pinch starting).
+func _take_back_stroke() -> void:
+	if _stroke == null:
+		return
+	var twin: Node = _stroke.get_meta("twin")
+	_ops.remove_child(_stroke)
+	_stroke.queue_free()
+	_mask_ops.remove_child(twin)
+	twin.queue_free()
+	_stroke = null
+	_stop_scratch()
+	_changed()
 
 
 ## The scratching follows the stroke: loud while the crayon moves fast, quiet while it rests.
@@ -292,7 +423,7 @@ func _exit_tree() -> void:
 
 
 func _to_sheet(local: Vector2) -> Vector2:
-	return local / (size.x / SHEET)
+	return (local - _sheet.position) / _sheet.scale.x
 
 
 func _press(at: Vector2) -> void:
@@ -300,11 +431,7 @@ func _press(at: Vector2) -> void:
 		Tool.PEN, Tool.ERASER:
 			begin_stroke(at)
 		Tool.FILL:
-			fill_at(at)
-		Tool.DOT:
-			if show_dot:
-				set_dot(at.clamp(Vector2.ZERO, Vector2(SHEET, SHEET)))
-				Sounds.play("dot")
+			_fill_at = at
 
 
 # --- Drawing operations ----------------------------------------------------------------------
@@ -378,24 +505,26 @@ func add_stroke(points: PackedVector2Array) -> void:
 
 func fill_at(at: Vector2) -> void:
 	var start := Vector2i(at.floor())
-	if start.x < 0 or start.y < 0 or start.x >= SHEET or start.y >= SHEET:
+	if start.x < 0 or start.y < 0 or start.x >= sheet_size.x or start.y >= sheet_size.y:
 		return
 	_busy = true
 	var sheet_image := await snapshot()
-	var blockers := _ghost_walls(sheet_image)
-	# The ghost is a wall for a fill that starts off it - a leg's colour stops at the body - but not
-	# for one that starts on it: eyes and mouths are drawn on top of the head, whose ghost fills
-	# the whole zoomed sheet, so inside an eye it is the kid's own lines that hold the colour in.
-	if blockers != null and blockers.get_pixelv(start).a > 0.5 and sheet_image.get_pixelv(start).a < 0.5:
-		blockers = null
 	var t0 := Time.get_ticks_usec()
-	var result := flood(sheet_image, start, FILL_GAP, blockers)
+	var blockers: Image = null
+	var walls := _walls(sheet_image, FILL_GAP)
+	var result := flood(sheet_image, start, FILL_GAP, walls)
+	if result.get("leaked", false):
+		# An open shape - a C, a leg drawn as a U - would let the colour out over the whole page.
+		# Close it off where the kid would have, and fill inside that.
+		blockers = close_around(sheet_image, start, walls)
+		if blockers != null:
+			result = flood(sheet_image, start, FILL_GAP, _walls(blockers, FILL_GAP))
 	# Read off a phone with `adb logcat -s godot` - the bucket is GDScript, the slow case on a
 	# cheap tablet (.ai/android.md).
 	print("[timing] fill %d ms" % ((Time.get_ticks_usec() - t0) / 1000))
 	_busy = false
 	if result.get("leaked", false):
-		message.emit("That would colour the whole page! Fill INSIDE a closed shape.")
+		message.emit("Tap INSIDE something you drew to colour it in!")
 		Sounds.play("ui_nope")
 		return
 	if not result.has("mask"):
@@ -407,7 +536,7 @@ func fill_at(at: Vector2) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = _fill_shader
 	mat.set_shader_parameter("fill_color", color)
-	# Paper fills keep off the ghost as well as the ink, so a leg's colour stops at the body.
+	# Paper fills keep off the closing edge as well as the ink, so the colour stops there.
 	mat.set_shader_parameter("ink", ImageTexture.create_from_image(
 		blockers if blockers != null and result["empty"] else sheet_image))
 	mat.set_shader_parameter("protect_ink", result["empty"])
@@ -465,23 +594,51 @@ func undo() -> void:
 func clear() -> void:
 	Sounds.play("clear")
 	var wipe := Polygon2D.new()
-	wipe.polygon = PackedVector2Array([Vector2.ZERO, Vector2(SHEET, 0), Vector2(SHEET, SHEET),
-		Vector2(0, SHEET)])
+	var s := Vector2(sheet_size)
+	wipe.polygon = PackedVector2Array([Vector2.ZERO, Vector2(s.x, 0), s, Vector2(0, s.y)])
 	wipe.material = _erase_material
 	_add_op(wipe, wipe.duplicate())
 	_changed()
 
 
 func _changed() -> void:
+	_edits += 1
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_mask_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
+## Whether anything was drawn, filled, rubbed out or undone since mark_loaded.
+func changed_since_load() -> bool:
+	return _edits != _seen_edits
+
+
+## What is on the page now is what the caller has kept.
+func mark_loaded() -> void:
+	_seen_edits = _edits
+
+
 ## The drawing as it stands, full sheet, transparent where nothing is drawn.
 func snapshot() -> Image:
-	_changed()
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_mask_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	await RenderingServer.frame_post_draw
 	return _viewport.get_texture().get_image()
+
+
+## The whole sheet as drawn, not cropped - {image, shine: {mode, mask} or {}, used_marker} - for
+## a creature, whose parts keep their place on the one sheet. Empty when nothing is drawn.
+func snapshot_full() -> Dictionary:
+	var img := await snapshot()
+	if img.get_used_rect().size.x < 2:
+		return {}
+	var out := img.duplicate() as Image
+	Crayon.unpremultiply(out)
+	var result := {"image": out, "shine": {}, "used_marker": used_marker}
+	if _shine_mode != "":
+		var mask := _mask_viewport.get_texture().get_image()
+		if mask.get_used_rect().size.x > 0:
+			result["shine"] = {"mode": _shine_mode, "mask": mask}
+	return result
 
 
 ## The finished drawing cropped to its ink, and the dot in the cropped image's pixels - plus
@@ -505,24 +662,103 @@ func finish() -> Dictionary:
 
 # --- Flood fill ------------------------------------------------------------------------------
 
-## The drawing with the ghost laid into it, for the bucket to treat as walls. Null with no ghost.
-func _ghost_walls(sheet_image: Image) -> Image:
-	if _ghost_image == null or not _ghost.visible:
+## For a tap in an open shape that would colour the whole page - a C, a leg drawn as a U, two
+## lines side by side: the drawing with that shape closed off by a straight edge across its
+## opening (the convex hull of its lines), so the colour stops there as if the kid had drawn the
+## edge. The shape is the lines first met looking out from the tap, the nearest ones and any about
+## as near. Null when the tap is not inside any shape at all - the kid tapped beside a line, or on
+## empty paper.
+static func close_around(img: Image, start: Vector2i, walls := PackedByteArray()) -> Image:
+	var w := img.get_width()
+	var h := img.get_height()
+	var ink := walls if not walls.is_empty() else _walls(img, FILL_GAP)
+	if ink[start.y * w + start.x] != 0:
+		ink = _walls(img, 0)
+		if ink[start.y * w + start.x] != 0:
+			return null
+	# Look out from the tap every way for the first line each way.
+	var hits := []
+	var nearest := INF
+	for k in RAYS:
+		var dir := Vector2.from_angle(TAU * k / RAYS)
+		var p := Vector2(start) + Vector2(0.5, 0.5)
+		var d := 0.0
+		while true:
+			p += dir
+			d += 1.0
+			var x := int(p.x)
+			var y := int(p.y)
+			if x < 0 or y < 0 or x >= w or y >= h:
+				break
+			if ink[y * w + x] != 0:
+				hits.append([y * w + x, d])
+				nearest = minf(nearest, d)
+				break
+	if hits.size() < 3:
 		return null
-	var composite := sheet_image.duplicate() as Image
-	var g := _ghost_image.duplicate() as Image
-	g.resize(maxi(1, int(_ghost_rect.size.x)), maxi(1, int(_ghost_rect.size.y)))
-	composite.blend_rect(g, Rect2i(Vector2i.ZERO, g.get_size()), Vector2i(_ghost_rect.position))
-	return composite
+	# The lines it met, each followed all the way round; their outermost points, row by row.
+	var reach := maxf(nearest * 2.5, nearest + 40.0)
+	var seen := PackedByteArray()
+	seen.resize(w * h)
+	var row_min := PackedInt32Array()
+	var row_max := PackedInt32Array()
+	row_min.resize(h)
+	row_max.resize(h)
+	row_min.fill(w)
+	row_max.fill(-1)
+	for hit in hits:
+		var at: int = hit[0]
+		if float(hit[1]) > reach or seen[at] != 0:
+			continue
+		seen[at] = 1
+		var stack := PackedInt32Array([at])
+		while not stack.is_empty():
+			var i := stack[stack.size() - 1]
+			stack.remove_at(stack.size() - 1)
+			var x := i % w
+			var y := i / w
+			row_min[y] = mini(row_min[y], x)
+			row_max[y] = maxi(row_max[y], x)
+			for dy in [-1, 0, 1]:
+				var ny: int = y + dy
+				if ny < 0 or ny >= h:
+					continue
+				for dx in [-1, 0, 1]:
+					var nx: int = x + dx
+					if nx < 0 or nx >= w:
+						continue
+					var j := ny * w + nx
+					if ink[j] != 0 and seen[j] == 0:
+						seen[j] = 1
+						stack.append(j)
+	var points := PackedVector2Array()
+	for y in h:
+		if row_max[y] >= 0:
+			points.append(Vector2(row_min[y], y))
+			points.append(Vector2(row_max[y], y))
+	var hull := Geometry2D.convex_hull(points)
+	if hull.size() < 4 or not Geometry2D.is_point_in_polygon(Vector2(start), hull):
+		return null
+	# The edge, drawn into a copy of the drawing for the bucket to stop at.
+	var out := img.duplicate() as Image
+	out.convert(Image.FORMAT_RGBA8)
+	for i in hull.size() - 1:
+		var a := hull[i]
+		var b := hull[i + 1]
+		var steps := maxi(1, int(a.distance_to(b)))
+		for k in steps + 1:
+			var q := a.lerp(b, k / float(steps))
+			out.fill_rect(Rect2i(int(q.x) - 1, int(q.y) - 1, 3, 3).intersection(Rect2i(0, 0, w, h)), Color(0, 0, 0, 1))
+	return out
 
 
 ## Fills from `start`. Tapping paper fills the paper region the tap is in, treating anything
 ## within `gap` pixels of ink as a wall so it can jump small gaps in an outline; tapping
-## colour recolours that colour. `blockers`, when given, is the drawing with the ghost laid in
+## colour recolours that colour. `blockers`, when given, is the drawing with the walls laid in
 ## and is what paper fills stop at. Returns {mask (R8 Image), empty, grow}, or {leaked = true}
 ## when a paper fill reached the edge of the sheet - the kid tapped outside their drawing,
 ## and colouring the whole page is never what they meant.
-static func flood(img: Image, start: Vector2i, gap: int, blockers: Image = null) -> Dictionary:
+static func flood(img: Image, start: Vector2i, gap: int, walls := PackedByteArray()) -> Dictionary:
 	var w := img.get_width()
 	var h := img.get_height()
 	var data := img.get_data()
@@ -530,14 +766,13 @@ static func flood(img: Image, start: Vector2i, gap: int, blockers: Image = null)
 	var empty := data[si + 3] < 200
 	var wall := PackedByteArray()
 	var grow := 1
-	var wall_src := blockers if blockers != null else img
 
 	if empty:
-		wall = _walls(wall_src, gap)
+		wall = walls if not walls.is_empty() else _walls(img, gap)
 		grow = gap
 		if wall[start.y * w + start.x] != 0:
 			# Tapped in a gap narrower than the wall padding; fill it exactly instead.
-			wall = _walls(wall_src, 0)
+			wall = _walls(img, 0)
 			grow = 1
 			if wall[start.y * w + start.x] != 0:
 				return {}
@@ -591,32 +826,24 @@ static func flood(img: Image, start: Vector2i, gap: int, blockers: Image = null)
 
 
 ## 255 wherever there is ink, padded out by `gap` pixels; 0 where a fill may go.
+##
+## Grown only around the drawing (the rest of a big sheet is empty paper), and in two half steps,
+## which make the same round-ish blob with far fewer looks: growing is the bucket's slow part.
 static func _walls(img: Image, gap: int) -> PackedByteArray:
 	var ink := BitMap.new()
 	ink.create_from_image_alpha(img, 0.5)
-	if gap > 0:
-		ink.grow_mask(gap, Rect2i(Vector2i.ZERO, img.get_size()))
+	var used := img.get_used_rect()
+	if gap > 0 and used.size.x > 0:
+		var around := used.grow(gap + 1).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+		var half := gap / 2
+		ink.grow_mask(half, around)
+		ink.grow_mask(gap - half, around)
 	var walls := ink.convert_to_image()
 	walls.convert(Image.FORMAT_L8)
 	return walls.get_data()
 
 
-## Where the kid has tapped for a part: a ring with a number in it for each.
-class MarkLayer extends Control:
-	var spots := []
-
-	func _draw() -> void:
-		var font := get_theme_default_font()
-		for i in spots.size():
-			var at: Vector2 = spots[i]
-			draw_circle(at, 22.0, Color(1, 0.99, 0.95, 0.9))
-			draw_arc(at, 22.0, 0.0, TAU, 32, UI.ACCENT, 5.0, true)
-			var label := str(i + 1)
-			var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
-			draw_string(font, at + Vector2(-w / 2.0, 9.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 26, UI.INK)
-
-
-## Add-ons shown in place on the sheet (set_previews).
+## Other drawings shown on the sheet (set_previews).
 class PreviewLayer extends Control:
 	var items := []
 
@@ -625,17 +852,5 @@ class PreviewLayer extends Control:
 			var tex: Texture2D = p["texture"]
 			var k: float = p["scale"]
 			draw_set_transform(p["pos"], 0.0, Vector2(-k if p.get("flip", false) else k, k))
-			draw_texture(tex, -Vector2(p["pivot"]), Color(1, 1, 1, 0.92))
+			draw_texture(tex, -Vector2(p["pivot"]), Color(1, 1, 1, float(p.get("alpha", 0.92))))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-
-
-## The red "attach here" dot, drawn over the sheet. Not part of the drawing.
-class DotLayer extends Control:
-	var canvas: DrawCanvas
-
-	func _draw() -> void:
-		if not canvas.show_dot:
-			return
-		draw_circle(canvas.dot, 15.0, Color(1, 1, 1, 0.9))
-		draw_circle(canvas.dot, 11.0, Color("#e8344e"))
-		draw_arc(canvas.dot, 21.0, 0.0, TAU, 32, Color("#e8344e"), 3.0, true)
