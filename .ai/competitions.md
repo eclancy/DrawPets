@@ -24,10 +24,37 @@ same rhythm and a kid can plan ("Wednesday's Tug-of-War, let's train strength"):
 | Sun | Fun Fair | any | practise any event (1 star, 3 a day) |
 | Mon | Dash Race | speed | tap while the ring's hand is in the green for a burst; stamina holds the pace over the last 40% |
 | Tue | Trick Show | smarts | watch the trick cards, tap them back in order; a round longer each time, 5 rounds. The cards are the pet's own: every trick it knows, on the card the kid drew, topped up with the game's cards to four |
-| Wed | Tug-of-War Cup | strength | three-round knockout; tap HEAVE! when the ring is biggest |
+| Wed | Tug-of-War Cup | strength | three-round knockout; slide the rope's knot LEFT with the guide ring, let it go back RIGHT, in time with the drum - heave, ease, heave |
 | Thu | Style Show | charm | dress to the day's theme word, then tap to pose in the moving spotlight |
 | Fri | Hop Hurdles | agility | tap to jump; agility sets how high and how long |
 | Sat | Big Marathon | stamina | tap with the drum; on-beat keeps energy up, stamina sets how fast it drains |
+
+## Tug of war: pull, let go, pull (decided)
+
+Eric: "lets switch the game to look more like the kid having to pull their thumb left, then loosen
+up to the right, then pull left again in sync with the time." The rope's handle lies across the
+sky over the field (`TugGame.PullBar`): a guide ring slides LEFT for the first half of every beat
+(the drum booms, a green PULL arrow and "PULL!") and back RIGHT for the second ("let go..."). The
+kid's thumb slides the orange knot - anywhere on the screen, one to one - and lifting the thumb
+lets the rope pay out, which is letting go too. Pulling left WITH the guide adds up to `HEAVE_K`
+to the pet's pull (strength gives 0.8 a point); a thumb a moment behind still counts, since
+everyone follows a moving thing a little late (`LAG`). Out of time it adds nothing and costs
+nothing, and wiggling back and forth counts no more than one clean pull. A good pull says
+"HEAVE!" in green, flashes the knot and makes the pet lean back and growl harder (`Creature.effort`,
+a channel every creature has). Round 1 opens by showing it: the hand works the knot for two beats
+("Watch!"), the kid tries for two ("Your turn - try it!"), then Ready, GO on a pull. The round is
+won when the ribbon itself reaches your (orange) flag; after 20 s of a stuck round the flags walk
+in, so every round ends.
+
+## How to play is shown, not told (decided)
+
+Eric: "each game should be clear what to do." Every game shows its move with the same drawn hand
+(`HowTo`, `art/ui/ui_point.png`) doing it on the real cue, in time, with a caption of six words
+or fewer - the kid may not read. Competitions show it every run while they count down (and two
+"Watch!" goes first, the first time ever), it goes at the first touch, and it comes back when the
+kid rests while the game waits. Free play and Beginner show it the first three times per activity
+(`HowTo.first_times`) and again after about 6 s of nothing. One sentence on screen at a time, and
+the hand only ever shows a move that really works.
 
 ## Cups
 

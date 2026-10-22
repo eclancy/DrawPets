@@ -665,9 +665,11 @@ func finish() -> Dictionary:
 ## For a tap in an open shape that would colour the whole page - a C, a leg drawn as a U, two
 ## lines side by side: the drawing with that shape closed off by a straight edge across its
 ## opening (the convex hull of its lines), so the colour stops there as if the kid had drawn the
-## edge. The shape is the lines first met looking out from the tap, the nearest ones and any about
-## as near. Null when the tap is not inside any shape at all - the kid tapped beside a line, or on
-## empty paper.
+## edge. The shape is the open lines first met looking out from the tap - the nearest ones and
+## any about as near - and they must go at least about halfway round it. Things that are closed
+## already (an eye, a wheel) are things, not the walls of a shape: a tap between two eyes does not
+## colour the space between them. Null when the tap is not inside an open shape at all - beside a
+## line, between two things, or on empty paper.
 static func close_around(img: Image, start: Vector2i, walls := PackedByteArray()) -> Image:
 	var w := img.get_width()
 	var h := img.get_height()
@@ -694,48 +696,44 @@ static func close_around(img: Image, start: Vector2i, walls := PackedByteArray()
 				hits.append([y * w + x, d])
 				nearest = minf(nearest, d)
 				break
-	if hits.size() < 3:
-		return null
-	# The lines it met, each followed all the way round; their outermost points, row by row.
 	var reach := maxf(nearest * 2.5, nearest + 40.0)
-	var seen := PackedByteArray()
-	seen.resize(w * h)
-	var row_min := PackedInt32Array()
-	var row_max := PackedInt32Array()
-	row_min.resize(h)
-	row_max.resize(h)
-	row_min.fill(w)
-	row_max.fill(-1)
+	# Each line met, followed all the way round and numbered; the closed ones put aside.
+	var label := PackedByteArray()
+	label.resize(w * h)
+	var boxes := {}
+	var open := {}
 	for hit in hits:
 		var at: int = hit[0]
-		if float(hit[1]) > reach or seen[at] != 0:
+		if float(hit[1]) > reach or label[at] != 0 or boxes.size() >= 250:
 			continue
-		seen[at] = 1
-		var stack := PackedInt32Array([at])
-		while not stack.is_empty():
-			var i := stack[stack.size() - 1]
-			stack.remove_at(stack.size() - 1)
-			var x := i % w
-			var y := i / w
-			row_min[y] = mini(row_min[y], x)
-			row_max[y] = maxi(row_max[y], x)
-			for dy in [-1, 0, 1]:
-				var ny: int = y + dy
-				if ny < 0 or ny >= h:
-					continue
-				for dx in [-1, 0, 1]:
-					var nx: int = x + dx
-					if nx < 0 or nx >= w:
-						continue
-					var j := ny * w + nx
-					if ink[j] != 0 and seen[j] == 0:
-						seen[j] = 1
-						stack.append(j)
+		var id := boxes.size() + 1
+		boxes[id] = _follow_line(ink, label, at, id, w, h)
+		open[id] = not _is_closed(label, boxes[id], id, w)
+	# The open lines must go at least about halfway round the tap.
+	var round_it := 0
+	for hit in hits:
+		if float(hit[1]) <= reach and open.get(int(label[int(hit[0])]), false):
+			round_it += 1
+	if round_it < int(RAYS * 0.45):
+		return null
+	# Their outermost points, row by row, make the shape's hull.
 	var points := PackedVector2Array()
-	for y in h:
-		if row_max[y] >= 0:
-			points.append(Vector2(row_min[y], y))
-			points.append(Vector2(row_max[y], y))
+	for id in boxes:
+		if not open[id]:
+			continue
+		var box: Rect2i = boxes[id]
+		for y in range(box.position.y, box.end.y):
+			var row := y * w
+			var lo := -1
+			var hi := -1
+			for x in range(box.position.x, box.end.x):
+				if label[row + x] == id:
+					if lo < 0:
+						lo = x
+					hi = x
+			if lo >= 0:
+				points.append(Vector2(lo, y))
+				points.append(Vector2(hi, y))
 	var hull := Geometry2D.convex_hull(points)
 	if hull.size() < 4 or not Geometry2D.is_point_in_polygon(Vector2(start), hull):
 		return null
@@ -750,6 +748,84 @@ static func close_around(img: Image, start: Vector2i, walls := PackedByteArray()
 			var q := a.lerp(b, k / float(steps))
 			out.fill_rect(Rect2i(int(q.x) - 1, int(q.y) - 1, 3, 3).intersection(Rect2i(0, 0, w, h)), Color(0, 0, 0, 1))
 	return out
+
+
+## Numbers every ink pixel joined to `at` with `id`; its box. (The ink is grown, so lines are
+## thick enough that joining side to side is enough. Written out longhand: this is a hot loop.)
+static func _follow_line(ink: PackedByteArray, label: PackedByteArray, at: int, id: int, w: int,
+		h: int) -> Rect2i:
+	var x0 := at % w
+	var y0 := at / w
+	var x1 := x0
+	var y1 := y0
+	label[at] = id
+	var stack := PackedInt32Array([at])
+	while not stack.is_empty():
+		var i := stack[stack.size() - 1]
+		stack.remove_at(stack.size() - 1)
+		var x := i % w
+		var y := i / w
+		x0 = mini(x0, x)
+		x1 = maxi(x1, x)
+		y0 = mini(y0, y)
+		y1 = maxi(y1, y)
+		if x > 0 and ink[i - 1] != 0 and label[i - 1] == 0:
+			label[i - 1] = id
+			stack.append(i - 1)
+		if x < w - 1 and ink[i + 1] != 0 and label[i + 1] == 0:
+			label[i + 1] = id
+			stack.append(i + 1)
+		if y > 0 and ink[i - w] != 0 and label[i - w] == 0:
+			label[i - w] = id
+			stack.append(i - w)
+		if y < h - 1 and ink[i + w] != 0 and label[i + w] == 0:
+			label[i + w] = id
+			stack.append(i + w)
+	return Rect2i(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+
+
+## Whether a line closes round some paper of its own (an eye, a wheel) - more than a scribble's
+## crossing. Floods its box from the edges: any paper the flood cannot reach is inside it.
+static func _is_closed(label: PackedByteArray, box: Rect2i, id: int, w: int) -> bool:
+	# A copy of the box, one pixel bigger all round: 1 where the line is.
+	var bw := box.size.x + 2
+	var bh := box.size.y + 2
+	var wall := PackedByteArray()
+	wall.resize(bw * bh)
+	var ink_count := 0
+	for y in range(box.position.y, box.end.y):
+		var row := y * w
+		var brow := (y - box.position.y + 1) * bw + 1 - box.position.x
+		for x in range(box.position.x, box.end.x):
+			if label[row + x] == id:
+				wall[brow + x] = 1
+				ink_count += 1
+	# Paper the flood reaches from the box's edge is outside; marked 2.
+	wall[0] = 2
+	var stack := PackedInt32Array([0])
+	var count := 1
+	while not stack.is_empty():
+		var i := stack[stack.size() - 1]
+		stack.remove_at(stack.size() - 1)
+		var x := i % bw
+		if x > 0 and wall[i - 1] == 0:
+			wall[i - 1] = 2
+			count += 1
+			stack.append(i - 1)
+		if x < bw - 1 and wall[i + 1] == 0:
+			wall[i + 1] = 2
+			count += 1
+			stack.append(i + 1)
+		if i >= bw and wall[i - bw] == 0:
+			wall[i - bw] = 2
+			count += 1
+			stack.append(i - bw)
+		if i + bw < bw * bh and wall[i + bw] == 0:
+			wall[i + bw] = 2
+			count += 1
+			stack.append(i + bw)
+	var enclosed := bw * bh - count - ink_count
+	return enclosed > 0.15 * box.size.x * box.size.y
 
 
 ## Fills from `start`. Tapping paper fills the paper region the tap is in, treating anything

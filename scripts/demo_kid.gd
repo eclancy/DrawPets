@@ -829,8 +829,16 @@ func _play(kind: String, comp: CompetitionScreen) -> void:
 				if mini._time > 0.0 and fmod(mini._time, TrackGame.BEAT) < dt:
 					mini.tap()
 			"tug":
-				if mini._ring.value > 0.9:
-					mini.tap()
+				# A thumb following the guide a little late, lifting off to let go every other beat.
+				if mini._t > -2.0 * TugGame.BEAT and not mini._over:
+					var beat := int(floor(mini._t / TugGame.BEAT))
+					var lift := beat % 2 == 0 and not TugGame.is_pull(mini._t)
+					if lift and mini._held:
+						mini.release()
+					elif not lift and not mini._held:
+						mini.press(900.0 - mini._h * TugGame.STROKE)
+					if mini._held:
+						mini.drag(900.0 - TugGame.guide_at(mini._t - 0.08) * TugGame.STROKE)
 			"tricks":
 				if mini._state == "answer" and mini._answer < mini._sequence.size():
 					await _wait(0.3)

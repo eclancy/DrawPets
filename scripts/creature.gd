@@ -58,6 +58,9 @@ var roll := 0.0
 var curl := 0.0
 ## Leaning into something heavy it is pushing along.
 var straining := false
+## How hard it is pulling a rope right now, 0-1 (TugGame): leans further back, paws faster,
+## shakes and growls harder.
+var effort := 0.0
 ## Where a finger is petting it (global), or Vector2.INF. It leans into the finger.
 var touch_at := Vector2.INF
 var accel := Vector2.ZERO
@@ -762,11 +765,11 @@ func _run_action(delta: float) -> void:
 			if int(t * 6.0) != int((t - delta) * 6.0) and k < 0.8:
 				emote.emit("drop", global_position + Vector2(randf_range(-0.6, 0.6) * height_px, -height_px * 0.6))
 		"tug":
-			lean = -0.18
-			mouth_open = 0.5
+			lean = -0.18 - 0.16 * effort
+			mouth_open = 0.5 + 0.3 * effort
 			stride = 0.6
-			phase += delta * 9.0
-			head_tilt = sin(t * 15.0) * 0.1  # the growly shake
+			phase += delta * (9.0 + 9.0 * effort)
+			head_tilt = sin(t * 15.0) * (0.1 + 0.08 * effort)  # the growly shake
 		"hide":
 			head_tilt = sin(t * 1.5) * 0.1
 		"sleep":
