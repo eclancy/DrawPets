@@ -16,6 +16,8 @@ const DRAFT_DIR := "user://draft"
 const DRAFT_VERSION := 2
 
 var game: GameRoot
+## Straight back to the saved pet, without asking (back from a bug report).
+var resume := false
 var pet := PetBuilder.new_pet()
 var current: Control
 var sheet: CreatureSheet
@@ -44,7 +46,9 @@ func _ready() -> void:
 	_stop_button.offset_bottom = 76
 	_stop_button.visible = false
 	add_child(_stop_button)
-	if has_draft():
+	if has_draft() and resume:
+		resume_draft()
+	elif has_draft():
 		_offer_draft()
 	else:
 		_open_sheet()
@@ -146,6 +150,9 @@ func _ask_quit() -> void:
 	col.add_child(UI.button("Save it for later", _quit_save, Vector2(420, 72), 26))
 	col.add_child(UI.button("Throw it away", _quit_discard, Vector2(420, 64), 22))
 	col.add_child(UI.button("Keep drawing", _close_dialog, Vector2(420, 64), 22))
+	# For a grown-up: something went wrong while drawing? Tell the person who makes it. Held, like
+	# the one in Settings, and the pet is saved first so nothing is lost on the way.
+	col.add_child(UI.HeldButton.new("Grown-ups, hold: report a bug", _report_bug, Vector2(420, 52), 18))
 
 
 ## The demo kid taps Stop.
@@ -157,6 +164,13 @@ func _close_dialog() -> void:
 	if _dialog != null and is_instance_valid(_dialog):
 		UI.retire(_dialog)
 	_dialog = null
+
+
+## The pet is saved, then the bug report; its Back comes straight back to the pet as it was.
+func _report_bug() -> void:
+	_close_dialog()
+	await save_draft()
+	game.go_feedback(game.resume_creator)
 
 
 func _quit_save() -> void:

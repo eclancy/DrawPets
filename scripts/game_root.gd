@@ -118,6 +118,14 @@ func start_creator() -> Creator:
 	return c
 
 
+## Back to the pet being drawn, just as it was saved - from a bug report, say.
+func resume_creator() -> void:
+	var c := Creator.new()
+	c.game = self
+	c.resume = true
+	show_screen(c)
+
+
 ## Visits a home. `focus` is the pet the visit is about (selected, greeted first).
 func go_place(home_id: String, focus := "", first_visit := false, fun_day := "") -> void:
 	var h := profile.home(home_id)
@@ -443,8 +451,7 @@ func _music_for(node: Node) -> void:
 	Sounds.ambience(place)
 
 
-## The settings screen, then back where the kid was.
-## Feedback for a grown-up (FeedbackScreen), from Settings.
+## Feedback for a grown-up (FeedbackScreen), from Settings or the drawing's Stop box.
 func go_feedback(back: Callable) -> void:
 	var s := FeedbackScreen.new()
 	s.game = self
@@ -452,6 +459,7 @@ func go_feedback(back: Callable) -> void:
 	show_screen(s)
 
 
+## The settings screen, then back where the kid was.
 func go_settings(back := Callable()) -> void:
 	var s := SettingsScreen.new()
 	s.game = self

@@ -351,6 +351,49 @@ static func paper_background() -> ColorRect:
 	return full_rect(bg) as ColorRect
 
 
+## A grown-up's button: it does its thing only once it has been held down for HOLD seconds, with
+## a bar filling under it - so a stray tap from a kid never opens a box to type in.
+class HeldButton extends VBoxContainer:
+	const HOLD := 1.5
+	var on_held := Callable()
+	var button: Button
+	var _bar: ProgressBar
+	var _down := false
+	var _held := 0.0
+
+	func _init(text: String, held: Callable, min_size := Vector2(420, 56), font_size := 20) -> void:
+		on_held = held
+		add_theme_constant_override("separation", 4)
+		button = UI.button(text, _nothing, min_size, font_size)
+		button.button_down.connect(_press.bind(true))
+		button.button_up.connect(_press.bind(false))
+		add_child(button)
+		_bar = ProgressBar.new()
+		_bar.max_value = HOLD
+		_bar.show_percentage = false
+		_bar.custom_minimum_size = Vector2(0, 12)
+		add_child(_bar)
+
+	func _nothing() -> void:
+		pass
+
+	func _press(down: bool) -> void:
+		_down = down
+
+	func _process(delta: float) -> void:
+		if _down:
+			_held += delta
+			if int(_held * 4.0) != int((_held - delta) * 4.0):
+				Sounds.play("ui_tap", 1.0 + _held * 0.3)
+		else:
+			_held = maxf(0.0, _held - delta * 3.0)
+		_bar.value = _held
+		if _held >= HOLD:
+			_held = 0.0
+			_down = false
+			on_held.call()
+
+
 class StarCount extends Label:
 	func show_stars(n: int) -> void:
 		text = str(n)
