@@ -1,17 +1,17 @@
 class_name TugGame
 extends Node2D
 ## Tug-of-War Cup - STRENGTH (.ai/competitions.md). Three rounds, one rival each, weakest
-## first; lose a round and the cup is over. Drag the ribbon to your line to win.
+## first; lose a round and the cup is over. Pull the ribbon to your flag to win.
 ##
-## Pull like a real tug of war: heave, ease, heave. The rope's handle lies across the sky over the
-## field, where a thumb (and the hint's hand) has room, and a guide ring slides along it in time - LEFT (pull!)
-## then back RIGHT (let go) - with a drum on every pull. Thumb on the handle, slide it left with
-## the guide, let it back right, again. Pulling with the guide adds to the pet's strength; out of
-## time it adds nothing (and costs nothing), so a strong pet still does well with a clumsy pull.
+## Pull like a real tug of war: a big sign in the sky says TAP! (green, a drum boom) - tap tap tap
+## as fast as you can and your pet heaves the rope your way - then STOP (red, an open hand): keep
+## still while it rests, or it slips back. Then TAP! again. Tapping in time adds to the pet's
+## strength; tapping while it says STOP takes a little away, so tapping all the time is not the
+## way. A strong pet still does well with a clumsy kid.
 ##
-## Round 1 shows how first: a drawn hand works the handle for two beats ("Watch!"), then the kid
-## tries for two beats ("Your turn!") before the rope is live. If the thumb rests for two beats
-## while it counts, the hand comes back to show it again.
+## Round 1 shows how first: a drawn hand taps the sign, then keeps still on STOP ("Watch!"), then
+## the kid tries a go ("Your turn!") before the rope is live. If the kid stops tapping for a whole
+## go, the hand comes back to show it again.
 
 signal finished(scores: Array)
 
@@ -20,30 +20,37 @@ signal finished(scores: Array)
 const LINE := 150.0
 const LINE_MIN := 60.0
 const LINES_WAIT := 20.0
-## The beat: the first half pulls, the second lets go.
-const BEAT := 1.4
-## The handle's slide, in screen px - 1 to 1 under the thumb.
-const STROKE := 320.0
-const BAR_Y := 330.0
-const BAR_LEFT := 480.0
-const BAR_RIGHT := 800.0
-## What a pull in time adds to the pet's pull (its strength gives 0.8 a point), and a rival's
-## heave. Pulling in time all the way through is worth about 20 strength points over a rival who
-## heaves now and then - enough to beat a cup's first rival with any pet, and the later ones with
-## a trained one.
+## A go: TAP for this long, then STOP for this long.
+const TAP_TIME := 2.4
+const STOP_TIME := 2.0
+const CYCLE := TAP_TIME + STOP_TIME
+## Tap faster, pull harder: the pull is how many taps came in the last RATE_WINDOW seconds,
+## full at FULL_TAPS (about five a second). Each tap on STOP slips this much.
+const RATE_WINDOW := 0.8
+const FULL_TAPS := 4.0
+const SLIP_PER_TAP := 0.6
+const SLIP_FADE := 1.5
+## Everyone stops a moment late: taps this soon after STOP comes up count for nothing either way.
+const STOP_GRACE := 0.3
+## Taps closer together than this are one (a finger bouncing).
+const TAP_GAP := 0.06
+## What tapping in time adds to the pet's pull (its strength gives 0.8 a point), what slipping
+## takes off, and a rival's heave. Tapping fast all through a TAP is worth about 20 strength
+## points over a rival who heaves now and then - enough to beat a cup's first rival with any pet,
+## and the later ones with a trained one. Tapping on STOP costs more than it gains, so a kid who
+## never stops tapping loses even to the first rival.
 const HEAVE_K := 50.0
+const SLIP_K := 70.0
 const RIVAL_HEAVE_K := 30.0
 ## How fast the rope moves for a difference in pull.
 const DRAG := 1.8
-## How near the handle must be to the guide (as a share of the slide): this near counts fully,
-## and it fades to nothing by NEAR_ZERO further.
-const NEAR := 0.08
-const NEAR_ZERO := 0.45
-## A thumb follows a moving thing a moment late: being where the guide was this long ago counts.
-const LAG := 0.25
+## Taps in one TAP! that make a great pull.
+const GREAT := 6
+## The sign, in the sky over the middle of the field.
+const SIGN_AT := Vector2(640, 300)
 
 const PULL_GREEN := Color("#5fb85a")
-const LET_GO := Color("#e9a94e")
+const STOP_RED := Color("#e8664e")
 
 var screen: CompetitionScreen
 
@@ -54,20 +61,16 @@ var _t := 0.0
 var _live_t := 0.0
 var _line := LINE
 var _over := false
-## The handle: 0 let out (right), 1 pulled (left). Held by a thumb, or paying out on its own.
-var _h := 0.0
-var _prev_h := 0.0
-var _vel := 0.0
-var _held := false
-var _down_x := 0.0
-var _down_h := 0.0
+## How hard the kid has the pet pulling now (0-1), and how far it has slipped.
+var _power := 0.0
+var _slip := 0.0
+var _taps := 0
+var _stop_taps := 0
+## When the last few taps on TAP! came (the rhythm's clock).
+var _tap_times: Array = []
+var _last_tap := -10.0
 var _idle := 0.0
-## This beat's pull: how far the handle went left, and how near the guide it stayed.
-var _travel := 0.0
-var _near_sum := 0.0
-var _near_time := 0.0
-var _half := 0
-var _heave := 0.0
+var _phase := 0
 var _rival_heave := 0.0
 var _rival_pulls := false
 var _player: Creature
@@ -75,8 +78,7 @@ var _rival: Creature
 var _player_x := 400.0
 var _rival_x := 880.0
 var _rope: Sprite2D
-var _bar: PullBar
-var _word: Label
+var _sign: TapSign
 var _msg: Label
 var _round_label: Label
 var _hint: HowTo
@@ -112,19 +114,18 @@ func _new_round() -> void:
 	_m = 0.0
 	_line = LINE
 	_live_t = 0.0
-	_heave = 0.0
+	_power = 0.0
+	_slip = 0.0
+	_tap_times.clear()
+	_last_tap = -1000.0  # the clock starts again each round
+	_taps = 0
+	_stop_taps = 0
 	_rival_heave = 0.0
 	_rival_pulls = false
-	_h = 0.0
-	_prev_h = 0.0
-	_vel = 0.0
-	_travel = 0.0
-	_near_sum = 0.0
-	_near_time = 0.0
 	_over = false
-	# Round 1: two beats of watching the hand, two of trying. Then just two to get ready.
-	_t = -(4.0 if _round == 0 else 2.0) * BEAT
-	_half = _half_at(_t)
+	# Round 1: a go of watching the hand, a go of trying. Later rounds: a STOP to get ready.
+	_t = -2.0 * CYCLE if _round == 0 else -STOP_TIME
+	_phase = phase_index(_t)
 	_round_label.text = "Round %d of 3 - vs %s" % [_round + 1, r["name"]]
 	_player.perform("tug", 999.0)
 	_rival.perform("tug", 999.0)
@@ -139,7 +140,7 @@ func _new_round() -> void:
 	_place_pets()
 	queue_redraw()
 	if _round == 0:
-		_show_hint("Watch!", "follow")
+		_show_hint("Watch!")
 	else:
 		_say("Get ready...")
 
@@ -175,111 +176,114 @@ func _build_hud() -> void:
 	_round_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_round_label.offset_top = 20
 	_hud.add_child(_round_label)
-	_msg = UI.title("", 52)
+	_msg = UI.title("", 46)
 	_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_msg.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_msg.offset_top = 130
+	_msg.offset_top = 120
 	_hud.add_child(_msg)
-	_bar = PullBar.new()
-	_hud.add_child(UI.full_rect(_bar))
-	# PULL! / let go, flipping in time, just over the handle.
-	_word = UI.title("", 40)
-	_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_word.position = Vector2(440, 248)
-	_word.size = Vector2(400, 50)
-	_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hud.add_child(_word)
+	_sign = TapSign.new()
+	_sign.position = SIGN_AT - TapSign.BOX / 2.0
+	_hud.add_child(_sign)
 
 
-# --- The thumb ---------------------------------------------------------------------------------
-# Mouse events, which a phone also makes from the first finger. The drag is relative, so a thumb
-# anywhere works; it does not have to land on the handle.
+# --- Taps ----------------------------------------------------------------------------------------
+# A press anywhere is a tap (mouse events, which a phone also makes from the first finger).
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			press(event.position.x)
-		else:
-			release()
-	elif event is InputEventMouseMotion and _held:
-		drag(event.position.x)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		tap()
 
 
-func press(x: float) -> void:
-	if _over:
+func tap() -> void:
+	if _over or _t - _last_tap < TAP_GAP:
 		return
-	_held = true
-	_down_x = x
-	_down_h = _h
+	_last_tap = _t
 	_idle = 0.0
 	if _hint != null:
 		_hint.dismiss()
 		_hint = null
 		# Still watching the hand? Straight on to trying it.
-		if _t < -2.0 * BEAT:
-			_t += ceilf((-2.0 * BEAT - _t) / BEAT) * BEAT
+		if _t < -CYCLE:
+			_t += ceilf((-CYCLE - _t) / CYCLE) * CYCLE
+			_phase = phase_index(_t)
+	_tapped(is_pull(_t), true)
 
 
-func drag(x: float) -> void:
-	if not _held or _over:
-		return
-	_h = clampf(_down_h + (_down_x - x) / STROKE, 0.0, 1.0)
-	# Pinned at an end: the next move the other way answers at once.
-	if _h <= 0.0 or _h >= 1.0:
-		_down_x = x
-		_down_h = _h
-	_idle = 0.0
+## A tap - the kid's, or the hand's while it shows how - lands on TAP! (a pull) or on STOP (a slip).
+func _tapped(pulling: bool, kid: bool) -> void:
+	if pulling:
+		_tap_times.append(_t)
+		_taps += 1
+		_sign.pop = 1.0
+		Sounds.play_varied("tug", 1.0 + 0.06 * (_taps % 4), 0.04)
+	elif fposmod(_t, CYCLE) - TAP_TIME >= STOP_GRACE:
+		_slip = minf(1.0, _slip + SLIP_PER_TAP)
+		_stop_taps += 1
+		_sign.shake = 1.0
+		if kid:
+			_say("STOP! Keep still...", STOP_RED)
+			Sounds.play("ui_nope")
 
 
-## Safe to call twice: a lifted finger can arrive as a mouse release and a touch release.
-func release() -> void:
-	_held = false
+## The hand taps while it shows how: before the rope is live, the pet pulls for it, as it will for
+## the kid. Once it is live the hand's taps only bounce the sign - they never pull for the kid.
+func _hint_tapped() -> void:
+	if _t < 0.0:
+		_tapped(is_pull(_t), false)
+	elif is_pull(_t):
+		_sign.pop = 1.0
 
 
-## The guide at time `t`: 0 let out (right) to 1 pulled (left). Pulls during the first half of
-## each beat, eases back during the second.
-static func guide_at(t: float) -> float:
-	var p := fposmod(t, BEAT) / BEAT
-	if p < 0.5:
-		var k := p / 0.5
-		return 1.0 - (1.0 - k) * (1.0 - k)
-	var e := (p - 0.5) / 0.5
-	return 1.0 - e * e * (3.0 - 2.0 * e)
+## How hard the taps in `times` pull at time `now`: those in the last RATE_WINDOW seconds, out of
+## FULL_TAPS (older ones are dropped from `times`).
+static func rate_power(times: Array, now: float) -> float:
+	while not times.is_empty() and float(times[0]) < now - RATE_WINDOW:
+		times.pop_front()
+	return clampf(times.size() / FULL_TAPS, 0.0, 1.0)
 
 
-## How near a handle at `h` is to the guide at `t`, 0..1 - or to where it was a moment ago.
-static func nearness(h: float, t: float) -> float:
-	var off := 1.0
-	for k in 4:
-		off = minf(off, absf(h - guide_at(t - LAG * k / 3.0)))
-	return 1.0 - clampf((off - NEAR) / NEAR_ZERO, 0.0, 1.0)
-
-
+## TAP! or STOP at time `t`: each go starts with TAP!.
 static func is_pull(t: float) -> bool:
-	return fposmod(t, BEAT) < BEAT * 0.5
+	return fposmod(t, CYCLE) < TAP_TIME
 
 
-static func _half_at(t: float) -> int:
-	return int(floor(t / (BEAT * 0.5)))
+## Which TAP! or STOP this is (counting up, two to a go).
+static func phase_index(t: float) -> int:
+	return int(floor(t / CYCLE)) * 2 + (0 if is_pull(t) else 1)
 
 
-static func bar_x(h: float) -> float:
-	return lerpf(BAR_RIGHT, BAR_LEFT, h)
+## How much of this TAP! or STOP is left, 1 down to 0.
+static func phase_left(t: float) -> float:
+	var p := fposmod(t, CYCLE)
+	return 1.0 - (p / TAP_TIME if p < TAP_TIME else (p - TAP_TIME) / STOP_TIME)
 
 
-## The guide ring's spot on the screen, for the hint's hand to ride.
-func guide_point() -> Vector2:
-	return Vector2(bar_x(guide_at(_t)), BAR_Y)
+## Where the hand is in its poke (HowTo's phase: it presses at 0.5) - quick taps on TAP!, and up
+## and still on STOP.
+static func hint_phase(t: float) -> float:
+	if not is_pull(t):
+		return 0.0
+	return fmod(fposmod(t, CYCLE), 0.36) / 0.36
 
 
-func _show_hint(text: String, gesture: String) -> void:
+func _hint_phase() -> float:
+	return hint_phase(_t)
+
+
+func _sign_point() -> Vector2:
+	return SIGN_AT + Vector2(0, 16)
+
+
+func _show_hint(text: String) -> void:
 	if _hint != null:
 		_hint.dismiss()
 	_hint = HowTo.new()
-	_hint.gesture = gesture
-	_hint.follow = guide_point
+	_hint.gesture = "tap"
+	_hint.at = _sign_point
+	_hint.phase = _hint_phase
+	_hint.on_press = _hint_tapped
 	_hint.caption = text
-	_hint.caption_y = 130.0
+	_hint.caption_y = 120.0
 	_hud.add_child(_hint)
 
 
@@ -296,49 +300,24 @@ func _process(delta: float) -> void:
 		_msg.modulate.a = maxf(0.0, _msg.modulate.a - delta * 0.8)
 		return
 	_t += delta
-	var watching := _t < -2.0 * BEAT and _round == 0
 	var live := _t >= 0.0
-	_msg.modulate.a = maxf(0.0, _msg.modulate.a - delta * (0.0 if _t < 0.0 else 1.2))
-
-	# The handle: the hand works it while the kid watches; otherwise the thumb, or it pays out.
-	if watching:
-		_h = guide_at(_t)
-	elif not _held:
-		_h = move_toward(_h, 0.0, delta * 2.5)
+	var watching := _round == 0 and _t < -CYCLE
+	_msg.modulate.a = maxf(0.0, _msg.modulate.a - delta * (0.0 if _t < 0.0 else 0.9))
+	if not watching:
 		_idle += delta
-	var dh := _h - _prev_h
-	_prev_h = _h
-	_vel = lerpf(_vel, dh / maxf(delta, 0.001), minf(1.0, delta * 12.0))
 
-	# A new half-beat: grade the pull just finished, roll the rival's, the drum, the countdown.
-	var half := _half_at(_t)
-	if half != _half:
-		_half = half
-		_new_half(watching)
+	var phase := phase_index(_t)
+	if phase != _phase:
+		_phase = phase
+		_new_phase(live)
 
-	var near := nearness(_h, _t)
 	var pulling := is_pull(_t)
-	var target := 0.0
-	if pulling:
-		if dh > 0.0:
-			_travel += dh
-		_near_sum += near * delta
-		_near_time += delta
-		# Following the guide left, at its pace - but wiggling back and forth for extra counts none.
-		var v := maxf(0.0, _vel) if _travel <= 1.05 else 0.0
-		target = near * clampf(v / (0.7 / (0.5 * BEAT)), 0.0, 1.0)
-	_heave = move_toward(_heave, target, delta * 8.0)
+	_power = move_toward(_power, rate_power(_tap_times, _t) if pulling else 0.0, delta * 5.0)
+	_slip = maxf(0.0, _slip - delta * SLIP_FADE)
 	_rival_heave = move_toward(_rival_heave, 1.0 if pulling and _rival_pulls else 0.0, delta * 8.0)
-	_player.effort = _heave if not watching else (0.8 if pulling else 0.0)
+	_player.effort = _power
 	_rival.effort = _rival_heave
-
-	# PULL! / let go, in time.
-	_word.text = "PULL!" if pulling else "let go..."
-	_word.add_theme_color_override("font_color", PULL_GREEN if pulling else LET_GO)
-	_word.add_theme_font_size_override("font_size", 46 if pulling else 32)
-	_bar.t = _t
-	_bar.h = _h
-	_bar.near = near
+	_sign.t = _t
 
 	if _t < 0.0:
 		# The rope is still: keep the ribbon right in the middle, so it starts there.
@@ -346,10 +325,6 @@ func _process(delta: float) -> void:
 		_player_x += 640.0 - mid
 		_rival_x += 640.0 - mid
 		_place_pets()
-		# The hand comes back if the thumb rests while it counts.
-		if not watching and not _held and _idle > 2.0 * BEAT and _hint == null:
-			_show_hint("Pull left, let go, again!", "follow")
-		_place_rope()
 		return
 
 	_live_t += delta
@@ -358,56 +333,56 @@ func _process(delta: float) -> void:
 		if absf(line - _line) > 1.0:
 			_line = line
 			queue_redraw()
-	if not _held and _idle > 2.0 * BEAT and _hint == null:
-		_show_hint("Pull left, let go, again!", "follow")
+	# A whole go with no tap: the hand comes back to show it again.
+	if _idle > CYCLE and _hint == null:
+		_show_hint("TAP TAP TAP, then STOP!")
 	var r: Dictionary = screen.rivals[_round]
-	var player_pull := 30.0 + Stats.value(screen.pet, "strength") * 0.8 + _heave * HEAVE_K
+	var player_pull := 30.0 + Stats.value(screen.pet, "strength") * 0.8 + _power * HEAVE_K - _slip * SLIP_K
 	var rival_pull := 30.0 + Stats.value(r["pet"], "strength") * 0.8 + _rival_heave * RIVAL_HEAVE_K \
 		+ sin(_t * 1.3) * 3.0
 	_m += (rival_pull - player_pull) * DRAG * delta
 	_place_pets()
 	# Won or lost when the ribbon itself reaches a line.
 	var ribbon := (_player.mouth_global().x + _rival.mouth_global().x) / 2.0 - 640.0
-	if live and ribbon <= -_line:
+	if ribbon <= -_line:
 		_end_round(true)
-	elif live and ribbon >= _line:
+	elif ribbon >= _line:
 		_end_round(false)
 
 
-func _new_half(watching: bool) -> void:
-	var pull_starts := is_pull(_t)
-	if not pull_starts:
-		# A pull just ended: how was it?
-		var grade := minf(_travel, 1.0) * (_near_sum / maxf(_near_time, 0.001))
-		if not watching and (_t >= -2.0 * BEAT or _round > 0):
-			if grade >= 0.7:
-				_say("HEAVE!" if _t >= 0.0 else "Yes!", PULL_GREEN)
-				_bar.flash = 1.0
+## A TAP! or a STOP begins: how did the last TAP! go, the drum, the rival's heave, the countdown.
+func _new_phase(live: bool) -> void:
+	var pulling := is_pull(_t)
+	var trying := _t >= -CYCLE
+	if not pulling:
+		# A TAP! just ended: how was it?
+		if trying and _hint == null:
+			if _taps >= GREAT:
+				_say("Great pulling!" if live else "Yes! Now STOP!", PULL_GREEN)
+				_sign.pop = 1.0
 				Sounds.play("heave")
-				if _t >= 0.0:
+				if live:
 					Voice.speak(screen.pet, "tug", _player)
-			elif grade >= 0.35:
-				_say("Pull!", PULL_GREEN.darkened(0.15))
-				Sounds.play_varied("tug", 1.0, 0.1)
-		_travel = 0.0
-		_near_sum = 0.0
-		_near_time = 0.0
+			elif _taps >= 2:
+				_say("Tap faster!" if live else "Now STOP!", PULL_GREEN.darkened(0.15))
+			elif not live and _round == 0:
+				_say("Now STOP!")
+		_taps = 0
+		Sounds.play("slide")
 		return
+	_stop_taps = 0
 	Sounds.play("drum_beat")
-	if _t >= 0.0:
+	if live:
 		var r: Dictionary = screen.rivals[_round]
 		_rival_pulls = _rng.randf() < 0.3 + Stats.value(r["pet"], "strength") / 200.0
-	# The countdown, a beat at a time: watch, your turn, ready, GO - always on a pull.
-	var beat := int(floor(_t / BEAT + 0.01))
-	if beat == -2 and _round == 0:
+	# The countdown, a go at a time: watch, your turn, GO - always on a TAP!.
+	var go := int(floor(_t / CYCLE + 0.01))
+	if go == -1 and _round == 0:
 		if _hint != null:
 			_hint.dismiss()
 			_hint = null
-		_say("Your turn - try it!")
-	elif beat == -1:
-		_say("Ready...")
-		Sounds.play("count_tick")
-	elif beat == 0:
+		_say("Your turn! TAP TAP TAP!")
+	elif go == 0:
 		_say("GO!", PULL_GREEN)
 		Sounds.play("count_go")
 
@@ -432,13 +407,11 @@ func _place_rope() -> void:
 
 func _end_round(won: bool) -> void:
 	_over = true
-	_held = false
 	_player.effort = 0.0
 	_rival.effort = 0.0
 	if _hint != null:
 		_hint.dismiss()
 		_hint = null
-	_word.text = ""
 	_player.interrupt()
 	_rival.interrupt()
 	if won:
@@ -479,62 +452,71 @@ func _pause(seconds: float) -> Signal:
 	return t.timeout
 
 
-## The rope's handle: a rope to slide along, the guide ring sliding in time, the kid's knot,
-## and the two arrows - green PULL one way, soft let-go the other. The owner sets `t` (the
-## rhythm's clock), `h` (the knot, 0 let out to 1 pulled), `near` and `flash` every frame; `y`,
-## `pulled_x` and `loose_x` say where it lies (pulled to the left by default - flip them to pull
-## right). Used by the cup (TugGame) and the rope tug at home (PlaceScreen).
-class PullBar extends Control:
+## The big sign: a green TAP! circle with a tapping finger, or a red STOP with an open hand, and a
+## ring round it running down the time left. `t` is the rhythm's clock (set by the owner every
+## frame); `pop` bounces it (a tap in time), `shake` wobbles it (a tap on STOP). Used by the cup,
+## the cup's how-to picture and the rope tug at home.
+class TapSign extends Control:
+	const BOX := Vector2(220, 220)
+	const RADIUS := 74.0
 	var t := 0.0
-	var h := 0.0
-	var near := 0.0
-	var flash := 0.0
-	var y := TugGame.BAR_Y
-	var pulled_x := TugGame.BAR_LEFT
-	var loose_x := TugGame.BAR_RIGHT
+	var pop := 0.0
+	var shake := 0.0
+	## Off: just the word, still (before a game starts).
+	var radius := RADIUS
+	var _word: Label
+	var _icon: TextureRect
+	var _was := -1
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		size = BOX
+		_icon = UI.icon("ui_point", 40, "none")
+		_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_icon)
+		_word = UI.title("", 40)
+		_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_word.add_theme_color_override("font_color", UI.CARD)
+		_word.add_theme_color_override("font_outline_color", UI.INK)
+		_word.add_theme_constant_override("outline_size", 8)
+		add_child(_word)
 
 	func _process(delta: float) -> void:
-		flash = maxf(0.0, flash - delta * 2.5)
+		pop = maxf(0.0, pop - delta * 4.0)
+		shake = maxf(0.0, shake - delta * 3.0)
+		var pulling := TugGame.is_pull(t)
+		var now := 0 if pulling else 1
+		if now != _was:
+			_was = now
+			_word.text = "TAP!" if pulling else "STOP"
+			_icon.texture = Items.art_texture("ui_point" if pulling else "tool_hand")
+		var k := radius / RADIUS
+		_word.add_theme_font_size_override("font_size", int(40 * k))
+		_word.position = size / 2.0 - Vector2(radius, radius * 0.55)
+		_word.size = Vector2(radius * 2.0, radius * 0.7)
+		var ic := 40.0 * k
+		_icon.size = Vector2(ic, ic)
+		_icon.position = size / 2.0 + Vector2(-ic / 2.0, radius * 0.18)
 		queue_redraw()
 
-	func x_of(k: float) -> float:
-		return lerpf(loose_x, pulled_x, k)
-
 	func _draw() -> void:
+		var c := size / 2.0 + Vector2(sin(shake * 40.0) * 10.0 * shake, 0.0)
+		var r := radius * (1.0 + 0.12 * pop)
 		var pulling := TugGame.is_pull(t)
-		var way := signf(pulled_x - loose_x)
-		var lo := minf(pulled_x, loose_x)
-		var hi := maxf(pulled_x, loose_x)
-		# A paper strip for the rope to lie on, so it reads over the grass.
-		Crayon.fill(self, Crayon.rounded_rect(Rect2(lo - 130, y - 40, hi - lo + 260, 80), 30.0),
-			Color(1, 0.99, 0.95, 0.85), 41, 9.0)
-		Crayon.line(self, Vector2(lo - 30, y), Vector2(hi + 30, y), Color("#c9a26b"), 12.0, 42, 1.5)
-		# The arrows: the one for now is big and bright.
-		_arrow(Vector2(pulled_x + way * 82, y), way, TugGame.PULL_GREEN, pulling)
-		_arrow(Vector2(loose_x - way * 82, y), -way, TugGame.LET_GO, not pulling)
-		# The guide ring, sliding in time.
-		var g := Vector2(x_of(TugGame.guide_at(t)), y)
-		var gc := TugGame.PULL_GREEN if pulling else TugGame.LET_GO
-		Crayon.marker_line(self, Crayon.ellipse(g, Vector2(34, 34), 24), gc, 7.0, 43)
-		# The kid's knot: glowing green while it keeps up with the guide.
-		var knot := Vector2(x_of(h), y)
-		if near > 0.5:
-			Crayon.marker_line(self, Crayon.ellipse(knot, Vector2(30, 30), 24),
-				Color(TugGame.PULL_GREEN, near), 8.0, 44)
-		Crayon.fill_blob(self, knot, Vector2(22, 22), UI.ACCENT, 45)
-		Crayon.marker_line(self, Crayon.ellipse(knot, Vector2(22, 22), 20), UI.ACCENT.darkened(0.35), 4.0, 46)
-		if flash > 0.0:
-			Crayon.marker_line(self, Crayon.ellipse(knot, Vector2(46, 46), 28), Color(1, 0.85, 0.3, flash), 9.0, 47)
-
-	func _arrow(at: Vector2, dir: float, col: Color, lit: bool) -> void:
-		var k := 1.25 if lit else 0.8
-		var c := col if lit else Color(col, 0.35)
-		var pts := PackedVector2Array()
-		for p in [Vector2(-34, -14), Vector2(4, -14), Vector2(4, -32), Vector2(40, 0), Vector2(4, 32),
-				Vector2(4, 14), Vector2(-34, 14)]:
-			pts.append(at + Vector2(p.x * dir, p.y) * k)
-		Crayon.fill(self, pts, c, 48 + int(dir), 7.0)
-		Crayon.marker_line(self, pts, c.darkened(0.3), 4.0, 50 + int(dir))
+		var col := TugGame.PULL_GREEN if pulling else TugGame.STOP_RED
+		var shape := PackedVector2Array()
+		var corners := 24 if pulling else 8
+		for i in corners:
+			var a := TAU * (i + (0.0 if pulling else 0.5)) / corners
+			shape.append(c + Vector2.from_angle(a) * r)
+		Crayon.marker_fill(self, shape, col, 61 if pulling else 62)
+		Crayon.marker_line(self, shape, col.darkened(0.35), 6.0, 63)
+		# The time left, as a ring running down.
+		var left := TugGame.phase_left(t)
+		var arc := PackedVector2Array()
+		var n := maxi(2, int(40.0 * left))
+		for i in n + 1:
+			arc.append(c + Vector2.from_angle(-PI / 2.0 + TAU * left * i / n) * (r + 14.0))
+		Crayon.marker_line(self, arc, Color(col, 0.75), 7.0, 64, false)

@@ -225,9 +225,9 @@ func _draw() -> void:
 	if has_word("glowy") and _lit > 0.01 and stretch_to == Vector2.INF:
 		Crayon.glow(self, sprite.position, radius * 1.7, _lit, 5)
 	if stretch_to != Vector2.INF:
-		# Tug of war: a crayon rope under the stretched toy, from the pet's mouth to your end, in
-		# the colour of the rope on the tug handle (TugGame.PullBar) - so it plainly runs from one
-		# to the other, however thin a stretched drawing gets.
+		# Tug of war: a crayon rope under the stretched toy, from the pet's mouth to your end (the
+		# TAP! / STOP sign) - so it plainly runs from one to the other, however thin a stretched
+		# drawing gets.
 		var a := to_local(global_position + Vector2(0, -z * scale.y))
 		Crayon.line(self, a, to_local(stretch_to), ROPE, 11.0, 61, 1.5)
 	if held or carrier != null:

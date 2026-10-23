@@ -110,7 +110,7 @@ heavy, (bouncy, rolly, floaty, spinny), chewy, squeaky that it has. Nothing read
 | play | words | what the kid does | what the pet does | trains |
 |---|---|---|---|---|
 | **fetch** | bouncy, rolly, floaty, spinny (or none) | flick it | everyone chases, leaping for it in the air; the catcher brings it back to where it was thrown from and holds it out - take it and throw again. Put down, a pet brings it to you | speed, agility in the air, its words |
-| **tug** | stretchy | hold it out | the nearest pet comes for the other end (no need to find its mouth), then pulls back with its strength, shaking its head. Flung, it is fetched and held out end-first: grab it to pull | strength |
+| **tug** | stretchy | hold it out | the nearest pet comes for the other end (no need to find its mouth), then pulls back with its strength, shaking its head - a TAP! / STOP sign beside it: tap tap tap on TAP!, keep still on STOP; four good pulls and it lets go, happily (the Tug-of-War Cup's rhythm). Flung, it is fetched and held out end-first: grab it to pull | strength |
 | **cuddle** | soft | put it down (on a pet, or near one) | hugs it, eyes shut, hearts - then takes it to bed on something cozy for a nap | charm, stamina |
 | **chew** | chewy (and nothing above) | put it down | lies down with it for a long chew. A fetched chewy toy nobody takes is chewed too | stamina |
 | **squeak** | squeaky (and nothing above) | put it down, tap it | squeak! every pet looks; the nearest pounces on it and bats it away - tap again. Flung, it is chased and squeaked to bits in the catcher's mouth | agility, charm |

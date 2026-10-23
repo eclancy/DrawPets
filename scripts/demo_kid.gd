@@ -720,10 +720,15 @@ func _toys(place: PlaceScreen, zorp: Creature) -> void:
 			break
 		await _wait(0.1)
 	await _shot("tug_grab")
-	for i in 12:
-		place._move_held(hold + Vector2(-16.0 * i, 6.0 * i))
-		await _wait(0.08)
-	await _shot("tug")
+	# Tap tap tap on TAP!, still on STOP - until the shot, a few goes in.
+	for i in 60:
+		if place._tug == null:
+			break
+		if TugGame.is_pull(place._tug_t):
+			place._tug_tap()
+		await _wait(0.2)
+		if i == 40:
+			await _shot("tug")
 	place._drop_held(hold + Vector2(-190, 70), Vector2(640, 300))
 	await _wait(2.0)
 
@@ -920,16 +925,10 @@ func _play(kind: String, comp: CompetitionScreen) -> void:
 				if mini._time > 0.0 and fmod(mini._time, TrackGame.BEAT) < dt:
 					mini.tap()
 			"tug":
-				# A thumb following the guide a little late, lifting off to let go every other beat.
-				if mini._t > -2.0 * TugGame.BEAT and not mini._over:
-					var beat := int(floor(mini._t / TugGame.BEAT))
-					var lift := beat % 2 == 0 and not TugGame.is_pull(mini._t)
-					if lift and mini._held:
-						mini.release()
-					elif not lift and not mini._held:
-						mini.press(900.0 - mini._h * TugGame.STROKE)
-					if mini._held:
-						mini.drag(900.0 - TugGame.guide_at(mini._t - 0.08) * TugGame.STROKE)
+				# Tap tap tap on TAP! (about five a second), still on STOP.
+				if mini._t > -TugGame.CYCLE and not mini._over and TugGame.is_pull(mini._t) \
+						and Engine.get_process_frames() % 12 == 0:
+					mini.tap()
 			"tricks":
 				if mini._state == "answer" and mini._answer < mini._sequence.size():
 					await _wait(0.3)

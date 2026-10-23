@@ -119,35 +119,27 @@ var _eating: PlaceItem
 var _told_full := false
 var _munch_in := 0.0
 ## Tug of war (see "Tug of war"): the pet on the other end, the rhythm's clock (negative while
-## it gets a grip), the kid's knot (0 let out, 1 pulled) and how it is moving, whether a finger
-## is on it and where it came down, how hard this pull is going, where the pet backs off from
-## and to (the front, where no furniture hides it), where the guide ring was, the heaves so far
-## and the pulls since the last good one, how long no finger has been on the rope, whether the
-## hand is teaching this one, the camera's pet (held still meanwhile), and the HUD bits - the
-## rope's handle, the PULL!/let go word and the hearts to fill.
+## it gets a grip), how hard the kid has it pulling, the taps in this TAP!, which TAP! or STOP it
+## is, where the pet backs off from and to (the front, where no furniture hides it), the good
+## pulls so far and the goes since the last one, how long since a tap, whether the hand is teaching
+## this one, the camera's pet (held still meanwhile), and the HUD bits - the TAP! / STOP sign, the
+## word over it and the hearts to fill.
 var _tug: Creature
 var _tug_t := 0.0
-var _tug_h := 0.0
-var _tug_prev_h := 0.0
-var _tug_vel := 0.0
-var _tug_down := false
-var _tug_down_x := 0.0
-var _tug_down_h := 0.0
-var _tug_heave := 0.0
+var _tug_power := 0.0
+var _tug_taps := 0
+var _tug_tap_times: Array = []
+var _tug_phase := 0
 var _tug_lead := 0.0
 var _tug_from := Vector2.ZERO
 var _tug_to := Vector2.ZERO
-var _tug_guide := Vector2(640, 360)
 var _tug_heaves := 0
 var _tug_dry := 0
-var _tug_half := 0
-var _tug_travel := 0.0
-var _tug_near_sum := 0.0
-var _tug_near_time := 0.0
 var _tug_idle := 0.0
+var _tug_last_tap := -10.0
 var _tug_teach := false
 var _tug_follow: Creature
-var _tug_bar: TugGame.PullBar
+var _tug_sign: TugGame.TapSign
 var _tug_word: Label
 var _tug_hearts: HBoxContainer
 ## Showing how (HowTo): the hand up now, what it teaches ("rub", "food", "toys", "tug"...), how
@@ -522,10 +514,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## A finger comes down: on furniture (decorating), a toy, a pet, or the ground. In tug of war,
-## anywhere: it takes hold of the knot again.
+## anywhere: it is a tap.
 func _press(at: Vector2) -> void:
 	if _tug != null:
-		_tug_press(_screen_of(at).x)
+		_tug_tap()
 		return
 	if tab == "furniture":
 		var f := _furniture_at(at)
@@ -571,8 +563,7 @@ func _press(at: Vector2) -> void:
 
 
 func _drag(at: Vector2) -> void:
-	if _tug_down:
-		_tug_drag(_screen_of(at).x)
+	if _tug != null:
 		return
 	if _toy_press:
 		if at.distance_to(_toy_press_at) > 12.0:
@@ -591,7 +582,6 @@ func _drag(at: Vector2) -> void:
 
 
 func _release() -> void:
-	_tug_down = false
 	if _toy_press:
 		_toy_press = false
 		tap_toy()
@@ -812,7 +802,6 @@ func _move_held(at: Vector2) -> void:
 		"food", "toy":
 			var it := _held as PlaceItem
 			if _tug != null:
-				_tug_drag(_screen_of(at).x)
 				return
 			it.position = Vector2(at.x, clampf(at.y + 60.0, it.bounds.position.y, it.bounds.end.y))
 			it.z = maxf(0.0, it.position.y - at.y - it.radius * 0.9 * it.scale.y)
@@ -869,8 +858,7 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 				_tug_caller.stop()
 				_tug_caller = null
 			if _tug != null:
-				# Tug of war goes on: the knot pays out, and a touch anywhere takes it up again.
-				_tug_down = false
+				# Tug of war goes on: a tap anywhere pulls.
 				return
 			if put_back and not tap_take:
 				_reset_toy_play()
@@ -1652,29 +1640,24 @@ func _sfx_times(id: String, count: int, gap: float, pitch := 1.0, vol := 0.0) ->
 
 # --- Tug of war ------------------------------------------------------------------------------
 # The same pull as the Tug-of-War Cup (TugGame), so playing at home is practice for it: the pet
-# takes the rope's other end and backs off to the right, facing you, and your end - the orange
-# knot on a strip of paper beside it (TugGame.PullBar) - slides LEFT to pull and back RIGHT to let
-# go, in time with a guide ring and a drum. A finger anywhere moves the knot one to one; lifting
-# it lets the rope pay out, which is letting go too. Each pull in time is a HEAVE: the knot
-# flashes, the pet leans back and growls, a heart fills - and strength grows (`_train`). Fill all
-# TUG_GOAL hearts and the pet lets go happily: you win, it celebrates. Out of time costs nothing,
-# and nothing a finger does ends it badly. A kid who wanders off leaves the pet holding its end
-# for a while, then it drops it - no winner, no fuss.
+# takes the rope's other end and backs off to the right, facing you, and beside it the big sign
+# says TAP! - tap tap tap anywhere and the pet is heaved your way, leaning back and growling - then
+# STOP: keep still while it rests (a tap now and it tugs back). Each TAP! with enough taps is a
+# good pull: a heart fills, and strength grows (`_train`). Fill all TUG_GOAL hearts and the pet
+# lets go happily: you win, it celebrates. Nothing a finger does ends it badly. A kid who wanders
+# off leaves the pet holding its end for a while, then it drops it - no winner, no fuss.
 
-## Hearts to fill - good heaves - to win.
-const TUG_GOAL := 5
-## How good a pull has to be to fill a heart (TugGame grades it 0..1: how far, how near the ring).
-## Kinder than the cup's 0.7: this is play.
-const TUG_GOOD := 0.55
-## The knot's slide in screen px (one to one under the finger), and the gap from the pet's mouth
-## to the knot let right out.
-const TUG_STROKE := 240.0
-const TUG_GAP := 190.0
-## The pet's mouth must be this far from the left edge to leave room for the strip and its arrows
-## clear of the buttons down the left; if it is not, the pet backs off to the right to get a grip.
-const TUG_MOUTH_MIN := 120.0 + 130.0 + TUG_STROKE + TUG_GAP
-## No finger on the rope this long (seconds) and the pet drops its end.
-const TUG_REST := 8.0 * TugGame.BEAT
+## Hearts to fill - good pulls - to win.
+const TUG_GOAL := 4
+## Taps in one TAP! that make a good pull. Kinder than the cup's: this is play.
+const TUG_GOOD := 4
+## The sign sits this far left of the pet's mouth, the rope running from its mouth to the sign.
+const TUG_GAP := 230.0
+## The pet's mouth must be this far from the left edge to leave room for the sign clear of the
+## buttons down the left; if it is not, the pet backs off to the right to get a grip.
+const TUG_MOUTH_MIN := 120.0 + TugGame.TapSign.BOX.x + TUG_GAP
+## No tap this long (seconds) and the pet drops its end.
+const TUG_REST := 3.0 * TugGame.CYCLE
 
 
 ## Holding a stretchy toy right by a pet's mouth: it grabs the other end.
@@ -1711,7 +1694,7 @@ func _tug_arrived(c: Creature) -> void:
 		_start_tug(c, _finger)
 
 
-## It has the other end. The finger that brought the rope is already on it: it holds the knot.
+## It has the other end; your end is the sign beside it.
 func _start_tug(c: Creature, at: Vector2) -> void:
 	_tug = c
 	_tug_caller = null
@@ -1723,7 +1706,7 @@ func _start_tug(c: Creature, at: Vector2) -> void:
 	toy.held = false
 	toy.pick_up(c)
 	_panel.visible = false
-	# The camera holds still while you tug, so your end stays under the knot on the screen.
+	# The camera holds still while you tug, so the sign stays put on the screen.
 	_tug_follow = _follow
 	_follow = null
 	# Facing your end, on its left - backing off to the right first if it needs the room, and
@@ -1737,57 +1720,49 @@ func _start_tug(c: Creature, at: Vector2) -> void:
 	if m.x < TUG_MOUTH_MIN:
 		_tug_to.x = minf(_world_of_hud(Vector2(TUG_MOUTH_MIN + 24.0, m.y)).x + reach, GROUND.end.x)
 		m = _hud_of(_tug_to + Vector2(-reach, -up))
-	# A beat to get a grip ("Ready..."), two if it has a way to back off.
-	_tug_lead = TugGame.BEAT * (2.0 if _tug_from.distance_to(_tug_to) > 220.0 else 1.0)
+	# A STOP to get a grip ("Ready..."), a whole go if it has a way to back off - then TAP!.
+	_tug_lead = TugGame.STOP_TIME + (TugGame.CYCLE if _tug_from.distance_to(_tug_to) > 220.0 else 0.0)
 	_tug_t = -_tug_lead
-	_tug_half = -999
-	_tug_h = 0.0
-	_tug_prev_h = 0.0
-	_tug_vel = 0.0
-	_tug_heave = 0.0
-	_tug_travel = 0.0
-	_tug_near_sum = 0.0
-	_tug_near_time = 0.0
+	_tug_phase = TugGame.phase_index(_tug_t)
+	_tug_power = 0.0
+	_tug_taps = 0
+	_tug_tap_times.clear()
+	_tug_last_tap = -1000.0  # the clock starts again each tug
 	_tug_heaves = 0
 	_tug_dry = 0
 	_tug_idle = 0.0
-	_tug_down = true
-	_tug_down_x = _screen_of(at).x
-	_tug_down_h = 0.0
 	_build_tug_hud(m)
-	# The first few times, the hand rides the guide ring: pull left with it, let go, again.
+	# The first few times, the hand taps the sign on TAP! and keeps still on STOP.
 	_tug_teach = HowTo.first_times(game.profile, "howto_home_tug", HOW_TIMES)
-	_tug_guide_point()
 	if _tug_teach:
 		_how_key = "tug"
-		var y := _tug_bar.y
-		_how_spec = {"gesture": "follow", "follow": _tug_guide_point, "until_touch": true,
-			"caption": "Pull left, let go, again!",
-			"caption_y": y - 170.0 if y - 170.0 >= 96.0 else y + 100.0}
+		var y := _tug_sign_point().y
+		_how_spec = {"gesture": "tap", "at": _tug_sign_point, "phase": _tug_hint_phase,
+			"until_touch": true, "caption": "TAP TAP TAP, then STOP!",
+			"caption_y": y - 190.0 if y - 190.0 >= 96.0 else y + 120.0}
 		_show_how()
 	else:
-		_show_hint("Tug of war! Pull left with the ring, let go, again!")
+		_show_hint("Tug of war! Tap tap tap on TAP!, keep still on STOP.")
 
 
-## The rope's handle, the PULL!/let go word over it and the hearts to fill under it - beside the
-## pet's mouth (`m`, on the screen), so the rope runs from its mouth to your knot.
+## The sign, the word over it and the hearts to fill under it - left of the pet's mouth (`m`, on
+## the screen), so the rope runs from its mouth to the sign.
 func _build_tug_hud(m: Vector2) -> void:
-	_drop_tug_hud([_tug_bar, _tug_word, _tug_hearts])
-	var y := clampf(m.y, 240.0, 470.0)
-	_tug_bar = TugGame.PullBar.new()
-	_tug_bar.y = y
-	_tug_bar.loose_x = m.x - TUG_GAP
-	_tug_bar.pulled_x = m.x - TUG_GAP - TUG_STROKE
-	_hud_root.add_child(UI.full_rect(_tug_bar))
-	var mid := m.x - TUG_GAP - TUG_STROKE / 2.0
-	_tug_word = UI.title("Ready...", 40)
+	_drop_tug_hud([_tug_sign, _tug_word, _tug_hearts])
+	var at := Vector2(m.x - TUG_GAP, clampf(m.y, 240.0, 470.0))
+	_tug_sign = TugGame.TapSign.new()
+	_tug_sign.radius = 62.0
+	_tug_sign.position = at - TugGame.TapSign.BOX / 2.0
+	_tug_sign.t = _tug_t
+	_hud_root.add_child(_tug_sign)
+	_tug_word = UI.title("Ready...", 36)
 	_tug_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tug_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tug_word.position = Vector2(mid - 200.0, y - 100.0)
-	_tug_word.size = Vector2(400, 54)
+	_tug_word.position = Vector2(at.x - 200.0, at.y - 150.0)
+	_tug_word.size = Vector2(400, 50)
 	_hud_root.add_child(_tug_word)
 	_tug_hearts = UI.hearts(0, 40)
-	_tug_hearts.position = Vector2(mid - 100.0, y + 46.0)
+	_tug_hearts.position = Vector2(at.x - 80.0, at.y + 92.0)
 	_hud_root.add_child(_tug_hearts)
 
 
@@ -1798,32 +1773,37 @@ func _drop_tug_hud(nodes: Array) -> void:
 			n.queue_free()
 
 
-## Where the guide ring is on the screen, for the hand to ride (where it last was, as the hand
-## fades after the rope is let go).
-func _tug_guide_point() -> Vector2:
-	if _tug_bar != null and is_instance_valid(_tug_bar):
-		_tug_guide = Vector2(_tug_bar.x_of(TugGame.guide_at(_tug_t)), _tug_bar.y)
-	return _tug_guide
+## The middle of the sign on the screen, for the hand to tap (where it last was, as the hand fades
+## after the rope is let go).
+func _tug_sign_point() -> Vector2:
+	if _tug_sign != null and is_instance_valid(_tug_sign):
+		return _tug_sign.position + TugGame.TapSign.BOX / 2.0 + Vector2(0, 12)
+	return Vector2(640, 360)
 
 
-## A finger comes down anywhere while tugging: it takes hold of the knot where it is.
-func _tug_press(x: float) -> void:
-	_tug_down = true
-	_tug_down_x = x
-	_tug_down_h = _tug_h
-	_tug_idle = 0.0
+func _tug_hint_phase() -> float:
+	return TugGame.hint_phase(_tug_t)
 
 
-## The finger slides: left pulls the knot, right lets it out - one to one.
-func _tug_drag(x: float) -> void:
-	if not _tug_down:
+## A tap anywhere while tugging: on TAP! the pet is heaved your way; on STOP it tugs back.
+func _tug_tap() -> void:
+	if _tug == null or _tug_t - _tug_last_tap < TugGame.TAP_GAP:
 		return
-	_tug_h = clampf(_tug_down_h + (_tug_down_x - x) / TUG_STROKE, 0.0, 1.0)
-	# Pinned at an end: the next move the other way answers at once.
-	if _tug_h <= 0.0 or _tug_h >= 1.0:
-		_tug_down_x = x
-		_tug_down_h = _tug_h
+	_tug_last_tap = _tug_t
 	_tug_idle = 0.0
+	if _tug_t < 0.0:
+		return  # still getting a grip
+	if TugGame.is_pull(_tug_t):
+		_tug_tap_times.append(_tug_t)
+		_tug_taps += 1
+		_tug_sign.pop = 1.0
+		Sounds.play_varied("tug", 1.0 + 0.06 * (_tug_taps % 4), 0.04)
+	elif fposmod(_tug_t, TugGame.CYCLE) - TugGame.TAP_TIME >= TugGame.STOP_GRACE:
+		_tug_sign.shake = 1.0
+		_tug_power = 0.0
+		_tug_word.text = "STOP! Keep still..."
+		_tug_word.add_theme_color_override("font_color", TugGame.STOP_RED)
+		Sounds.play("ui_nope")
 
 
 func _update_tug(delta: float) -> void:
@@ -1834,57 +1814,36 @@ func _update_tug(delta: float) -> void:
 		return
 	var c := _tug
 	_tug_t += delta
+	_tug_idle += delta
 	var live := _tug_t >= 0.0
-	# The knot: under the finger, or paying out on its own.
-	if not _tug_down:
-		_tug_h = move_toward(_tug_h, 0.0, delta * 2.5)
-		_tug_idle += delta
-	var dh := _tug_h - _tug_prev_h
-	_tug_prev_h = _tug_h
-	_tug_vel = lerpf(_tug_vel, dh / maxf(delta, 0.001), minf(1.0, delta * 12.0))
-	# A new half-beat: the drum on a pull, and the pull just finished graded.
-	var half := int(floor(_tug_t / (TugGame.BEAT * 0.5)))
-	if half != _tug_half:
-		_tug_half = half
-		_tug_new_half()
+	var phase := TugGame.phase_index(_tug_t)
+	if phase != _tug_phase:
+		_tug_phase = phase
+		_tug_new_phase(live)
 		if _tug == null:
-			return  # that was the winning heave
-	var near := TugGame.nearness(_tug_h, _tug_t)
+			return  # that was the winning pull
 	var pulling := TugGame.is_pull(_tug_t)
-	var want := 0.0
-	if pulling and live:
-		if dh > 0.0:
-			_tug_travel += dh
-		_tug_near_sum += near * delta
-		_tug_near_time += delta
-		# Going left with the ring, at its pace (wiggling back and forth counts no more).
-		var v := maxf(0.0, _tug_vel) if _tug_travel <= 1.05 else 0.0
-		want = near * clampf(v / (0.7 / (0.5 * TugGame.BEAT)), 0.0, 1.0)
-	_tug_heave = move_toward(_tug_heave, want, delta * 6.0)
-	# The pet: backs off to get a grip, then leans back and growls harder the better you pull -
-	# and a good heave draws it your way a little.
+	var want := TugGame.rate_power(_tug_tap_times, _tug_t) if pulling else 0.0
+	_tug_power = move_toward(_tug_power, want, delta * 5.0)
+	# The pet: backs off to get a grip, then leans back and growls harder the faster you tap -
+	# and comes your way a little as you heave.
 	var grip := 1.0 if _tug_lead <= 0.0 else clampf(1.0 + _tug_t / _tug_lead, 0.0, 1.0)
 	grip = grip * grip * (3.0 - 2.0 * grip)
-	c.position = _tug_from.lerp(_tug_to, grip) - Vector2(34.0 * _tug_heave, 0.0)
+	c.position = _tug_from.lerp(_tug_to, grip) - Vector2(34.0 * _tug_power, 0.0)
 	c.facing = -1.0
-	c.effort = clampf(0.2 + 0.8 * _tug_heave, 0.0, 1.0)
+	c.effort = clampf(0.2 + 0.8 * _tug_power, 0.0, 1.0)
 	toy.global_position = c.mouth_global() + Vector2(0, toy.radius * 0.3)
 	toy.z = 0.0
-	toy.stretch_to = _world_of_hud(Vector2(_tug_bar.x_of(_tug_h), _tug_bar.y))
-	_tug_bar.t = _tug_t
-	_tug_bar.h = _tug_h
-	_tug_bar.near = near if live else 0.0
+	var sign_at := _tug_sign.position + TugGame.TapSign.BOX / 2.0
+	toy.stretch_to = _world_of_hud(sign_at + Vector2(_tug_sign.radius * 0.8, 0.0))
+	_tug_sign.t = _tug_t
 	if not live:
 		_tug_word.text = "Ready..."
 		_tug_word.add_theme_color_override("font_color", UI.INK)
-		_tug_word.add_theme_font_size_override("font_size", 36)
-	else:
-		_tug_word.text = "PULL!" if pulling else "let go..."
-		var col := TugGame.PULL_GREEN if pulling else TugGame.LET_GO
-		_tug_word.add_theme_color_override("font_color", col)
-		_tug_word.add_theme_font_size_override("font_size", 46 if pulling else 32)
+	elif _tug_word.text == "Ready...":
+		_tug_word.text = ""
 	# Resting, or not quite getting it: the hand comes back to show it again.
-	var resting := _tug_idle > 2.0 * TugGame.BEAT or _tug_dry >= 3
+	var resting := _tug_idle > TugGame.CYCLE or _tug_dry >= 2
 	if _tug_teach and _how_key == "tug" and _how == null and resting:
 		_tug_dry = 0
 		_show_how()
@@ -1893,37 +1852,40 @@ func _update_tug(delta: float) -> void:
 		_end_tug()
 
 
-func _tug_new_half() -> void:
+## A TAP! or a STOP begins: how did the last TAP! go, and the drum.
+func _tug_new_phase(live: bool) -> void:
 	if not TugGame.is_pull(_tug_t):
-		# A pull just ended: how was it? (Not while it is still getting a grip.)
-		if _tug_t > 0.0:
-			var grade := minf(_tug_travel, 1.0) * (_tug_near_sum / maxf(_tug_near_time, 0.001))
-			if grade >= TUG_GOOD:
+		# A TAP! just ended: how was it? (Not while it is still getting a grip.)
+		if live:
+			if _tug_taps >= TUG_GOOD:
 				_tug_heaved()
 			else:
 				_tug_dry += 1
-				if grade >= 0.25:
-					Sounds.play_varied("tug", 1.0, 0.1)
+				if _tug_taps >= 1:
 					_train(_tug, "strength", 0.15 * _shiny())
-		_tug_travel = 0.0
-		_tug_near_sum = 0.0
-		_tug_near_time = 0.0
+		_tug_taps = 0
+		if _tug != null:
+			Sounds.play("slide")
 		return
-	# A pull starts: the drum - or, getting a grip, a tick.
+	# A TAP! starts: the drum - or, getting a grip, a tick.
 	Sounds.play("drum_beat" if _tug_t >= -0.05 else "count_tick")
+	if _tug_word != null and _tug_word.text.begins_with("STOP"):
+		_tug_word.text = ""
 
 
-## A pull in time: HEAVE! The knot flashes, the pet growls and leans back, a heart fills.
+## A good pull: the sign bounces, the pet growls and leans back, a heart fills.
 func _tug_heaved() -> void:
 	var c := _tug
 	_tug_heaves += 1
 	_tug_dry = 0
-	_tug_bar.flash = 1.0
+	_tug_sign.pop = 1.0
 	Sounds.play("heave")
 	Voice.speak(c.pet, "tug", c)
 	_on_emote("heart", c.top_global())
 	_train(c, "strength", 0.5 * _shiny())
 	_fill_tug_heart(_tug_heaves - 1)
+	_tug_word.text = "Great pulling!"
+	_tug_word.add_theme_color_override("font_color", TugGame.PULL_GREEN)
 	# They have got it: the hand can go.
 	if _how_key == "tug":
 		_drop_how()
@@ -1945,10 +1907,10 @@ func _fill_tug_heart(i: int) -> void:
 ## Every heart filled: it lets go of its end, happily, and the rope flies to your side - you win,
 ## and it is so pleased it played.
 func _tug_won() -> void:
-	var knot := _world_of_hud(Vector2(_tug_bar.x_of(_tug_h), _tug_bar.y))
+	var end := _world_of_hud(_tug_sign.position + TugGame.TapSign.BOX / 2.0)
 	var c := _tug_stop()
 	if toy != null and is_instance_valid(toy):
-		toy.drop_at(Vector2(knot.x, c.position.y + 4.0), maxf(0.0, c.position.y - knot.y))
+		toy.drop_at(Vector2(end.x, c.position.y + 4.0), maxf(0.0, c.position.y - end.y))
 		toy.vz = 260.0
 	c.perform("celebrate", 1.8)
 	c.say("heart")
@@ -1965,10 +1927,10 @@ func _tug_won() -> void:
 	_tug_word.text = "You win!"
 	_tug_word.add_theme_color_override("font_color", TugGame.PULL_GREEN)
 	_tug_word.add_theme_font_size_override("font_size", 50)
-	_tug_bar.flash = 1.0
-	# The win stays up a moment, then the rope's handle goes.
-	get_tree().create_timer(1.8).timeout.connect(_drop_tug_hud.bind([_tug_bar, _tug_word, _tug_hearts]))
-	_tug_bar = null
+	_tug_sign.pop = 1.0
+	# The win stays up a moment, then the sign goes.
+	get_tree().create_timer(1.8).timeout.connect(_drop_tug_hud.bind([_tug_sign, _tug_word, _tug_hearts]))
+	_tug_sign = null
 	_tug_word = null
 	_tug_hearts = null
 
@@ -1981,8 +1943,8 @@ func _end_tug() -> void:
 	var c := _tug_stop()
 	if toy != null and is_instance_valid(toy) and is_instance_valid(c):
 		toy.drop_at(c.position + Vector2(c.facing * c.mouth_reach(), 6.0), 10.0)
-	_drop_tug_hud([_tug_bar, _tug_word, _tug_hearts])
-	_tug_bar = null
+	_drop_tug_hud([_tug_sign, _tug_word, _tug_hearts])
+	_tug_sign = null
 	_tug_word = null
 	_tug_hearts = null
 
@@ -1992,7 +1954,6 @@ func _end_tug() -> void:
 func _tug_stop() -> Creature:
 	var c := _tug
 	_tug = null
-	_tug_down = false
 	if is_instance_valid(c):
 		c.effort = 0.0
 		c.interrupt()
@@ -3001,6 +2962,7 @@ func _show_how() -> void:
 	h.targets = _how_spec.get("targets", [])
 	h.period = _how_spec.get("period", 1.3)
 	h.on_press = _how_spec.get("on_press", Callable())
+	h.phase = _how_spec.get("phase", Callable())
 	h.until_touch = _how_spec.get("until_touch", true)
 	h.caption_y = _how_spec.get("caption_y", HOW_CAPTION_Y)
 	_how = h

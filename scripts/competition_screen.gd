@@ -429,7 +429,7 @@ static func racer(p: Dictionary) -> Creature:
 ## play for the first two goes only, so the intro does not nag.
 ##
 ## The Dash's ring and the Marathon's drum are the race's own (RingMeter, timed by TrackGame's
-## numbers), and the tug's handle is the tug's own (TugGame.PullBar), so what the kid learns here
+## numbers), and the tug's TAP! / STOP sign is the tug's own (TugGame.TapSign), so what the kid learns here
 ## is exactly what they will see.
 class HowPanel extends Control:
 	const SIZE := Vector2(520, 270)
@@ -442,6 +442,8 @@ class HowPanel extends Control:
 	const DRUM_AT := Vector2(124, 150)
 	const DRUM_SIZE := 196.0
 	const HURDLE_CYCLE := 1.6
+	## Where the tug's TAP! / STOP sign sits.
+	const TUG_SIGN := Vector2(330, 112)
 	const HURDLE_GAP := 520.0
 	## How far ahead the hurdle is when its mark lights up, and the mark before it. The pet takes
 	## off as the hand touches (HowTo's finger is down from 0.42 of its go, so at 0.45) and is at
@@ -471,7 +473,7 @@ class HowPanel extends Control:
 	var _pet_at := Vector2.ZERO
 	var _hand: HowTo
 	var _ring: RingMeter
-	var _bar: TugGame.PullBar
+	var _sign: TugGame.TapSign
 	var _word: Label
 	var _word_t := 0.0
 	var _boost := 0.0
@@ -508,14 +510,13 @@ class HowPanel extends Control:
 				# Green for as long either side of the BOOM as a tap counts, as in the race.
 				_add_ring("drum", Vector2(1.0 - TrackGame.ON_BEAT / (TrackGame.BEAT * 0.5), 1.0), DRUM_AT, DRUM_SIZE)
 			"tug":
-				_cycle = TugGame.BEAT
+				_cycle = TugGame.CYCLE
 				_add_pet(Vector2(150, 254), 70.0)
 				_pet.perform("tug", 9999.0)
-				_bar = TugGame.PullBar.new()
-				_bar.y = 110.0
-				_bar.pulled_x = 170.0
-				_bar.loose_x = 350.0
-				add_child(UI.full_rect(_bar))
+				_sign = TugGame.TapSign.new()
+				_sign.radius = 50.0
+				_sign.position = TUG_SIGN - TugGame.TapSign.BOX / 2.0
+				add_child(_sign)
 			"tricks":
 				_cycle = SHOW
 				_add_pet(Vector2(78, 168), 84.0)
@@ -540,13 +541,11 @@ class HowPanel extends Control:
 		add_child(_word)
 		_hand = HowTo.new()
 		_hand.hand_height = 84.0
+		_hand.gesture = "tap"
+		_hand.at = _tap_point
+		_hand.phase = _hand_phase
 		if kind == "tug":
-			_hand.gesture = "follow"
-			_hand.follow = _guide_point
-		else:
-			_hand.gesture = "tap"
-			_hand.at = _tap_point
-			_hand.phase = _hand_phase
+			_hand.on_press = _tug_tap
 		add_child(_hand)
 		_say_tip()
 
@@ -651,6 +650,8 @@ class HowPanel extends Control:
 				return _poke(TRICK_TAPS)
 			"style":
 				return _poke(STYLE_TAPS)
+			"tug":
+				return TugGame.hint_phase(_t)
 		return _in() / _cycle
 
 	## The poke nearest now, at `taps` seconds into the go: down on time, up between them.
@@ -670,6 +671,8 @@ class HowPanel extends Control:
 				return Vector2(_pet_at.x + HURDLE_AHEAD - MARK_BEFORE, _pet_at.y + 8.0)
 			"marathon":
 				return DRUM_AT + Vector2(0, 8)
+			"tug":
+				return TUG_SIGN + Vector2(0, 10)
 			"tricks":
 				var a := _card_rect(_cards.find(_order[0])).get_center()
 				var b := _card_rect(_cards.find(_order[1])).get_center()
@@ -679,9 +682,12 @@ class HowPanel extends Control:
 				return a.lerp(_pet_at + Vector2(0, -56), smoothstep(2.6, 3.4, _in()))
 		return SIZE / 2.0
 
-	## The tug's guide ring, for the hand to ride.
-	func _guide_point() -> Vector2:
-		return Vector2(_bar.x_of(TugGame.guide_at(_t)), _bar.y)
+	## The hand taps the sign: on TAP! the pet heaves the rope.
+	func _tug_tap() -> void:
+		_sign.pop = 1.0
+		_boost = 0.35
+		if _loud():
+			Sounds.play_varied("tug", 1.0, 0.06)
 
 	# --- Each frame --------------------------------------------------------------------------
 
@@ -748,24 +754,18 @@ class HowPanel extends Control:
 			_word_t = 0.35
 			_play("drum_beat")
 
+	## TAP! - the hand taps away and the pet heaves, leaning back - then STOP: the hand keeps still
+	## and so does the pet.
 	func _tug(before: float) -> void:
-		var h := TugGame.guide_at(_t)
-		_bar.t = _t
-		_bar.h = h
-		_bar.near = 1.0
-		_pet.effort = h
-		_pet_at.x = 150.0 - 28.0 * h
+		_sign.t = _t
+		var pulling := TugGame.is_pull(_t)
+		_pet.effort = clampf(0.4 + 2.0 * _boost, 0.0, 1.0) if pulling else 0.0
+		_pet_at.x = 150.0 - 22.0 * _pet.effort
 		if _passed(before, 0.0):
 			_play("drum_beat")
-		if _passed(before, TugGame.BEAT * 0.5):
-			_bar.flash = 1.0
-			_play("heave")
-		var pulling := TugGame.is_pull(_t)
-		_word.text = "PULL!" if pulling else "let go..."
-		_word.add_theme_color_override("font_color", TugGame.PULL_GREEN if pulling else TugGame.LET_GO)
-		_word.add_theme_font_size_override("font_size", 38 if pulling else 28)
-		_word.position = Vector2(_bar.x_of(0.5) - _word.size.x / 2.0, 18)
-		_word_t = 1.0
+		if _passed(before, TugGame.TAP_TIME):
+			_play("slide")
+
 
 	func _tricks(before: float) -> void:
 		_hand.visible = _in() > 2.9 and _in() < 5.4

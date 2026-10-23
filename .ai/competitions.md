@@ -24,27 +24,32 @@ same rhythm and a kid can plan ("Wednesday's Tug-of-War, let's train strength"):
 | Sun | Fun Fair | any | practise any event (1 star, 3 a day) |
 | Mon | Dash Race | speed | tap while the ring's hand is in the green for a burst; stamina holds the pace over the last 40% |
 | Tue | Trick Show | smarts | watch the trick cards, tap them back in order; a round longer each time, 5 rounds. The cards are the pet's own: every trick it knows, on the card the kid drew, topped up with the game's cards to four |
-| Wed | Tug-of-War Cup | strength | three-round knockout; slide the rope's knot LEFT with the guide ring, let it go back RIGHT, in time with the drum - heave, ease, heave |
+| Wed | Tug-of-War Cup | strength | three-round knockout; TAP TAP TAP while the sign says TAP!, keep still while it says STOP |
 | Thu | Style Show | charm | dress to the day's theme word, then tap to pose in the moving spotlight |
 | Fri | Hop Hurdles | agility | tap to jump; agility sets how high and how long |
 | Sat | Big Marathon | stamina | tap with the drum; on-beat keeps energy up, stamina sets how fast it drains |
 
-## Tug of war: pull, let go, pull (decided)
+## Tug of war: TAP TAP TAP, then STOP (decided)
 
-Eric: "lets switch the game to look more like the kid having to pull their thumb left, then loosen
-up to the right, then pull left again in sync with the time." The rope's handle lies across the
-sky over the field (`TugGame.PullBar`): a guide ring slides LEFT for the first half of every beat
-(the drum booms, a green PULL arrow and "PULL!") and back RIGHT for the second ("let go..."). The
-kid's thumb slides the orange knot - anywhere on the screen, one to one - and lifting the thumb
-lets the rope pay out, which is letting go too. Pulling left WITH the guide adds up to `HEAVE_K`
-to the pet's pull (strength gives 0.8 a point); a thumb a moment behind still counts, since
-everyone follows a moving thing a little late (`LAG`). Out of time it adds nothing and costs
-nothing, and wiggling back and forth counts no more than one clean pull. A good pull says
-"HEAVE!" in green, flashes the knot and makes the pet lean back and growl harder (`Creature.effort`,
-a channel every creature has). Round 1 opens by showing it: the hand works the knot for two beats
-("Watch!"), the kid tries for two ("Your turn - try it!"), then Ready, GO on a pull. The round is
-won when the ribbon itself reaches your (orange) flag; after 20 s of a stuck round the flags walk
-in, so every round ends.
+Eric: "the pull contest should be to TAP TAP TAP and then stop in time with the rhythm. saying
+'heave' is unclear as to what to do. make each iteration of tapping vs stopping longer." (It was a
+knot slid left and right in time before that, and a ring to tap when big before that.)
+
+A big sign in the sky (`TugGame.TapSign`) says **TAP!** - green, round, a tapping finger, a drum
+boom - for `TAP_TIME` (2.4 s), then **STOP** - red, eight-sided, an open hand - for `STOP_TIME`
+(2 s), with a ring round it running down the time left. On TAP!, the faster the taps the harder
+the pet pulls - taps in the last `RATE_WINDOW` (0.8 s) out of `FULL_TAPS` (4), so about five a
+second is full - up to `HEAVE_K` on top of its strength (0.8 a point). A tap on STOP (after a
+`STOP_GRACE` moment, since everyone stops a little late) makes it slip back (`SLIP_K`) and says
+"STOP! Keep still..." - so tapping all the time loses, even to the first rival, and so does not
+tapping; tapping in time wins. The hand's taps while it re-teaches never pull for the kid.
+Six taps or more in one TAP! is "Great pulling!"; fewer than that, "Tap faster!". The pet leans
+back and growls harder the harder it pulls (`Creature.effort`). Round 1 opens by showing it: the
+hand taps the sign through a TAP! and keeps still through a STOP ("Watch!"), the kid tries a go
+("Your turn! TAP TAP TAP!"), then GO on a TAP!; later rounds get a STOP to get ready. A whole go
+with no tap brings the hand back. The round is won when the ribbon itself reaches your (orange)
+flag; after 20 s of a stuck round the flags walk in, so every round ends. The rope tug at home is
+the same sign and rhythm, kinder (four good pulls win), so playing at home is practice for the cup.
 
 ## How to play is shown, not told (decided)
 
