@@ -132,7 +132,10 @@ Kids found drawing a pet in stages confusing, so the creature is drawn on one bi
 part, each part where it goes: tap Wings, draw the wings on the creature, "Done with the wings"
 and they flap, then back to the sheet with the next part glowing. Zoom (pinch, wheel, buttons)
 and slide the sheet for small things. No parts picker, no placing taps, no assembly screen: the
-game cuts the drawing into parts itself (`creature-pipeline.md`). Next: watch a kid use it.
+game cuts the drawing into parts itself (`creature-pipeline.md`). Then: every part is its own
+drawing, with "Draw another leg", "Copy this leg" and "In front / Behind" for any part, and no
+hidden copies (a kid had drawn four legs and got them all doubled - in 0.2.1 the staged creator
+gave sixteen). Next: watch a kid use it.
 
 ## M1.20 - Every game shows what to do (built)
 

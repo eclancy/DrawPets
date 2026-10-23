@@ -33,9 +33,9 @@ const SHEET := 512
 const MAIN := ["head", "arm", "leg"]
 const FACE := ["eye", "mouth", "ear", "horn", "antenna", "hair", "nose"]
 
-## The order parts are built in - which is also the order they stack in. Hosts come before
-## what goes on them, and face parts after the body's wings and spikes, so a face on a headless
-## creature is never hidden behind its own wing.
+## The order parts are built in: hosts come before what goes on them. (A kid's pet stacks its
+## parts as they were stacked on the sheet - each drawing's `behind` and `z`; a ready-made
+## creature stacks in this order, so a face on a headless one is never behind its own wing.)
 const ORDER := ["head", "leg", "arm", "wing", "tail", "fin", "spike", "tentacle", "other",
 	"eye", "ear", "mouth", "nose", "horn", "antenna", "hair", "hand", "foot", "claw"]
 
@@ -118,27 +118,30 @@ const TYPES := {
 ## Drawing the creature on one sheet (CreatureSheet): what each part's button says to draw, and
 ## where. The kid draws it right where it goes - touching what it grows from.
 const DRAW := {
-	"body": "Draw your creature's BODY - big, facing right. Then give it a head, eyes, legs and more!",
+	"body": "Draw a big BODY, facing right. No legs yet!",
 	"head": "Draw its HEAD, touching the body.",
-	"eye": "Draw its EYES on its head. Two eyes? Draw two! They will blink.",
-	"mouth": "Draw its MOUTH on its head, WIDE OPEN - it opens to eat and talk.",
+	"eye": "Draw an EYE on its head. It blinks!",
+	"mouth": "Draw its MOUTH WIDE OPEN - it eats and talks!",
 	"nose": "Draw its NOSE on its head. It sniffs!",
-	"ear": "Draw its EARS on its head. Draw one and it gets a matching one behind.",
-	"horn": "Draw its HORNS on its head, touching it.",
-	"antenna": "Draw its ANTENNAE on its head - they go boing!",
+	"ear": "Draw an EAR on its head.",
+	"horn": "Draw a HORN on its head, touching it.",
+	"antenna": "Draw an ANTENNA on its head. Boing!",
 	"hair": "Draw its HAIR or MANE on its head.",
-	"leg": "Draw its LEGS, coming down from the body - as many as you like. They walk!",
-	"arm": "Draw its ARMS, coming out of the body. They wave!",
-	"wing": "Draw its WINGS, touching the body. Draw one and it gets a matching one behind. They flap!",
+	"leg": "Draw a LEG, coming down from the body. It walks!",
+	"arm": "Draw an ARM, coming out of the body. It waves!",
+	"wing": "Draw a WING, touching the body. It flaps!",
 	"tail": "Draw its TAIL, coming out of the body. It wags!",
-	"fin": "Draw its FINS, touching the body. Fins let it swim!",
+	"fin": "Draw a FIN, touching the body. It swims!",
 	"spike": "Draw its SPIKES along its back.",
-	"tentacle": "Draw its TENTACLES dangling from the body. Wiggly!",
-	"other": "Draw anything else it has - a shell? A backpack? A jetpack?",
-	"hand": "Draw HANDS or paws on the ends of its arms.",
-	"foot": "Draw FEET on the bottoms of its legs.",
-	"claw": "Draw CLAWS on its feet or hands.",
+	"tentacle": "Draw a TENTACLE, dangling from the body.",
+	"other": "Draw anything else - a shell? A jetpack?",
+	"hand": "Draw a HAND on the end of an arm.",
+	"foot": "Draw a FOOT on the bottom of a leg.",
+	"claw": "Draw CLAWS on a foot or a hand.",
 }
+## After "Draw another leg" (with the part's name, in capitals), and after "Copy this leg".
+const DRAW_MORE := "Draw another %s!"
+const DRAG_COPY := "Drag it where it goes!"
 ## The buttons on the creature sheet, in the order a kid is nudged through (body, head, eyes,
 ## mouth, legs), then everything else.
 const SHEET_PARTS := ["body", "head", "eye", "mouth", "leg", "arm", "ear", "nose", "tail", "wing",
@@ -155,6 +158,11 @@ static func info(type: String) -> Dictionary:
 	if type == "body":
 		return BODY
 	return TYPES.get(type, ITEM)
+
+
+## One of a part, in words: "leg", "eye" - "thing" for anything else.
+static func one_name(type: String) -> String:
+	return "thing" if type == "other" else str(info(type)["label"]).to_lower()
 
 
 static func label_for(type: String, count: int) -> String:

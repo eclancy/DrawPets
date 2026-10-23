@@ -55,7 +55,7 @@ var _done := false
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var back := ColorRect.new()
-	back.color = Color(UI.PAPER, 0.94)
+	back.color = UI.PAPER  # solid: only the creature showing off, not the sheet behind it too
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(UI.full_rect(back))
 
@@ -70,6 +70,17 @@ func _ready() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(title)
+	# One picture for each one it has - four leg pictures for four legs - so a kid who cannot read
+	# yet can count them, and sees at once if two came out as one.
+	var n := PetBuilder.count_of(pet, part_type)
+	if part_type != "body" and n > 0:
+		var icons := HBoxContainer.new()
+		icons.alignment = BoxContainer.ALIGNMENT_CENTER
+		icons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icons.add_theme_constant_override("separation", 6)
+		for i in mini(n, 10):
+			icons.add_child(UI.icon(PartTypes.icon(part_type), 40, "none"))
+		col.add_child(icons)
 	_stage = Control.new()
 	_stage.custom_minimum_size = Vector2(640, 400)
 	_stage.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

@@ -13,7 +13,7 @@ extends Control
 ## used up then.
 
 const DRAFT_DIR := "user://draft"
-const DRAFT_VERSION := 2
+const DRAFT_VERSION := 3
 
 var game: GameRoot
 ## Straight back to the saved pet, without asking (back from a bug report).
@@ -24,8 +24,9 @@ var sheet: CreatureSheet
 
 ## The drawing, a layer per part type (CreatureSheet), and the part being drawn.
 var _layers := {}
-var _shines := {}
 var _active := "body"
+## Parts the sheet has opened by itself (type -> true): a part skipped with Done stays skipped.
+var _offered := {}
 ## Shiny markers used in this pet: mode -> true. Used up when it is finished.
 var _markers_used := {}
 var _after_drawing := false
@@ -91,8 +92,9 @@ func _open_sheet() -> void:
 	_after_drawing = false
 	var s := CreatureSheet.new()
 	s.layers = _layers
-	s.shines = _shines
 	s.start = _active
+	s.offered = _offered
+	s.profile = game.profile
 	s.markers = _markers()
 	s.markers_used = _markers_used
 	s.on_stop = _ask_quit
@@ -117,14 +119,25 @@ func _take_parts(built: Dictionary) -> void:
 
 # --- Stop, and saving for later --------------------------------------------------------------
 
-## Android's back gesture: closes whatever is open, or asks whether to stop.
+## Android's back gesture: closes whatever is open, back to the drawing from its name, or asks
+## whether to stop.
 func go_back() -> void:
 	if _dialog != null and is_instance_valid(_dialog):
 		_close_dialog()
 	elif sheet != null and is_instance_valid(sheet) and sheet.skip_preview():
 		return
+	elif current is DetailsScreen:
+		(current as DetailsScreen)._back()
 	else:
 		_ask_quit()
+
+
+## "Back to drawing" from its name: the sheet again, with nothing picked, to add or fix a part.
+func _back_to_drawing() -> void:
+	_after_drawing = false
+	_active = ""
+	_open_sheet()
+	_autosave()
 
 
 ## "Stop drawing?" - save it for later, throw it away, or keep going.
@@ -203,24 +216,33 @@ func _autosave() -> void:
 	_write_draft()
 
 
-## Each layer is a PNG beside draft.json, written only when it has changed - a part put down
-## saves that part, not the whole creature again.
+## Each drawing is a PNG beside draft.json (with where it goes, and its place in the stack),
+## written only when it has changed - a part put down saves that part, not the whole creature.
 func _write_draft() -> void:
 	DirAccess.make_dir_recursive_absolute(DRAFT_DIR)
 	if sheet != null and is_instance_valid(sheet):
 		_active = sheet.active
 	var layers := {}
-	var shines := {}
 	var keep := ["draft.json"]
 	for type in _layers:
-		layers[type] = {"_png": _save_png("layer_" + type, _layers[type])}
-		keep.append(layers[type]["_png"])
-		if _shines.has(type):
-			shines[type] = {"mode": _shines[type]["mode"],
-				"mask": {"_png": _save_png("shine_" + type, _shines[type]["mask"])}}
-			keep.append(shines[type]["mask"]["_png"])
-	var data := {"version": DRAFT_VERSION, "layers": layers, "shines": shines, "active": _active,
-		"markers": _markers_used.keys(), "after": _after_drawing}
+		var list := []
+		var drawings: Array = _layers[type]
+		for i in drawings.size():
+			var d: Dictionary = drawings[i]
+			var e := {"image": {"_png": _save_png("layer_%s_%d" % [type, i], d["image"])},
+				"at": {"_v2": [d["at"].x, d["at"].y]}, "behind": bool(d.get("behind", false)),
+				"z": int(d.get("z", 0)), "shine": {}}
+			keep.append(e["image"]["_png"])
+			var sh: Dictionary = d.get("shine", {})
+			if not sh.is_empty():
+				e["shine"] = {"mode": sh["mode"], "mask": {"_png": _save_png("shine_%s_%d" % [type, i], sh["mask"])}}
+				keep.append(e["shine"]["mask"]["_png"])
+			list.append(e)
+		layers[type] = list
+	var data := {"version": DRAFT_VERSION, "layers": layers, "active": _active,
+		"markers": _markers_used.keys(), "after": _after_drawing, "offered": _offered.keys(),
+		"pet": {"name": pet.get("name", ""), "size": pet.get("size", "medium"),
+			"place": pet.get("place", "meadow")}}
 	var f := FileAccess.open(DRAFT_DIR + "/draft.json", FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(data))
@@ -316,22 +338,55 @@ func _draft_picture() -> Image:
 	if layers.is_empty():
 		return null
 	var all := Image.create(CreatureSheet.SIZE.x, CreatureSheet.SIZE.y, false, Image.FORMAT_RGBA8)
-	for type in CreatureSheet.stack_order():
-		if layers.has(type):
-			var img: Image = layers[type]
-			all.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i.ZERO)
+	for e in CreatureSheet.stack_of(layers):
+		var img: Image = e[1]["image"]
+		all.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(e[1]["at"]))
 	var used := all.get_used_rect()
 	return all.get_region(used) if used.size.x > 1 else null
 
 
-## The draft as saved - and a draft from before the one-sheet creature (version 1), whose body
-## is all that carries over: it goes in the middle of the sheet to be drawn on.
+## The draft as saved: type -> its drawings ({image, at, shine, behind, z}). Older drafts are
+## read too - version 2 kept one sheet-sized picture per part (it becomes that part's one drawing,
+## still cut into its pieces), and version 1 (the staged creator) only carries its body over, in
+## the middle of the sheet.
 static func _read_draft() -> Dictionary:
 	var data = JSON.parse_string(FileAccess.get_file_as_string(DRAFT_DIR + "/draft.json"))
 	if typeof(data) != TYPE_DICTIONARY:
 		return {}
 	var d: Dictionary = _unpack(data)
-	if int(d.get("version", 1)) >= DRAFT_VERSION:
+	var version := int(d.get("version", 1))
+	if version >= 3:
+		# A picture that did not load is left out, not carried on as nothing.
+		var layers := {}
+		for type in d.get("layers", {}):
+			var list := []
+			for dr in d["layers"][type]:
+				if not (dr.get("image") is Image):
+					continue
+				dr["at"] = Vector2(dr.get("at", Vector2.ZERO))
+				dr["behind"] = bool(dr.get("behind", false))
+				dr["z"] = int(dr.get("z", 0))
+				var sh = dr.get("shine")
+				if typeof(sh) != TYPE_DICTIONARY or not (sh.get("mask") is Image):
+					dr["shine"] = {}
+				list.append(dr)
+			if not list.is_empty():
+				layers[type] = list
+		d["layers"] = layers
+		return d
+	if version == 2:
+		var layers := {}
+		var z := 0
+		for type in d.get("layers", {}):
+			if not (d["layers"][type] is Image):
+				continue
+			var img: Image = d["layers"][type]
+			var shine: Dictionary = d.get("shines", {}).get(type, {})
+			var dr := CreatureSheet.drawing_from_sheet(img, shine, PartCutter.BEHIND.has(type), z)
+			z += 1
+			if not dr.is_empty():
+				layers[type] = [dr]
+		d["layers"] = layers
 		return d
 	var body: Image
 	for e in d.get("done", []):
@@ -339,13 +394,12 @@ static func _read_draft() -> Dictionary:
 			body = e["image"]
 	if body == null and str(d.get("host", "")) == "body":
 		body = d.get("current", {}).get("image")
-	var out := {"layers": {}, "shines": {}, "active": "body", "markers": d.get("markers", [])}
+	var out := {"layers": {}, "active": "body", "markers": d.get("markers", [])}
 	if body != null:
-		var page := Image.create(CreatureSheet.SIZE.x, CreatureSheet.SIZE.y, false, Image.FORMAT_RGBA8)
-		var at := (CreatureSheet.SIZE - body.get_size()) / 2
 		body.convert(Image.FORMAT_RGBA8)
-		page.blit_rect(body, Rect2i(Vector2i.ZERO, body.get_size()), at.max(Vector2i.ZERO))
-		out["layers"]["body"] = page
+		var at := ((Vector2(CreatureSheet.SIZE) - Vector2(body.get_size())) / 2.0).floor()
+		out["layers"]["body"] = [{"image": body, "at": at.max(Vector2.ZERO), "shine": {},
+			"behind": false, "z": 0}]
 	return out
 
 
@@ -362,13 +416,19 @@ func resume_draft() -> void:
 		_start_fresh()
 		return
 	_layers = d.get("layers", {})
-	_shines = d.get("shines", {})
 	_active = str(d.get("active", "body"))
+	_offered = {}
+	for t in d.get("offered", []):
+		_offered[str(t)] = true
+	var saved: Dictionary = d.get("pet", {})
+	for key in ["name", "size", "place"]:
+		if saved.has(key):
+			pet[key] = str(saved[key])
 	_markers_used = {}
 	for m in d.get("markers", []):
 		_markers_used[m] = true
 	if bool(d.get("after", false)) and _layers.has("body"):
-		_take_parts(PartCutter.build(_layers, _shines))
+		_take_parts(PartCutter.build(_layers))
 		_details()
 		return
 	_open_sheet()
@@ -383,6 +443,7 @@ func _details() -> void:
 	s.pet = pet
 	s.profile = game.profile
 	s.on_done = _personality
+	s.on_back = _back_to_drawing
 	_show(s)
 
 

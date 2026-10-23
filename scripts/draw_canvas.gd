@@ -18,6 +18,12 @@ extends Control
 signal message(text: String)
 ## While `placing`, a tap on the sheet does not draw: it just says where (sheet pixels).
 signal tapped(at: Vector2)
+## Anything at all changed on the page (a stroke, a fill, an undo, a copy slid along).
+signal edited
+## A copy being put in place (`moving`) was let go of.
+signal copy_dropped
+## The copy can no longer slide: the kid drew somewhere else.
+signal moving_ended
 
 const SHEET := PartTypes.SHEET
 
@@ -105,6 +111,28 @@ var _viewport: SubViewport
 var _ops: Node2D
 var _sheet: Control
 var placing := false
+## A fresh copy of a drawing (a second leg) is on the page by itself: a crayon (or hand) press on
+## its ink slides it about instead of drawing, until the kid draws somewhere else or picks a tool
+## that is not for sliding. A dashed line goes round it meanwhile.
+var moving := false:
+	set(on):
+		moving = on
+		if _frame != null:
+			_frame.queue_redraw()
+## Asked when the bucket would say "Tap INSIDE something you drew": `on_miss.call(at)` true means
+## the caller dealt with it (the tap was inside another of this part's drawings, say).
+var on_miss := Callable()
+## Asked when the crayon or the eraser goes down: `chooser.call(at)` true means the caller is
+## switching to the drawing under it and will call `resume_press(at)` once it has.
+var chooser := Callable()
+var _dragging := false
+var _loaded_size := Vector2.ZERO
+var _loaded_image: Image
+## Where the copy being slid really is: it only ever sits on whole pixels, so a slide never blurs
+## the kid's lines, but the slide itself is followed exactly.
+var _slide_at := Vector2.ZERO
+var _left_down := false
+var _frame: MoveFrame
 var _ink: TextureRect
 var _previews_behind: PreviewLayer
 var _previews_front: PreviewLayer
@@ -182,6 +210,12 @@ func _ready() -> void:
 	_previews_front.size = sheet
 	_previews_front.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(_previews_front)
+
+	_frame = MoveFrame.new()
+	_frame.canvas = self
+	_frame.size = sheet
+	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(_frame)
 
 	_erase_material = ShaderMaterial.new()
 	var erase := Shader.new()
@@ -277,6 +311,10 @@ func restart() -> void:
 	_shine_mode = ""
 	_ink.material = null
 	used_marker = ""
+	moving = false
+	_dragging = false
+	_loaded_size = Vector2.ZERO
+	_loaded_image = null
 	_changed()
 
 
@@ -316,7 +354,16 @@ func _gui_input(event: InputEvent) -> void:
 				tapped.emit(at.clamp(Vector2.ZERO, Vector2(sheet_size)))
 			accept_event()
 			return
+		_left_down = event.pressed
 		if event.pressed:
+			if moving and (tool == Tool.PEN or tool == Tool.HAND):
+				if _grab(at):
+					accept_event()
+					return
+				if tool == Tool.PEN:
+					# Drawing somewhere else: the copy stays where it is.
+					moving = false
+					moving_ended.emit()
 			if tool == Tool.HAND:
 				_panning = true
 			else:
@@ -324,6 +371,8 @@ func _gui_input(event: InputEvent) -> void:
 			if _stroke != null:
 				_scratch = Sounds.loop_start("eraser" if tool == Tool.ERASER else "crayon", -40.0)
 		else:
+			if _dragging:
+				_drop()
 			_panning = false
 			_stroke = null
 			_stop_scratch()
@@ -335,7 +384,10 @@ func _gui_input(event: InputEvent) -> void:
 				fill_at(spot)
 		accept_event()
 	elif event is InputEventMouseMotion:
-		if _panning:
+		if _dragging:
+			_drag_by(event.relative / _sheet.scale.x)
+			accept_event()
+		elif _panning:
 			pan_by(event.relative)
 			accept_event()
 		elif _stroke != null:
@@ -358,6 +410,7 @@ func _input(event: InputEvent) -> void:
 			_touches[event.index] = local
 			if _touches.size() == 2 and not _gesture:
 				_gesture = true
+				_dragging = false
 				_take_back_stroke()
 				_fill_at = Vector2(-1, -1)
 				_start_pinch()
@@ -429,6 +482,8 @@ func _to_sheet(local: Vector2) -> Vector2:
 func _press(at: Vector2) -> void:
 	match tool:
 		Tool.PEN, Tool.ERASER:
+			if chooser.is_valid() and chooser.call(at):
+				return
 			begin_stroke(at)
 		Tool.FILL:
 			_fill_at = at
@@ -524,6 +579,8 @@ func fill_at(at: Vector2) -> void:
 	print("[timing] fill %d ms" % ((Time.get_ticks_usec() - t0) / 1000))
 	_busy = false
 	if result.get("leaked", false):
+		if on_miss.is_valid() and on_miss.call(at):
+			return
 		message.emit("Tap INSIDE something you drew to colour it in!")
 		Sounds.play("ui_nope")
 		return
@@ -573,7 +630,102 @@ func load_drawing(img: Image, at: Vector2, shine_mask: Image = null, shine_mode 
 		shine = ""
 	_add_op(sprite, twin)
 	_base_ops = _ops.get_child_count()
+	_loaded_size = Vector2(img.get_size())
+	_loaded_image = img
 	_changed()
+
+
+# --- Sliding a copy into place -----------------------------------------------------------------
+
+## Starts sliding the copy, if `at` is on its ink - or a fingertip from it, the same on screen at
+## any zoom (the page is just the copy, untouched).
+func _grab(at: Vector2) -> bool:
+	if _base_ops != 1 or _ops.get_child_count() != 1 or _loaded_image == null:
+		return false
+	var op: Node2D = _ops.get_child(0)
+	var local := at - op.position
+	var r := 20.0 / _sheet.scale.x
+	var hit := false
+	for k in 9:
+		var q := Vector2i(local + (Vector2.ZERO if k == 0 else Vector2.from_angle(TAU * k / 8.0) * r))
+		if Rect2i(Vector2i.ZERO, _loaded_image.get_size()).has_point(q) and _loaded_image.get_pixelv(q).a > 0.1:
+			hit = true
+			break
+	if not hit:
+		return false
+	_dragging = true
+	_slide_at = op.position
+	Sounds.play("pickup")
+	return true
+
+
+## Slides the copy by `by` (sheet px), kept on the page. Relative, so it never jumps under the
+## finger, at any zoom.
+func _drag_by(by: Vector2) -> void:
+	if _ops.get_child_count() == 0:
+		return
+	var op: Node2D = _ops.get_child(0)
+	var twin: Node2D = op.get_meta("twin")
+	_slide_at = (_slide_at + by).clamp(Vector2.ZERO, (Vector2(sheet_size) - _loaded_size).max(Vector2.ZERO))
+	op.position = _slide_at.round()
+	twin.position = op.position
+	_frame.queue_redraw()
+	_changed()
+
+
+func _drop() -> void:
+	_dragging = false
+	Sounds.play("place")
+	copy_dropped.emit()
+
+
+## The demo slides a copy as a finger would: pressed at `from`, let go at `to` (sheet px).
+func drag_copy(from: Vector2, to: Vector2) -> void:
+	if _grab(from):
+		_drag_by(to - from)
+		_drop()
+
+
+## Where the loaded drawing (a copy being slid) is now, in sheet px.
+func loaded_rect() -> Rect2:
+	if _base_ops < 1 or _ops.get_child_count() == 0:
+		return Rect2()
+	return Rect2((_ops.get_child(0) as Node2D).position, _loaded_size)
+
+
+## A point on the sheet, in global (screen) space - for a hint's hand to point at. Kept inside the
+## view, so a hand never points off the page.
+func sheet_to_global(p: Vector2) -> Vector2:
+	var local := (_sheet.position + p * _sheet.scale.x).clamp(Vector2(24, 24), size - Vector2(24, 24))
+	return get_global_transform() * local
+
+
+## Slides the page so that `p` (sheet px) is in view - in the middle, if it was not.
+func bring_into_view(p: Vector2) -> void:
+	var on_screen := _sheet.position + p * _sheet.scale.x
+	if Rect2(Vector2.ZERO, size).grow(-60.0).has_point(on_screen):
+		return
+	_apply_view(size / 2.0 - p * _sheet.scale.x)
+
+
+## Something drawn on top of what was loaded, to take back.
+func can_undo() -> bool:
+	return _ops.get_child_count() > _base_ops
+
+
+## How many strokes, fills and wipes are on the page (a loaded drawing counts as one).
+func op_count() -> int:
+	return _ops.get_child_count()
+
+
+## After the caller switched drawings for an eraser press (`chooser`): carries the press on, if
+## the finger is still down.
+func resume_press(at: Vector2) -> void:
+	if not _left_down or _gesture:
+		return
+	begin_stroke(at)
+	if _stroke != null:
+		_scratch = Sounds.loop_start("eraser" if tool == Tool.ERASER else "crayon", -40.0)
 
 
 func undo() -> void:
@@ -603,6 +755,7 @@ func clear() -> void:
 
 func _changed() -> void:
 	_edits += 1
+	edited.emit()
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_mask_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
@@ -917,6 +1070,46 @@ static func _walls(img: Image, gap: int) -> PackedByteArray:
 	var walls := ink.convert_to_image()
 	walls.convert(Image.FORMAT_L8)
 	return walls.get_data()
+
+
+## A dashed line round a copy that can still slide, so it is clear which thing will move.
+class MoveFrame extends Control:
+	var canvas: DrawCanvas
+
+	func _draw() -> void:
+		if not canvas.moving:
+			return
+		var r := canvas.loaded_rect()
+		if r.size.x <= 0.0:
+			return
+		# Dashes of marker, walked round a rounded box a little bigger than the copy.
+		var k := canvas._sheet.scale.x
+		var box := Crayon.rounded_rect(r.grow(10.0 / k), 16.0 / k)
+		box.append(box[0])
+		var dash := 16.0 / k
+		var gap := 10.0 / k
+		var left := dash
+		var on := true
+		var seed := 0
+		var piece := PackedVector2Array([box[0]])
+		for i in box.size() - 1:
+			var a := box[i]
+			var b := box[i + 1]
+			var d := a.distance_to(b)
+			var t := 0.0
+			while d - t > left:
+				t += left
+				var q := a.lerp(b, t / d)
+				if on:
+					piece.append(q)
+					Crayon.marker_line(self, piece, Color(UI.ACCENT, 0.9), maxf(3.0, 4.0 / k), seed, false)
+					seed += 1
+				piece = PackedVector2Array([q])
+				on = not on
+				left = dash if on else gap
+			left -= d - t
+			if on:
+				piece.append(b)
 
 
 ## Other drawings shown on the sheet (set_previews).

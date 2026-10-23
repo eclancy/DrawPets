@@ -2,16 +2,20 @@ class_name PartCutter
 extends RefCounted
 ## Turns a creature drawn on one sheet (CreatureSheet) into a pet (.ai/creature-pipeline.md).
 ##
-## Each part type was drawn on its own layer, in place on the creature. A layer becomes parts:
-##   - its separate PIECES are separate parts - two eyes drawn, two eyes that blink on their own;
-##     ink this close together is one piece (a pupil inside its eye), and stray specks are dropped;
+## The kid draws each part as its own DRAWING, in place on the creature: a leg, then "Draw another
+## leg" or "Copy this leg" for the next. Each drawing becomes parts:
+##   - its separate PIECES are separate parts - four legs drawn in one go are still four legs that
+##     walk; ink about 12 px apart or less is one piece, and so is ink mostly inside another's box
+##     (a pupil, an eye's highlight, a wing's feathers); stray specks are dropped. Two drawings are
+##     never one piece, however they overlap;
 ##   - each piece rides on a HOST: face parts on the head they are drawn on (or the body, with no
 ##     head), hands on an arm, feet and claws on a leg, everything else on the body;
 ##   - its JOINT is where it touches its host - a leg swings from where it meets the body, an ear
 ##     wobbles from its base - or its middle for eyes, mouths and noses, which blink, open and
-##     twitch about their centre. Drawn not touching anything, it hangs from its nearest point.
-## A single wing, ear, horn, antenna, leg, arm or tentacle gets a twin behind it, shaded, for
-## depth - the cutout trick the rest of the pipeline uses for far limbs.
+##     twitch about their centre. Drawn not touching anything, it hangs from its nearest point;
+##   - it goes IN FRONT of its host or BEHIND it, as the kid chose for that drawing, and among the
+##     parts on the same host the later-stacked one is in front (the drawing's `z`).
+## Nothing is ever added that the kid did not draw or copy: no hidden twins.
 ##
 ## Nothing is redrawn or tidied: each part is exactly the kid's pixels, cut out.
 
@@ -22,14 +26,14 @@ const SPECK := 40
 ## Parts whose joint is their middle rather than where they touch.
 const CENTRE_TYPES := ["eye", "mouth", "nose"]
 const BODY_ONLY := ["head", "leg", "arm", "wing", "tail", "fin", "tentacle"]
-## Tucked behind what they grow from, so the join never shows. (Hair is not: drawn in place, it is
-## drawn ON the head, and the kid should see it there.)
+## Start out tucked behind what they grow from, so the join never shows - until the kid says
+## otherwise. (Hair does not: drawn in place, it is drawn ON the head.)
 const BEHIND := ["tail", "spike", "fin"]
 
 
-## The separate pieces of a layer (a sheet-sized drawing): [{rect (sheet px), image (just that
-## piece's pixels), ink (how many), centre}], left to right.
-static func pieces(layer: Image) -> Array:
+## The separate pieces of a drawing whose top-left is at `at` on the sheet: [{rect (sheet px),
+## image (just that piece's pixels), ink (how many), centre}], left to right.
+static func pieces(layer: Image, at := Vector2i.ZERO) -> Array:
 	var used := layer.get_used_rect()
 	if used.size.x < 2 or used.size.y < 2:
 		return []
@@ -70,7 +74,8 @@ static func pieces(layer: Image) -> Array:
 					stack.append(n)
 		boxes.append(box)
 
-	# Islands whose boxes overlap are one piece: an eye's highlight drawn just apart from it.
+	# An island mostly inside another's box is part of it: an eye's highlight, a wing's feathers.
+	# Merely overlapping boxes are not - four slanted legs stay four.
 	var group := range(boxes.size() + 1)
 	var merged := true
 	while merged:
@@ -79,7 +84,9 @@ static func pieces(layer: Image) -> Array:
 			for b in range(a + 1, boxes.size()):
 				var ga := _root(group, a + 1)
 				var gb := _root(group, b + 1)
-				if ga != gb and (boxes[a] as Rect2i).grow(2).intersects(boxes[b]):
+				var ra: Rect2i = boxes[a]
+				var rb: Rect2i = boxes[b]
+				if ga != gb and ra.intersection(rb).get_area() * 2 >= mini(ra.get_area(), rb.get_area()):
 					group[gb] = ga
 					merged = true
 
@@ -112,9 +119,10 @@ static func pieces(layer: Image) -> Array:
 			for k in 4:
 				bytes[o + k] = rgba[i * 4 + k]
 		var img := Image.create_from_data(box.size.x, box.size.y, false, Image.FORMAT_RGBA8, bytes)
-		out.append({"rect": Rect2i(box.position + region.position, box.size), "image": img,
-			"ink": px.size(), "centre": sum / px.size() + Vector2(region.position) + Vector2(0.5, 0.5),
-			"pixels": px, "region": region, "region_w": w})
+		var on_sheet := Rect2i(region.position + at, region.size)
+		out.append({"rect": Rect2i(box.position + on_sheet.position, box.size), "image": img,
+			"ink": px.size(), "centre": sum / px.size() + Vector2(on_sheet.position) + Vector2(0.5, 0.5),
+			"pixels": px, "region": on_sheet, "region_w": w})
 	out.sort_custom(func(a, b): return a["rect"].position.x < b["rect"].position.x)
 	return out
 
@@ -150,7 +158,7 @@ static func attach(piece: Dictionary, type: String, hosts: Array) -> Dictionary:
 			if not hr.has_point(at):
 				continue
 			var j := (at.y - hr.position.y) * int(h["w"]) + (at.x - hr.position.x)
-			if (h["alpha"] as PackedByteArray)[j] > 100:
+			if (h["rgba"] as PackedByteArray)[j * 4 + 3] > 100:
 				n += 1
 				sum += Vector2(at)
 		# A face part prefers a head it is on; the body only if it is on no head.
@@ -194,12 +202,12 @@ static func _nearest(piece: Dictionary, hosts: Array) -> Dictionary:
 	for h in hosts:
 		var hr: Rect2i = h["rect"]
 		var hw: int = h["w"]
-		var alpha: PackedByteArray = h["alpha"]
+		var rgba: PackedByteArray = h["rgba"]
 		var hstep := maxi(1, int(sqrt(float(hr.size.x * hr.size.y) / 1500.0)))
 		var ink := []
 		for y in range(0, hr.size.y, hstep):
 			for x in range(0, hr.size.x, hstep):
-				if alpha[y * hw + x] > 100:
+				if rgba[(y * hw + x) * 4 + 3] > 100:
 					ink.append(Vector2(x, y) + Vector2(hr.position))
 		for k in range(0, px.size(), step):
 			var p := Vector2(px[k] % rw, px[k] / rw) + Vector2(region.position)
@@ -211,42 +219,49 @@ static func _nearest(piece: Dictionary, hosts: Array) -> Dictionary:
 	return out
 
 
-## A host entry for a placed part: what `attach` needs to know about it.
+## A host entry for a placed part: what `attach` needs to know about it - its pixels as bytes, read
+## four to a pixel (the alpha is every fourth).
 static func host_entry(id: String, type: String, rect: Rect2i, image: Image) -> Dictionary:
 	var img := image.duplicate() as Image
 	img.convert(Image.FORMAT_RGBA8)
-	var rgba := img.get_data()
-	var alpha := PackedByteArray()
-	alpha.resize(rect.size.x * rect.size.y)
-	for i in alpha.size():
-		alpha[i] = rgba[i * 4 + 3]
-	return {"id": id, "type": type, "rect": rect, "alpha": alpha, "w": rect.size.x, "image": image}
+	return {"id": id, "type": type, "rect": rect, "rgba": img.get_data(), "w": rect.size.x, "image": image}
 
 
-## The pet, from the creature's layers: type -> sheet-sized drawing, and type -> {mode, mask}
-## for the ones drawn partly with a shiny marker. Empty if there is no body yet. `cache` keeps
-## each layer's pieces (type -> pieces) between calls, so only a layer that changed is cut again.
-static func build(layers: Dictionary, shines := {}, cache := {}) -> Dictionary:
-	if not layers.has("body"):
+## The pet, from the creature's drawings: type -> [{image (cropped to its ink), at (sheet px of
+## its top-left), shine ({} or {mode, mask} the same size), behind, z}], as CreatureSheet keeps
+## them. Empty if there is no body yet. `cache` keeps each drawing's pieces between calls (by its
+## Image), so only a drawing that changed is cut again.
+static func build(layers: Dictionary, cache := {}) -> Dictionary:
+	var bodies: Array = layers.get("body", [])
+	if bodies.is_empty():
 		return {}
-	var body_layer: Image = layers["body"]
-	var used := body_layer.get_used_rect()
-	if used.size.x < 2:
+	var bd: Dictionary = bodies[0]
+	var body_img: Image = bd["image"]
+	var u := body_img.get_used_rect()
+	if u.size.x < 2:
 		return {}
+	var used := Rect2i(Vector2i(bd["at"]) + u.position, u.size)
 	var pet := PetBuilder.new_pet()
-	PetBuilder.set_body(pet, body_layer.get_region(used), _crop_shine(shines.get("body", {}), used, null))
+	PetBuilder.set_body(pet, body_img.get_region(u), _crop_shine(bd.get("shine", {}), u, null))
 	var centre := Vector2(used.position) + Vector2(used.size) / 2.0
-	var hosts := [host_entry("body", "body", used, body_layer.get_region(used))]
-	var twins := []
+	var hosts := [host_entry("body", "body", used, body_img.get_region(u))]
+	var seen := {}
+	var zs := {}
 	for type in PartTypes.ORDER:
-		if not layers.has(type):
-			continue
-		if not cache.has(type):
-			cache[type] = pieces(layers[type])
-		var ps: Array = cache[type]
-		var placed := []
-		for i in ps.size():
-			var piece: Dictionary = ps[i]
+		var found := []
+		for d in layers.get(type, []):
+			var img: Image = d["image"]
+			seen[img] = true
+			if not cache.has(img):
+				cache[img] = pieces(img, Vector2i(d["at"]))
+			for piece in cache[img]:
+				found.append([piece, d])
+		# Left to right across all of a type's drawings, so four legs drawn one by one still take
+		# turns as they walk.
+		found.sort_custom(_left_of)
+		for i in found.size():
+			var piece: Dictionary = found[i][0]
+			var d: Dictionary = found[i][1]
 			var a := attach(piece, type, hosts)
 			var host: Dictionary = a["host"]
 			var joint: Vector2 = a["joint"]
@@ -256,59 +271,39 @@ static func build(layers: Dictionary, shines := {}, cache := {}) -> Dictionary:
 				"id": "%s_%d" % [type, PetBuilder._next_index(pet, type)], "type": type, "image": file,
 				"pivot": PetBuilder.arr(joint - Vector2(piece["rect"].position)), "draw_scale": 1.0,
 				"scale": 1.0, "pos": PetBuilder.arr(joint - centre), "rot": 0.0, "flip": false,
-				"behind": BEHIND.has(type), "parent": host["id"], "pair": i, "side": 0,
+				"behind": bool(d.get("behind", BEHIND.has(type))), "parent": host["id"], "pair": i,
+				"side": 0,
 			}
+			# The drawing's place in the stack first, then the order they were cut in.
+			zs[part["id"]] = int(d.get("z", 0)) * 10000 + pet["parts"].size()
 			pet["parts"].append(part)
-			PetBuilder._add_shine(pet, part, type, _crop_shine(shines.get(type, {}), piece["rect"], piece))
-			placed.append({"part": part, "host": host, "piece": piece})
+			var own := Rect2i(piece["rect"].position - Vector2i(d["at"]), piece["rect"].size)
+			PetBuilder._add_shine(pet, part, type, _crop_shine(d.get("shine", {}), own, piece))
 			if PartTypes.MAIN.has(type):
 				hosts.append(host_entry(part["id"], type, piece["rect"], piece["image"]))
-		# One wing drawn: its pair goes behind, shaded, for depth.
-		if placed.size() == 1 and bool(PartTypes.info(type).get("pairs", false)):
-			twins.append(placed[0])
-	# Twins come last, so a lone arm's twin gets a copy of the hand drawn on it too.
-	for p in twins:
-		_add_twin(pet, p, p["part"]["type"], centre)
+	for img in cache.keys():
+		if not seen.has(img):
+			cache.erase(img)
+	# Parts on the same host stack as the kid stacked their drawings: a later one in front. Hosts
+	# still come before what hangs on them (by depth), so Creature hangs every part in one pass and
+	# each host's parts go on in exactly this order.
+	var depth := {"body": 0}
+	for part in pet["parts"]:
+		if part["id"] != "body":
+			depth[part["id"]] = int(depth.get(part["parent"], 0)) + 1
+	var body: Dictionary = pet["parts"][0]
+	var rest: Array = pet["parts"].slice(1)
+	rest.sort_custom(func(a, b): return _stack_key(a, depth, zs) < _stack_key(b, depth, zs))
+	pet["parts"] = [body] + rest
 	return pet
 
 
-static func _add_twin(pet: Dictionary, p: Dictionary, type: String, centre: Vector2) -> void:
-	var part: Dictionary = p["part"]
-	var host: Dictionary = p["host"]
-	var info := PartTypes.info(type)
-	var face_on_body: bool = host["type"] == "body" and PartTypes.FACE.has(type)
-	var far: Vector2 = info.get("body_far" if face_on_body and info.has("body_far") else "far", Vector2(-0.07, -0.02))
-	var hr: Rect2i = host["rect"]
-	var joint := PetBuilder.v2(part["pos"]) + centre
-	var shift := Vector2(far.x * hr.size.x, far.y * hr.size.y)
-	# Off the side of the host (an ear drawn on the right of the head): the other way instead.
-	var uv := (joint + shift - Vector2(hr.position)) / Vector2(hr.size)
-	if uv.x < 0.0 or uv.x > 1.0:
-		shift.x = -shift.x
-		uv = (joint + shift - Vector2(hr.position)) / Vector2(hr.size)
-	var at := joint + shift
-	# Walked to the host's outline the way the part grows (an ear up onto the top of the head), so
-	# the twin sits on the host, not in the air beside it.
-	var edge: Vector2 = info.get("edge", Vector2.ZERO)
-	if edge != Vector2.ZERO and uv.x >= 0.0 and uv.x <= 1.0 and uv.y >= 0.0 and uv.y <= 1.0:
-		at = PetBuilder.anchor_px(host["image"], uv, edge) + Vector2(hr.position)
-	var twin := _copy_part(pet, part, at - joint, part["parent"])
-	twin["behind"] = true
-	# What rides on it comes too - a hand on the twin arm.
-	for child in PetBuilder.children(pet, part["id"]):
-		if int(child.get("side", 0)) == 0:
-			_copy_part(pet, child, at - joint, twin["id"])
+static func _stack_key(part: Dictionary, depth: Dictionary, zs: Dictionary) -> int:
+	return int(depth[part["id"]]) * 100000000 + int(zs[part["id"]])
 
 
-## A far-side copy of a part, moved by `shift` (body space) and riding on `parent`.
-static func _copy_part(pet: Dictionary, part: Dictionary, shift: Vector2, parent: String) -> Dictionary:
-	var twin: Dictionary = part.duplicate(true)
-	twin["id"] = "%s_%d" % [part["type"], PetBuilder._next_index(pet, part["type"])]
-	twin["pos"] = PetBuilder.arr(PetBuilder.v2(part["pos"]) + shift)
-	twin["parent"] = parent
-	twin["side"] = 1
-	pet["parts"].append(twin)
-	return twin
+static func _left_of(a: Array, b: Array) -> bool:
+	return a[0]["rect"].position.x < b[0]["rect"].position.x
 
 
 ## The shine mask for one piece (or the whole body): {mode, mask} cropped to `rect`, and to the

@@ -11,6 +11,8 @@ var pet: Dictionary
 ## cannot be lived in until it is bought.
 var profile: Profile
 var on_done := Callable()
+## "Back to drawing", when set: the pet's sheet again, to add or fix a part.
+var on_back := Callable()
 
 var _name: LineEdit
 var _place_words: Label
@@ -37,6 +39,7 @@ func _ready() -> void:
 	_name.max_length = 18
 	_name.text = pet.get("name", "")
 	_name.custom_minimum_size = Vector2(0, 66)
+	_name.text_changed.connect(_named)
 	left.add_child(_name)
 
 	left.add_child(UI.label("How big is it?", 26))
@@ -73,6 +76,8 @@ func _ready() -> void:
 	_preview.pet = pet
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(_preview)
+	if on_back.is_valid():
+		right.add_child(UI.icon_button("tool_back", "Back to drawing", _back, 32, Vector2(0, 64)))
 	right.add_child(UI.big_button("Next", press_next))
 
 	pick_size(pet.get("size", "medium"))
@@ -109,6 +114,18 @@ func set_place(id: String) -> void:
 
 func set_pet_name(text: String) -> void:
 	_name.text = text
+
+
+## The name as it is typed, kept on the pet - so a pet saved for later from here keeps it too.
+func _named(text: String) -> void:
+	pet["name"] = text.strip_edges()
+
+
+## Back to the drawing, keeping the name typed so far.
+func _back() -> void:
+	if _name.text.strip_edges() != "":
+		pet["name"] = _name.text.strip_edges()
+	on_back.call()
 
 
 func press_next() -> void:

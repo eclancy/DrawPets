@@ -92,8 +92,10 @@ func _draft_round_trip() -> Creator:
 
 
 ## The whole creature on its one sheet: Done with the body (it bounces), then each part picked,
-## drawn where it goes and shown off - zoomed in for the eyes - then back to the head to add to
-## it, and "It's finished!".
+## drawn where it goes and shown off - zoomed in for the eyes. Legs are one leg, two copies slid
+## along the belly and one more drawn by hand; the ear and the wing are copied too, the wing's copy
+## put behind the body. Done on a part with nothing drawn moves on. Then back to the head to add
+## to it, "It's finished!", back to the drawing from its name, and finished again.
 func _draw_creature(sheet: CreatureSheet) -> void:
 	await _shot("draft_resumed")
 	await sheet.press_done()
@@ -109,15 +111,32 @@ func _draw_creature(sheet: CreatureSheet) -> void:
 			var c := sheet.canvas
 			c.zoom_at(2.6, c._sheet.position + Vector2(745, 290) * c._sheet.scale.x)
 			await _wait(0.2)
-		await _draw_part(type, sheet.canvas)
+		match type:
+			"leg":
+				await _draw_legs(sheet)
+			"ear":
+				await _draw_part("ear", sheet.canvas)
+				await _copy_to(sheet, Vector2(130, -24))
+			"wing":
+				await _draw_part("wing", sheet.canvas)
+				await _copy_to(sheet, Vector2(-70, -16))
+				await sheet.press_stack()
+				await _wait(0.3)
+			_:
+				await _draw_part(type, sheet.canvas)
 		await _wait(0.2)
-		if type in ["head", "eye", "leg", "wing"]:
+		if type in ["head", "eye", "wing"]:
 			await _shot("sheet_" + type)
 		if type == "eye":
 			sheet.canvas.reset_view()
 		await sheet.press_done()
 		await _through_preview(sheet, "preview_" + type if type in ["eye", "leg", "wing", "tail"] else "")
 		await _wait(0.3)
+	# Done on a part with nothing drawn: no horns, thanks - it moves on.
+	await sheet.pick("horn")
+	await sheet.press_done()
+	await _wait(0.3)
+	print("[demo] Done on an empty part moves on: %s" % (sheet.active != "horn"))
 	# Back to the head, to give it a spot - its lines come back to draw on.
 	await sheet.pick("head")
 	await _wait(0.3)
@@ -127,7 +146,79 @@ func _draw_creature(sheet: CreatureSheet) -> void:
 	await _through_preview(sheet)
 	await _wait(0.4)
 	await _shot("sheet_done")
+	var creator := sheet.get_parent() as Creator
 	await sheet.press_finished()
+	await _wait(0.6)
+	# From its name, back to the drawing (it is all still there), and finished again.
+	var details := creator.current as DetailsScreen
+	if details != null:
+		await _shot("details_first")
+		details._back()
+		await _wait(0.8)
+		await _shot("back_to_drawing")
+		var again := creator.current as CreatureSheet
+		print("[demo] back to drawing from its name: %s" % (again != null and again.layers.has("leg")))
+		if again != null:
+			await again.press_finished()
+	var counts := {}
+	for part in creator.pet["parts"]:
+		counts[part["type"]] = int(counts.get(part["type"], 0)) + 1
+	print("[demo] parts: legs %d ears %d wings %d feet %d arms %d" % [counts.get("leg", 0),
+		counts.get("ear", 0), counts.get("wing", 0), counts.get("foot", 0), counts.get("arm", 0)])
+
+
+## Legs, one at a time: one drawn and coloured, copied and slid along twice, a fourth drawn as an
+## outline by hand - and coloured from a fresh page, which makes that leg the bold one again.
+func _draw_legs(sheet: CreatureSheet) -> void:
+	var c := sheet.canvas
+	_line(c, _leg_outline(320.0), UI.PALETTE[0], 11.0, 8)
+	await _fill(c, Vector2(342, 690), UI.PALETTE[3])
+	await _wait(0.2)
+	await _shot("sheet_leg_one")
+	for x in [420.0, 520.0]:
+		await sheet.press_copy()
+		await _wait(0.3)
+		if x == 420.0:
+			await _shot("sheet_leg_copy")
+		var r := c.loaded_rect()
+		c.drag_copy(r.get_center(), r.get_center() + Vector2(x - 2.0 - r.position.x, 570.0 - r.position.y))
+		await _wait(0.2)
+	await sheet.press_another()
+	await _wait(0.2)
+	_line(c, _leg_outline(620.0), UI.PALETTE[0], 11.0, 11)
+	await _wait(0.2)
+	await _shot("sheet_leg")
+	# Another, then thought better of it: undo takes the empty one back.
+	await sheet.press_another()
+	sheet._undo()
+	await _wait(0.2)
+	print("[demo] undo took back the empty leg: %s" % (sheet.layers.get("leg", []).size() == 4))
+	# A fresh page, and the bucket inside the fourth leg: it becomes the bold one, coloured.
+	await sheet.press_another()
+	c.tool = DrawCanvas.Tool.FILL
+	c.color = UI.PALETTE[3]
+	await c.fill_at(Vector2(642, 690))
+	await _wait(0.6)
+	var last: Dictionary = sheet.layers["leg"].back()
+	print("[demo] bucket switched to the fourth leg: %s" % (last["at"].x > 600.0))
+	await _shot("sheet_leg_switched")
+
+
+func _leg_outline(x: float) -> PackedVector2Array:
+	return PackedVector2Array([Vector2(x, 570), Vector2(x - 2, 720), Vector2(x + 46, 720), Vector2(x + 44, 570)])
+
+
+## Copy this part, and slide the copy `by` from where the one copied is.
+func _copy_to(sheet: CreatureSheet, by: Vector2) -> void:
+	var src: Dictionary = sheet._bold
+	await sheet._fold()
+	src = sheet._bold
+	await sheet.press_copy()
+	await _wait(0.3)
+	var r := sheet.canvas.loaded_rect()
+	var goal: Vector2 = src["at"] + by
+	sheet.canvas.drag_copy(r.get_center(), r.get_center() + goal - r.position)
+	await _wait(0.2)
 
 
 func _make_pet(creator: Creator) -> void:
