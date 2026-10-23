@@ -156,6 +156,7 @@ var _how: HowTo
 ## The camera's first pose and its Snap! button, for Photo Day's hand.
 var _cam_pose: Control
 var _cam_snap: Control
+var _squeaks_shown := 0
 var _how_key := ""
 var _how_spec := {}
 var _how_idle := 0.0
@@ -163,6 +164,7 @@ var _how_idle := 0.0
 var _item_buttons := {}
 ## Quick taps on pets with no rub in between - after three, the hand shows how to rub.
 var _pats := 0
+var _pat_pet: Creature
 var _pat_last := 0.0
 ## Where the finger that took something from a drawer came down (screen), and whether it has
 ## been far from there since: let go on the drawer without going anywhere, it was a tap.
@@ -602,7 +604,10 @@ func _release() -> void:
 	if _pet_moved < 14.0 and _now() - _pet_press_time < 0.45:
 		boop(c)
 		# Little ones pat. Three pats and no rub: the hand shows them how to rub.
-		_pats = _pats + 1 if _now() - _pat_last < 6.0 else 1
+		# Pats on the same pet, with its card already open - not a kid looking through each card.
+		var same := _pat_pet == c and _panel.visible and _now() - _pat_last < 6.0
+		_pats = _pats + 1 if same else 1
+		_pat_pet = c
 		_pat_last = _now()
 		if _pats >= 3 and c.action() != "sleep":
 			_pats = 0
@@ -1354,6 +1359,7 @@ func _toy_landed() -> void:
 	if play == "squeak":
 		_look_at_toy()
 		# The hand taps it - squeak! - so a kid sees what a tap does.
+		_squeaks_shown = 0
 		_teach("squeak", {"gesture": "tap", "at": _toy_point, "caption": "Tap it to squeak!",
 			"on_press": _squeak_shown})
 		return
@@ -2476,13 +2482,13 @@ func _start_fun_day() -> void:
 			for c in creatures:
 				c.perform("celebrate", 1.6)
 			FunDays.join(game, "party")
-			_teach("party", {"gesture": "tap", "at": _pet_point.bind(guests[guests.size() - 1], 0.0),
+			_teach("party", {"gesture": "tap", "at": _guest_point,
 				"caption": "Tap a friend to say hi!"}, 2.5)
 		"photo":
 			open_tab("camera")
 			_show_hint("It's Photo Day! Pick a pose, then Snap! your pets.")
-			_teach("photo", {"gesture": "taps", "targets": [_control_point.bind(_cam_pose),
-				_control_point.bind(_cam_snap)], "caption": "Pick a pose, then Snap!"}, 1.5)
+			_teach("photo", {"gesture": "taps", "targets": [_cam_point.bind("pose"), _cam_point.bind("snap")],
+				"caption": "Pick a pose, then Snap!"}, 1.5)
 
 
 func _add_guest(pet: Dictionary, at: Vector2) -> Creature:
@@ -2513,6 +2519,22 @@ func _maybe_visitor() -> void:
 	c.go_to(Vector2(GROUND.end.x - 260.0, c.position.y), c.say.bind("hello"))
 	var fam: Dictionary = Visitors.families(game.profile).get(pet["_family"], {})
 	_show_hint("%s from %s came to visit!" % [pet["name"], Family.called(str(fam.get("name", "a friend's")))])
+
+
+## The guest nearest the middle of the screen, for the party's hand - so on a zoomed-in home it
+## never points at one half off the edge.
+func _guest_point() -> Vector2:
+	var best := Vector2(640, 400)
+	var best_d := INF
+	for g in guests:
+		if not is_instance_valid(g):
+			continue
+		var p := _pet_point(g, 0.0)
+		var d := p.distance_squared_to(_hud_root.size / 2.0)
+		if d < best_d:
+			best_d = d
+			best = p
+	return best
 
 
 ## A tap on a guest: it looks up and says hello.
@@ -3004,6 +3026,7 @@ func _taught(key: String) -> void:
 func _touched() -> void:
 	_how_idle = 0.0
 	if _how != null and is_instance_valid(_how) and _how.until_touch:
+		_how.dismiss()
 		_how = null
 
 
@@ -3161,11 +3184,13 @@ func _button_point(id: String, off: Vector2) -> Vector2:
 	return r.get_center() - _hud_root.get_global_rect().position + off
 
 
-## The middle of a button (the camera's), in the HUD's space.
-func _control_point(b: Control) -> Vector2:
-	if not is_instance_valid(b):
+## The middle of the camera's first pose or its Snap! button, in the HUD's space - looked up each
+## time, never held: reopening the drawer makes new buttons and frees the old ones.
+func _cam_point(which: String) -> Vector2:
+	var b = _cam_pose if which == "pose" else _cam_snap
+	if b == null or not is_instance_valid(b):
 		return Vector2(640, 660)
-	return b.get_global_rect().get_center() - _hud_root.get_global_rect().position
+	return (b as Control).get_global_rect().get_center() - _hud_root.get_global_rect().position
 
 
 ## A pet's body (and `dx` across it).
@@ -3199,7 +3224,10 @@ func _mud_point(c: Creature) -> Vector2:
 
 ## The hand taps the squeaky toy: it squeaks and hops, and everyone looks - what a tap does.
 func _squeak_shown() -> void:
-	if toy == null or not is_instance_valid(toy) or toy.held or toy.carrier != null:
+	# Twice is enough to show it; after that the hand just taps, so the pets are not kept
+	# looking at the toy for as long as the hand is up.
+	_squeaks_shown += 1
+	if _squeaks_shown > 2 or toy == null or not is_instance_valid(toy) or toy.held or toy.carrier != null:
 		return
 	_squeak_toy()
 	toy.hop(90.0)
@@ -3288,7 +3316,7 @@ func _process(delta: float) -> void:
 		for c in creatures:
 			if c.is_busy() or c == _toy_pet or c == _eater or c == _tug or c == _tug_caller or _chasers.has(c):
 				continue
-			if _how_key == "rub" and _how_spec.get("pet") == c:
+			if _how_key == "rub" and _how_spec.get("pet") == c and _how != null:
 				continue  # waiting to be rubbed, out in front, not off behind the furniture
 			if night and _now() > float(_up_till.get(c, 0.0)):
 				if randf() < 0.3:

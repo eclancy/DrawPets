@@ -548,7 +548,7 @@ static func draw_swipe(canvas: CanvasItem, pts: PackedVector2Array, col: Color, 
 	var barb := width * 2.6
 	var head := PackedVector2Array([tip + back.rotated(0.55) * barb, tip - back * width * 0.7,
 		tip + back.rotated(-0.55) * barb])
-	canvas.draw_colored_polygon(head, col)
+	Crayon.fill(canvas, head, col, seed + 3, 4.0, 1.0, 3.0)
 	Crayon.marker_line(canvas, head, col, width * 0.6, seed + 1)
 	if start_dot:
 		Crayon.fill_blob(canvas, pts[0], Vector2(width, width) * 1.2, col, seed + 2)
@@ -707,7 +707,7 @@ class Glyph extends Control:
 		var seed := 60 + swipe.length() * 7 + swipe.unicode_at(0)
 		# Solid paper, so the kid's drawing under the corner never shows through it.
 		var disc := Crayon.blob(c, Vector2(r, r), seed, 20, 0.04)
-		draw_colored_polygon(disc, UI.CARD)
+		Crayon.fill(self, disc, UI.CARD, seed + 2, 6.0, 0.0, 5.0)
 		Crayon.marker_line(self, disc, UI.ACCENT.darkened(0.1), maxf(2.5, r * 0.08), seed + 1)
 		var path := TrickScreen.shown_path(Tricks.swipe_path(swipe, c, r * 1.4))
 		if swipe == "zigzag":
