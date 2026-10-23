@@ -5,8 +5,9 @@ extends Node2D
 ##
 ## How it flies comes from the words the kid gave it, never from how it was drawn: "bouncy"
 ## bounces high, "floaty" glides, "rolly" rolls on, "heavy" barely leaves the hand, "spinny"
-## spins. A "stretchy" toy stretches between a pet's mouth and a finger in tug of war. How the
-## pets PLAY with it comes from its words too (Words.toy_play): see PlaceScreen's Toys.
+## spins. A "stretchy" toy stretches between a pet's mouth and your end of the rope in tug of
+## war. How the pets PLAY with it comes from its words too (Words.toy_play): see PlaceScreen's
+## Toys.
 
 ## Hit the ground going down at `speed` px/s - the louder the bounce sound.
 signal bounced(speed: float)
@@ -22,7 +23,7 @@ var radius := 30.0
 var bounds := Rect2(40, 460, 1200, 240)
 var bites_left := 1.0
 var sprite: Sprite2D
-## While tugging: the far end of the stretch (a finger), or Vector2.INF.
+## While tugging: the far end of the stretch (your end of the rope, global), or Vector2.INF.
 var stretch_to := Vector2.INF
 
 var _gravity := 1500.0
@@ -118,6 +119,8 @@ func throw_scale() -> float:
 
 ## How much smaller a thing looks in a pet's mouth than lying on the grass.
 const HELD := 0.72
+## The rope pulled taut in tug of war: the tug handle's rope colour.
+const ROPE := Color("#c9a26b")
 
 
 ## In a pet's mouth: held by its edge, out in front of the mouth and a little below it, so the
@@ -221,6 +224,12 @@ func end_stretch() -> void:
 func _draw() -> void:
 	if has_word("glowy") and _lit > 0.01 and stretch_to == Vector2.INF:
 		Crayon.glow(self, sprite.position, radius * 1.7, _lit, 5)
+	if stretch_to != Vector2.INF:
+		# Tug of war: a crayon rope under the stretched toy, from the pet's mouth to your end, in
+		# the colour of the rope on the tug handle (TugGame.PullBar) - so it plainly runs from one
+		# to the other, however thin a stretched drawing gets.
+		var a := to_local(global_position + Vector2(0, -z * scale.y))
+		Crayon.line(self, a, to_local(stretch_to), ROPE, 11.0, 61, 1.5)
 	if held or carrier != null:
 		return
 	var shrink := clampf(1.0 - z / 500.0, 0.3, 1.0)

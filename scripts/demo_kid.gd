@@ -809,7 +809,8 @@ func _play(kind: String, comp: CompetitionScreen) -> void:
 	var mini = comp._mini
 	var t := 0.0
 	var shot_taken := false
-	while t < 70.0:
+	# A whole cup: the tug's three rounds, with the first-time showing how, can take a while.
+	while t < (150.0 if kind == "tug" else 70.0):
 		await get_tree().process_frame
 		if not is_instance_valid(mini) or comp._mini != mini:
 			break
@@ -821,10 +822,9 @@ func _play(kind: String, comp: CompetitionScreen) -> void:
 				if mini._time > 0.0 and v > 0.78 and v < 0.84:
 					mini.tap()
 			"hurdles":
-				if mini._time > 0.0 and int(mini.racers[0]["next_hurdle"]) < mini.hurdles.size():
-					var gap: float = mini.hurdle_x(mini.racers[0], int(mini.racers[0]["next_hurdle"])) - float(mini.racers[0]["x"])
-					if gap < 70.0 and gap > 0.0:
-						mini.tap()
+				# On the take-off mark, while it glows - which always clears.
+				if mini._time > 0.0 and mini.pad_lit():
+					mini.tap()
 			"marathon":
 				if mini._time > 0.0 and fmod(mini._time, TrackGame.BEAT) < dt:
 					mini.tap()

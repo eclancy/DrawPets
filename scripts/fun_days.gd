@@ -6,14 +6,25 @@ extends RefCounted
 ##   Sun  Pet Party       Mon  Treasure Hunt    Tue  Talent Show    Wed  Spa Day
 ##   Thu  Costume Parade  Fri  Dance Party      Sat  Photo Day
 
+## "how" is the one line the pick screen says, in plain words a new reader can manage, and
+## "steps" are the same thing in pictures - what you do, then what happens - before the rosette
+## everyone gets (FunDayScreen; "glint" is the walk's own sparkle, "guests" today's two party
+## guests themselves). Each line has to be true in the screen the day happens in.
 const KINDS := {
-	"party": {"name": "Pet Party", "icon": "icon_heart", "how": "Two friends come to play at your home!"},
-	"treasure": {"name": "Treasure Hunt", "icon": "prop_present", "how": "A walk with extra glints to dig up!"},
-	"talent": {"name": "Talent Show", "icon": "icon_tricks", "how": "Show off its tricks - everybody cheers!"},
-	"spa": {"name": "Spa Day", "icon": "icon_bath", "how": "A bubbly bath, just for fun."},
-	"parade": {"name": "Costume Parade", "icon": "icon_wardrobe", "how": "Dress up and parade down the catwalk!"},
-	"dance": {"name": "Dance Party", "icon": "trick_dance", "how": "Everybody dance!"},
-	"photo": {"name": "Photo Day", "icon": "icon_camera", "how": "Take a photo of your pets for the album."},
+	"party": {"name": "Pet Party", "icon": "icon_heart", "how": "Two friends come to play. Tap them to say hi!",
+		"steps": ["guests", "icon_heart"]},
+	"treasure": {"name": "Treasure Hunt", "icon": "prop_present", "how": "Tap a sparkle - your pet digs up a present!",
+		"steps": ["icon_walk", "glint", "prop_present"]},
+	"talent": {"name": "Talent Show", "icon": "icon_tricks", "how": "Tap trick cards to show off - then take a bow!",
+		"steps": ["icon_tricks", "trick_bow"]},
+	"spa": {"name": "Spa Day", "icon": "icon_bath", "how": "A bubbly bath! Rub your pet to help.",
+		"steps": ["icon_bath", "icon_clean"]},
+	"parade": {"name": "Costume Parade", "icon": "icon_wardrobe", "how": "Dress up your pet, then Parade!",
+		"steps": ["icon_wardrobe", "icon_walk"]},
+	"dance": {"name": "Dance Party", "icon": "trick_dance", "how": "Tap a move - everybody dances!",
+		"steps": ["trick_dance", "trick_spin"]},
+	"photo": {"name": "Photo Day", "icon": "icon_camera", "how": "Pick a pose, then Snap! a photo for the album.",
+		"steps": ["icon_camera", "icon_album"]},
 }
 const WEEK := ["party", "treasure", "talent", "spa", "parade", "dance", "photo"]
 
@@ -37,9 +48,11 @@ static func joined(profile: Profile, key: String) -> bool:
 	return profile.data.get("fun_days", {}).has(key)
 
 
-## Joined in today's fun day: a rosette on the calendar, and stars once a day.
-static func join(game: GameRoot, kind: String) -> void:
-	var ev := today()
+## Joined in today's fun day: a rosette on the calendar, and stars once a day. `day` is the fun
+## day the activity began on (FunDays.today() when it started), so a show still going at
+## midnight counts for the day it was joined on; empty means today.
+static func join(game: GameRoot, kind: String, day: Dictionary = {}) -> void:
+	var ev := today() if day.is_empty() else day
 	if ev["kind"] != kind or joined(game.profile, ev["key"]):
 		return
 	var days: Dictionary = game.profile.data.get("fun_days", {})

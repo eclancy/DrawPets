@@ -452,7 +452,7 @@ func _end_round(won: bool) -> void:
 		_say("%s wins!" % screen.rivals[_round]["name"])
 		Sounds.play("ui_nope")
 		_rival.say("star")
-	await get_tree().create_timer(1.8).timeout
+	await _pause(1.8)
 	if won and _round < 2:
 		_round += 1
 		_new_round()
@@ -465,6 +465,18 @@ func _end_round(won: bool) -> void:
 			s = 3.0
 		scores.append({"who": i, "score": s})
 	finished.emit(scores)
+
+
+## Waits on a timer of the game's own, so a kid who leaves with Stop in the meantime leaves
+## nothing behind to wake up: the timer goes with the game, and the wait with it.
+func _pause(seconds: float) -> Signal:
+	var t := Timer.new()
+	t.one_shot = true
+	t.wait_time = seconds
+	add_child(t)
+	t.start()
+	t.timeout.connect(t.queue_free)
+	return t.timeout
 
 
 ## The rope's handle: a rope to slide along, the guide ring sliding in time, the kid's knot,

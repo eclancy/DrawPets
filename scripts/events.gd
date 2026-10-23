@@ -9,19 +9,29 @@ extends RefCounted
 ## Every event runs four cups. A cup opens once a pet has reached its level in the event's
 ## stat, so a kid always has something they can enter and something to train towards.
 
+## "how" is the one sentence that says how to play, and every game makes it true on screen.
+## "tips" say the same in six words or fewer, beside the little moving picture on the intro
+## (CompetitionScreen.HowPanel) while its hand does the move - one per step of the event. They
+## are the very words the game's own hand says when it plays, so the kid meets them twice.
 const KINDS := {
 	"dash": {"name": "Dash Race", "stat": "speed", "game": "track",
-		"how": "Tap when the ring turns GREEN for a burst of speed!"},
+		"how": "Tap when the ring lights up GREEN for a burst of speed!",
+		"tips": ["TAP when it's GREEN!"]},
 	"hurdles": {"name": "Hop Hurdles", "stat": "agility", "game": "track",
-		"how": "Tap to JUMP each hurdle. Don't jump too early!"},
+		"how": "Tap to JUMP when the mark in front of a hurdle lights up!",
+		"tips": ["TAP to JUMP when it glows!"]},
 	"marathon": {"name": "Big Marathon", "stat": "stamina", "game": "track",
-		"how": "Tap along with the drum - steady, not too fast!"},
+		"how": "Tap with every BOOM of the drum - not too fast!",
+		"tips": ["TAP on every BOOM!"]},
 	"tug": {"name": "Tug-of-War Cup", "stat": "strength", "game": "tug",
-		"how": "Tap HEAVE! when the ring is at its biggest. Win three rounds!"},
+		"how": "Slide the knot LEFT with the ring, then let it go RIGHT - in time! Win three rounds!",
+		"tips": ["Pull left, let go, again!"]},
 	"tricks": {"name": "Trick Show", "stat": "smarts", "game": "tricks",
-		"how": "Watch the trick cards, then tap them back in the same order!"},
+		"how": "Watch your pet's trick cards, then TAP the same cards in the same order!",
+		"tips": ["Watch the cards...", "TAP the same cards!"]},
 	"style": {"name": "Style Show", "stat": "charm", "game": "style",
-		"how": "Dress for the theme, then tap to POSE when you're in the spotlight!"},
+		"how": "Pick clothes with a STAR, then TAP when you're in the spotlight!",
+		"tips": ["Tap clothes with a STAR!", "TAP when the light's on you!"]},
 }
 const WEEK := ["fair", "dash", "tricks", "tug", "style", "hurdles", "marathon"]
 const TIERS := [

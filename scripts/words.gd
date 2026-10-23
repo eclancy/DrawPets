@@ -28,24 +28,25 @@ const TOY := {
 ## rope (stretchy, chewy) is for tug of war and a bouncy chewy thing is fetched, then chewed. A
 ## toy with none of them - only glowy, say - is a fetch toy.
 ##   fetch   flick it: everyone chases, the catcher brings it back and holds it out to you
-##   tug     hold it out: a pet grabs the other end and pulls
+##   tug     hold it out: a pet grabs the other end - pull, let go, pull, in time
 ##   cuddle  put it down: a pet hugs it, then naps with it on something cozy
 ##   chew    put it down: a pet lies down with it for a long chew
 ##   squeak  put it down and tap it: squeak! and the pets pounce on it
-##   puzzle  roll it: a pet noses it about until the treat falls out
+##   puzzle  put it down: a pet noses it about (a tap rolls it too) until the treat falls out
 ##   push    put it down: a pet leans into it and shoves it along
 const TOY_PLAY := [["stretchy", "tug"], ["soft", "cuddle"], ["puzzly", "puzzle"], ["heavy", "push"],
 	["bouncy", "fetch"], ["rolly", "fetch"], ["floaty", "fetch"], ["spinny", "fetch"],
 	["chewy", "chew"], ["squeaky", "squeak"]]
 
-## Shown when a toy comes out of the drawer, so a kid knows what to do with it.
+## Shown when a toy comes out of the drawer, so a kid knows what to do with it. Each says only a
+## move that works (PlaceScreen): flick and let go, hold it still, put it down, tap it.
 const PLAY_HINT := {
-	"fetch": "Flick it to throw it - fetch!",
-	"tug": "Hold it out - someone will grab the other end!",
+	"fetch": "Flick it up and let go - fetch!",
+	"tug": "Hold it out - a pet will grab the other end!",
 	"cuddle": "Put it down - someone wants a cuddle.",
 	"chew": "Put it down for a good long chew.",
 	"squeak": "Put it down, then tap it to squeak!",
-	"puzzle": "Roll it over - there's a treat inside!",
+	"puzzle": "Put it down - tap it to roll the treat out!",
 	"push": "Put it down - who's strong enough to push it?",
 }
 

@@ -21,10 +21,18 @@ func _ready() -> void:
 			if not pet.is_empty():
 				Stats.ensure(pet)
 				_pets.append(pet)
-	if event["kind"] == "fair":
+	# Back from a competition's intro (CompetitionScreen): the pet, the cup and - on Fun Fair day
+	# - the event the kid had picked are still picked.
+	event = event.duplicate()
+	_tier = int(event.get("tier", 0))
+	_pet_id = str(event.get("pet_id", ""))
+	var pick: String = event.get("pick", "")
+	for k in ["tier", "pet_id", "pick"]:
+		event.erase(k)
+	if event["kind"] == "fair" and pick == "":
 		_choose_kind()
 	else:
-		_kind = event["kind"]
+		_kind = pick if pick != "" else event["kind"]
 		_build()
 
 
@@ -94,13 +102,14 @@ func _build() -> void:
 		c.wander = false
 		c.confine = false
 		c.depth_scale = false
-		c.position = Vector2(85, 140)
+		c.position = Vector2(85, 132)
 		b.add_child(c)
 		c.setup(pet, 100.0)
+		# Two lines of words, kept inside the card's edge.
 		var l := UI.label("%s\n%s Lv%d" % [pet["name"], Stats.label(stat), Stats.level(Stats.value(pet, stat))], 17)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.position = Vector2(0, 142)
-		l.size = Vector2(170, 46)
+		l.position = Vector2(0, 132)
+		l.size = Vector2(170, 50)
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(l)
 		b.pressed.connect(func():

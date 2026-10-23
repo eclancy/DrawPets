@@ -24,6 +24,9 @@ var dev := {}
 var _frame := 0
 var _shot_at := -1
 var _toasts: VBoxContainer
+## Whether a screen wants the toasts aside (toasts_aside), and whether they are there now.
+var _toasts_aside := false
+var _toasts_right := false
 
 
 func _ready() -> void:
@@ -353,10 +356,15 @@ func go_tricks(home_id: String, pet_id: String) -> void:
 
 
 ## A present from a walk has been drawn: a star (three a day), and home with the new thing.
-func present_drawn(item: Dictionary, home_id: String, pet_id: String) -> void:
+## A present from a walk is drawn: home - or, on a Treasure Hunt with sparkles still in the
+## grass, back out to find the next.
+func present_drawn(item: Dictionary, home_id: String, pet_id: String, treasure := false) -> void:
 	if not item.is_empty():
 		reward_daily("present", 3, 1, "A present from your walk!")
-	go_place(home_id, pet_id)
+	if treasure and int(profile.today().get("treasure_opened", 0)) < WalkScreen.TREASURE_GLINTS:
+		go_walk(home_id, pet_id, true)
+	else:
+		go_place(home_id, pet_id)
 
 
 ## Swaps screens at the end of the frame - never mid-way through the button press that asked
@@ -411,9 +419,7 @@ func _check_safe_area(delta: float) -> void:
 		UI.fit_safe(screen)
 	elif screen != null and screen.has_method("fit_safe_area"):
 		screen.fit_safe_area()
-	if _toasts != null:
-		_toasts.offset_left = insets.x
-		_toasts.offset_right = -insets.z
+	_place_toasts()
 
 
 ## Each kind of screen has its music: calm for drawing, bouncy for competitions, the home tune
@@ -514,11 +520,51 @@ func _build_toasts() -> void:
 	add_child(layer)
 	_toasts = VBoxContainer.new()
 	_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_toasts.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_toasts.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_toasts.offset_top = 96
 	_toasts.alignment = BoxContainer.ALIGNMENT_BEGIN
 	layer.add_child(_toasts)
+	_toasts.child_exiting_tree.connect(_on_toast_gone)
+	_place_toasts()
+
+
+## Toasts stack down from the top, in the middle. A screen with something to see there - the
+## podium, its winner standing at the top - puts them `aside`, down the right-hand side, while it
+## is up, and back when it goes.
+func toasts_aside(aside: bool) -> void:
+	_toasts_aside = aside
+	_place_toasts()
+
+
+## A toast faded: if that was the last one still aside, the stack can go back to the middle.
+func _on_toast_gone(_toast: Node) -> void:
+	if _toasts_right and not _toasts_aside:
+		_place_toasts.call_deferred()
+
+
+## Puts the stack where it belongs now, clear of the phone's camera hole. Toasts still showing
+## aside when their screen goes stay where they are until they fade, rather than jumping into
+## the middle over the next screen; once the last has gone, the stack is back in the middle.
+func _place_toasts() -> void:
+	if _toasts == null or not is_instance_valid(_toasts):
+		return
+	var showing := 0
+	for t in _toasts.get_children():
+		if not t.is_queued_for_deletion():
+			showing += 1
+	var aside := _toasts_aside or (_toasts_right and showing > 0)
+	_toasts_right = aside
+	if aside:
+		_toasts.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		_toasts.offset_left = 0.0
+		_toasts.offset_right = -24.0 - UI.safe_insets.z
+		_toasts.offset_top = 124.0
+	else:
+		_toasts.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_toasts.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		_toasts.offset_left = UI.safe_insets.x
+		_toasts.offset_right = -UI.safe_insets.z
+		_toasts.offset_top = 96.0
+	_toasts.offset_bottom = _toasts.offset_top
 
 
 # --- Screenshots -----------------------------------------------------------------------------

@@ -237,7 +237,9 @@ static func hearts(level: int, px := 26.0) -> HBoxContainer:
 	return row
 
 
-## A big call-to-action button with a picture beside its words.
+## A big call-to-action button with a picture beside its words. A Button does not measure the
+## children laid over it, so it is kept at least as wide as its picture and words - or, in a row
+## that does not stretch it, it shrinks to a sliver with "Calendar" spilling off the screen.
 static func big_icon_button(icon_id: String, text: String, on_press: Callable) -> Button:
 	var b := big_button("", on_press)
 	var row := HBoxContainer.new()
@@ -250,7 +252,15 @@ static func big_icon_button(icon_id: String, text: String, on_press: Callable) -
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(l)
 	b.add_child(row)
+	_fit_width(b, row)
+	row.minimum_size_changed.connect(_fit_width.bind(b, row))
 	return b
+
+
+## Widens `b` to fit `content` and the button's own padding - never narrows what a caller asked.
+static func _fit_width(b: Button, content: Control) -> void:
+	var pad := 2.0 * 24.0
+	b.custom_minimum_size.x = maxf(b.custom_minimum_size.x, content.get_combined_minimum_size().x + pad)
 
 
 ## A button with a drawn icon above its label.

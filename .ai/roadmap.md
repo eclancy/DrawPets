@@ -134,6 +134,18 @@ and they flap, then back to the sheet with the next part glowing. Zoom (pinch, w
 and slide the sheet for small things. No parts picker, no placing taps, no assembly screen: the
 game cuts the drawing into parts itself (`creature-pipeline.md`). Next: watch a kid use it.
 
+## M1.20 - Every game shows what to do (built)
+
+Eric: "the games can be confusing ... each game should be clear what to do." Every game now shows
+its move with the same drawn hand (`HowTo`) on the real cue, in time, with a caption of six
+words or fewer (`competitions.md`). Tug of war is pull-left, let-go-right in time (the cup and the
+rope at home). The races got a ring that really lights up, a take-off mark that glows before
+each hurdle, a drum that bounces on the beat and a YOU marker; the Trick Show a clear WATCH and
+YOUR TURN with slots and a heart for one mistake; the Style Show a light that waits for the pet;
+the competition intro a moving picture of how to play, a Back button, and a Stop during play.
+Fun days, the bath, walks, home play and trick teaching show their moves too, and a Treasure
+Hunt now gives all three presents. Next: Pet Party and Photo Day hints, and watching a kid play.
+
 ## M2 - On a real phone - see `android.md`
 
 - Done: JDK 17, the Android SDK, the .NET Godot's Android template (no second editor needed), a

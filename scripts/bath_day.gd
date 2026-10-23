@@ -7,12 +7,13 @@ extends RefCounted
 ## Which steps come from the parts the kid drew (no feet, hands or claws: no nails to clip) and
 ## from the coat the kid picked for it (pet["coat"]) - never from the drawing's pixels.
 
-## The coats a kid can pick, and how each is groomed: [id, name, what it is like, step, tool].
+## The coats a kid can pick, and how each is groomed: [id, name, what it is like, step, tool,
+## what the bath says when it is groomed, what to do - the step's one line, six words at most].
 const COATS := [
-	["fur", "Fluffy fur", "soft and furry", "Brush its fur", "kit_brush"],
-	["scales", "Shiny scales", "smooth and scaly", "Polish its scales", "bath_cloth"],
-	["feathers", "Soft feathers", "fluffy and feathery", "Smooth its feathers", "bath_comb"],
-	["skin", "Smooth skin", "bare and smooth", "Rub in some lotion", "bath_lotion"],
+	["fur", "Fluffy fur", "soft and furry", "Brush its fur", "kit_brush", "So fluffy!", "Brush its fur all over!"],
+	["scales", "Shiny scales", "smooth and scaly", "Polish its scales", "bath_cloth", "So shiny!", "Polish its scales all over!"],
+	["feathers", "Soft feathers", "fluffy and feathery", "Smooth its feathers", "bath_comb", "So smooth!", "Smooth its feathers all over!"],
+	["skin", "Smooth skin", "bare and smooth", "Rub in some lotion", "bath_lotion", "So soft!", "Rub lotion all over!"],
 ]
 ## Where each place bathes - its watering hole. A home with a house has a bathroom instead.
 const SPOTS := {
@@ -61,15 +62,18 @@ static func spot(home: Dictionary) -> String:
 	return SPOTS.get(home.get("place", "meadow"), "pond")
 
 
-## The steps for this pet, in order: [id, words, tool].
+## The steps for this pet, in order: [id, words, tool, what to do, what it says when the step is
+## done]. "What to do" is the step's one line - the hand's caption, and the line at the bottom
+## once there is no hand - so it is six words at most, one sentence, and says where to rub; the
+## step's chip (its tool) already says which step it is.
 static func steps(pet: Dictionary) -> Array:
 	var out := []
 	for t in NAILS:
 		if PetBuilder.has_type(pet, t):
-			out.append(["nails", "Clip its nails", "bath_clippers"])
+			out.append(["nails", "Clip its nails", "bath_clippers", "Rub its paws!", "Nails done!"])
 			break
-	out.append(["wash", "Give it a wash", "kit_sponge"])
-	out.append(["teeth", "Brush its teeth", "bath_toothbrush"])
+	out.append(["wash", "Give it a wash", "kit_sponge", "Scrub it all over!", "All washed!"])
+	out.append(["teeth", "Brush its teeth", "bath_toothbrush", "Brush side to side!", "Sparkly teeth!"])
 	var c := coat_info(coat(pet))
-	out.append(["groom", c[3], c[4]])
+	out.append(["groom", c[3], c[4], c[6], c[5]])
 	return out

@@ -73,12 +73,16 @@ func _build() -> void:
 		day += 86400
 	col.add_child(grid)
 
+	# Today's button wears the day's picture too, the same one as in its square, for a kid who
+	# does not read the words yet.
 	if adv:
 		var info := Events.info(today["kind"])
-		col.add_child(UI.big_button("Today: %s - let's go!" % info["name"], func(): game.go_event(today)))
+		col.add_child(UI.big_icon_button(Events.icon(today["kind"]), "Today: %s - let's go!" % info["name"],
+			func(): game.go_event(today)))
 	else:
 		var fun := FunDays.info(today["kind"])
-		col.add_child(UI.big_button("Today: %s - let's go!" % fun["name"], func(): game.go_fun_day(today)))
+		col.add_child(UI.big_icon_button(fun["icon"], "Today: %s - let's go!" % fun["name"],
+			func(): game.go_fun_day(today)))
 
 
 ## A Beginner day: its fun day, and a rosette if the family joined in.

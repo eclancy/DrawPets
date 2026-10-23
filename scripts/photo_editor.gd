@@ -1,14 +1,24 @@
 class_name PhotoEditor
 extends Control
 ## The camera's second half (.ai/pet-life.md): the moment the kid snapped, big, to finish off -
-## pick a frame, tap stickers onto it and drag them about (drag one off the photo to take it
+## pick a frame, put stickers on it and drag them about (drag one off the photo to take it
 ## away) - then Keep it, into the album and the journal of every pet in it, or Throw it away.
 ## Frames and stickers are crayon drawings made in code, never shine.
+##
+## A sticker goes on either way a kid tries it: tapped in the tray it pops onto the middle of the
+## photo; dragged out of the tray it rides the finger and lands where it is let go. The first few
+## times, until one is on, a drawn hand (HowTo) drags one from the tray onto the photo.
 
 const FRAMES := ["paper", "hearts", "stars", "flowers", "rainbow", "snapshot"]
 const STICKERS := ["heart", "star", "flower", "crown", "note", "paw", "sun", "hello"]
 ## The kept photo's size.
 const SIZE := Vector2(960, 540)
+## Seconds with no touch before the hand comes back, while no sticker is on yet.
+const IDLE_BACK := 6.0
+## How many photos the hand shows the stickers on.
+const HINT_TIMES := 3
+## A finger that moves this far from where it came down on the tray is dragging, not tapping.
+const DRAG_START := 24.0
 
 var game: GameRoot
 var photo: Image
@@ -19,9 +29,31 @@ var pets: Array = []
 var on_done := Callable()
 
 var _viewport: SubViewport
+var _holder: SubViewportContainer
 var _frame: FrameArt
 var _stickers: Control
 var _frame_buttons := {}
+var _title: Label
+var _left: VBoxContainer
+var _tray := {}
+## Over the photo's column, the same size, unclipped: the hand lives here, its words centred
+## under the photo, its finger free to reach the tray.
+var _over: Control
+var _hand: HowTo
+## The sticker the hand carries while it shows how, so the kid sees what a drag brings along.
+var _demo: StickerArt
+var _teach := false
+var _idle := 0.0
+## A sticker is on: the hand's job is done.
+var _placed := false
+## A finger that came down on a sticker in the tray, and the sticker riding it once it drags.
+var _tray_kind := ""
+var _tray_from := Vector2.ZERO
+var _finger := Vector2.ZERO
+var _float: StickerArt
+## Set for the rest of the frame a drag ends in, so the tray button it ends on adds no second one.
+var _carried := false
+var _keeping := false
 
 
 func _ready() -> void:
@@ -43,8 +75,11 @@ func _ready() -> void:
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_constant_override("separation", 8)
 	body.add_child(left)
-	left.add_child(UI.title("Say cheese! Pick a frame, add stickers.", 30))
+	_left = left
+	_title = UI.title("Say cheese! Pick a frame, add stickers.", 30)
+	left.add_child(_title)
 	var holder := SubViewportContainer.new()
+	_holder = holder
 	holder.stretch = true
 	holder.custom_minimum_size = SIZE * 0.86
 	holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -91,7 +126,7 @@ func _ready() -> void:
 		_frame_buttons[kind] = b
 		frames.add_child(b)
 	right.add_child(frames)
-	right.add_child(UI.label("Stickers - tap one, then drag it", 20))
+	right.add_child(UI.label("Stickers", 22))
 	var tray := GridContainer.new()
 	tray.columns = 4
 	tray.add_theme_constant_override("h_separation", 6)
@@ -99,12 +134,14 @@ func _ready() -> void:
 	for kind in STICKERS:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(68, 68)
-		b.pressed.connect(add_sticker.bind(kind))
+		b.button_down.connect(_tray_down.bind(kind))
+		b.pressed.connect(_tray_tap.bind(kind))
 		var art := StickerArt.new()
 		art.kind = kind
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(UI.full_rect(art))
 		tray.add_child(b)
+		_tray[kind] = b
 	right.add_child(tray)
 	var gap := Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -113,6 +150,140 @@ func _ready() -> void:
 	right.add_child(keep)
 	right.add_child(UI.icon_button("ui_let_go", "Throw away", _throw_away, 32, Vector2(0, 70)))
 	set_frame("paper")
+
+	_over = Control.new()
+	_over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_over)
+	_demo = StickerArt.new()
+	_demo.kind = STICKERS[0]
+	_demo.size = Vector2(96, 96)
+	_demo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_demo.modulate.a = 0.0
+	_over.add_child(_demo)
+	_teach = game != null and HowTo.first_times(game.profile, "howto_stickers", HINT_TIMES)
+	# The hand comes in a moment after the editor does, once everything has found its place.
+	_idle = IDLE_BACK - 0.6
+
+
+func _process(delta: float) -> void:
+	_over.position = _left.get_global_rect().position - get_global_rect().position
+	_over.size = _left.size
+	# One sentence on screen at a time: the hand's own words while it is up.
+	_title.modulate.a = 0.0 if _hand != null else 1.0
+	# The hand's sticker rides its fingertip while it presses, then fades where it was let go.
+	if _hand != null and is_instance_valid(_hand) and _hand._press > 0.0:
+		_demo.position = _hand._finger - _demo.size / 2.0
+		_demo.modulate.a = 0.85 * _hand.modulate.a
+	else:
+		_demo.modulate.a = maxf(0.0, _demo.modulate.a - delta * 3.0)
+	if not _teach or _placed or _keeping or _hand != null or _tray_kind != "":
+		_idle = 0.0
+		return
+	_idle += delta
+	if _idle > IDLE_BACK:
+		_show_hand()
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouse:
+		_finger = (event as InputEventMouse).position
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_idle = 0.0
+		elif _tray_kind != "":
+			_tray_up()
+	elif event is InputEventMouseMotion and _tray_kind != "":
+		_tray_move()
+
+
+# --- The hand --------------------------------------------------------------------------------
+
+## The hand drags a sticker out of the tray onto the photo, with a few words under the photo.
+func _show_hand() -> void:
+	var h := HowTo.new()
+	h.gesture = "swipe"
+	h.period = 1.8
+	h.at = _tray_point
+	h.to = _photo_spot
+	h.caption = "Drag a sticker onto the photo!"
+	h.caption_y = _holder.get_global_rect().end.y - _left.get_global_rect().position.y + 12.0
+	h.until_touch = true
+	_hand = h
+	h.tree_exiting.connect(_hand_gone.bind(h))
+	_over.add_child(h)
+
+
+func _drop_hand() -> void:
+	if _hand != null and is_instance_valid(_hand):
+		_hand.dismiss()
+	_hand = null
+
+
+func _hand_gone(h: HowTo) -> void:
+	if _hand == h:
+		_hand = null
+	_idle = 0.0
+
+
+## The first sticker in the tray, in the hand's space.
+func _tray_point() -> Vector2:
+	var b: Button = _tray[STICKERS[0]]
+	return _over.get_global_transform().affine_inverse() * b.get_global_rect().get_center()
+
+
+## A spot on the photo for the hand to take it to, in the hand's space.
+func _photo_spot() -> Vector2:
+	var r := _holder.get_global_rect()
+	return _over.get_global_transform().affine_inverse() * (r.position + r.size * Vector2(0.62, 0.42))
+
+
+# --- Stickers from the tray --------------------------------------------------------------------
+# A tap on a sticker button pops it onto the photo (pressed). A finger that drags off the button
+# instead carries a sticker with it, read here in _input, before the button sees it. Positions
+# come from the events themselves (a phone's finger, the demo's), in the viewport's space.
+
+func _tray_down(kind: String) -> void:
+	_tray_kind = kind
+	_tray_from = _finger
+
+
+func _tray_tap(kind: String) -> void:
+	if _carried:
+		return
+	add_sticker(kind)
+
+
+func _tray_move() -> void:
+	if _float == null:
+		if _finger.distance_to(_tray_from) < DRAG_START:
+			return
+		_float = StickerArt.new()
+		_float.kind = _tray_kind
+		_float.size = Vector2(110, 110)
+		_float.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_float)
+		_drop_hand()
+	_float.position = get_global_transform_with_canvas().affine_inverse() * _finger - _float.size / 2.0
+
+
+## The finger comes up: a carried sticker lands on the photo where it is let go - or, let go
+## anywhere else, goes back to the tray.
+func _tray_up() -> void:
+	var kind := _tray_kind
+	_tray_kind = ""
+	if _float == null:
+		return
+	_float.queue_free()
+	_float = null
+	_carried = true
+	_end_carry.call_deferred()
+	var at := _holder.get_global_transform_with_canvas().affine_inverse() * _finger
+	if Rect2(Vector2.ZERO, _stickers.size).has_point(at):
+		add_sticker(kind, at)
+
+
+func _end_carry() -> void:
+	_carried = false
 
 
 func set_frame(kind: String) -> void:
@@ -139,11 +310,28 @@ func add_sticker(kind: String, at := Vector2(-1, -1)) -> void:
 	s.pivot_offset = s.size / 2.0
 	_stickers.add_child(s)
 	Sounds.play_varied("place", 1.3, 0.1, -4.0)
+	_placed = true
+	_drop_hand()
 
 
 ## Keeps it: rendered at full size, into the album and every pet's journal.
 func keep_it() -> void:
-	await RenderingServer.frame_post_draw
+	if _keeping:
+		return
+	_keeping = true
+	_drop_hand()
+	# Read back once a frame with the last sticker in it has been drawn. A hidden or minimised
+	# window draws no frames, so this never waits on one for long: after a moment it draws one.
+	var drawn := [false]
+	var mark := func(): drawn[0] = true
+	RenderingServer.frame_post_draw.connect(mark, CONNECT_ONE_SHOT)
+	var waited := 0
+	while not drawn[0] and waited < 60:
+		await get_tree().process_frame
+		waited += 1
+	if not drawn[0]:
+		RenderingServer.frame_post_draw.disconnect(mark)
+		RenderingServer.force_draw()
 	var img := _viewport.get_texture().get_image()
 	img.resize(int(SIZE.x), int(SIZE.y), Image.INTERPOLATE_BILINEAR)
 	var ids := []
@@ -157,6 +345,8 @@ func keep_it() -> void:
 
 
 func _throw_away() -> void:
+	if _keeping:
+		return
 	on_done.call("")
 
 
@@ -238,7 +428,9 @@ class Sticker extends StickerArt:
 					queue_free()
 			accept_event()
 		elif event is InputEventMouseMotion and _dragging:
-			position += (event as InputEventMouseMotion).relative
+			# The move comes in the sticker's own tilted frame: turned back into the photo's, so
+			# the sticker stays under the finger instead of sliding off sideways.
+			position += get_transform().basis_xform((event as InputEventMouseMotion).relative)
 			accept_event()
 
 

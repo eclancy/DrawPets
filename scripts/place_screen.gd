@@ -7,15 +7,19 @@ extends Node2D
 ##                        Its body: a happy wiggle - keep going and it rolls over for a belly rub.
 ##   Tap a pet         -> it looks up and says hello, and its card opens.
 ##   Tap the ground    -> it comes over.
-##   Food drawer       -> drag a snack out; the hungriest pet trots over and munches it.
+##   Food drawer       -> tap a snack into the bowl, or drag it out; the hungriest pet trots
+##                        over and munches it.
 ##   Toys drawer       -> each toy plays the way its words say (Words.toy_play): fling a ball and
-##                        it is fetched and held out for another throw; hold out a rope and a pet
-##                        grabs the other end; a teddy gets a cuddle, a bone a long chew; tap a
-##                        squeaky duck and they pounce; a treat ball is nosed about till the treat
-##                        falls out; a heavy thing gets shoved along. Toys lying about can be
-##                        picked up again, and tapped.
-##   Decorate drawer   -> drag furniture in, drag it about, drag it back to put it away.
-##   Wardrobe drawer   -> drag clothes onto a pet.
+##                        it is fetched and held out - tap it and it is thrown again; hold out a
+##                        rope and a pet grabs the other end for tug of war - pull, let go, pull,
+##                        in time with a drum, till it lets go happily (see "Tug of war"); a teddy
+##                        gets a cuddle, a bone a long chew; tap a squeaky duck and they pounce;
+##                        a treat ball is nosed (and tapped) about till the treat rolls out; a
+##                        heavy thing gets shoved along. Toys lying about can be picked up again,
+##                        and tapped.
+##   Decorate drawer   -> drag furniture in (or tap it in), drag it about, drag it back to put it
+##                        away.
+##   Wardrobe drawer   -> drag clothes onto a pet (or tap them, for the pet you are looking at).
 ##   Listen (optional) -> with the mic on, a clap or a shout - only how loud, never what is said,
 ##                        nothing kept - makes the pets look up and come running, and wakes a
 ##                        sleeper gently. Tapping the ground does the same without the mic.
@@ -32,13 +36,17 @@ extends Node2D
 ## At night (Clock) the place goes lavender, glowy things light up, and the pets curl up asleep
 ## somewhere cozy. A tap wakes one gently - it stays up while it is played with - and in the
 ## morning they stretch and say good morning.
+## Kids start at 7 and many barely read, so the first few times a kid comes to each of these a
+## drawn hand (HowTo) does the move where it happens, and comes back if they rest with it still
+## to do (see "Showing how").
 
 const ZOOM := {"tiny": 1.5, "small": 1.2, "medium": 1.0, "big": 0.9, "huge": 0.78, "giant": 0.66}
 const TABS := [["food", "icon_pantry", "Food"], ["toy", "icon_toys", "Toys"],
 	["furniture", "icon_decorate", "Decorate"], ["clothing", "icon_wardrobe", "Wardrobe"], ["bath", "icon_bath", "Bath"]]
 ## Where pets walk. It stops short of the screen's bottom edge, which the drawer bar covers -
-## the camera sits CAM_DROP lower so the whole band shows above the bar.
-const GROUND := Rect2(70, 458, 1140, 172)
+## the camera sits CAM_DROP lower so the whole band shows above the bar - and starts clear of
+## the column of buttons down the left, so nothing a kid wants to touch hides under Listen.
+const GROUND := Rect2(130, 458, 1080, 172)
 const CAM_DROP := 56.0
 
 var game: GameRoot
@@ -86,6 +94,13 @@ var _toy_press_time := 0.0
 var _thrown_from := Vector2(640, 600)
 var _offer_left := 0.0
 var _nudges := 0
+## Who is nosing the treat ball - picked up and put back, the same pet carries on where it was.
+var _nudger: Creature
+## A toy a pet held out, just taken by a touch: lifted again at once (a tap), it is thrown for
+## you, away from the pet (`_tap_dir`), so "tap it" is all a little one has to do.
+var _tap_take := false
+var _tap_take_time := 0.0
+var _tap_dir := 1.0
 var _pushing := false
 var _push_thud_in := 0.0
 var _tug_caller: Creature
@@ -94,12 +109,62 @@ var _hinted := {}
 var _chasers: Array = []
 var _leapt: Array = []
 var _caught_in_air := false
+## When the toy was last flung: nobody catches it for a moment, so one tapped out of a pet's mouth
+## really flies before it is chased down.
+var _chase_from := 0.0
 var _eater: Creature
+## The snack `_eater` is going for or eating. `food` is the newest one out, which may be another
+## the kid is already holding out for whoever is next.
+var _eating: PlaceItem
 var _told_full := false
-var _tug: Creature
-var _tug_time := 0.0
-var _tug_creak_in := 0.0
 var _munch_in := 0.0
+## Tug of war (see "Tug of war"): the pet on the other end, the rhythm's clock (negative while
+## it gets a grip), the kid's knot (0 let out, 1 pulled) and how it is moving, whether a finger
+## is on it and where it came down, how hard this pull is going, where the pet backs off from
+## and to (the front, where no furniture hides it), where the guide ring was, the heaves so far
+## and the pulls since the last good one, how long no finger has been on the rope, whether the
+## hand is teaching this one, the camera's pet (held still meanwhile), and the HUD bits - the
+## rope's handle, the PULL!/let go word and the hearts to fill.
+var _tug: Creature
+var _tug_t := 0.0
+var _tug_h := 0.0
+var _tug_prev_h := 0.0
+var _tug_vel := 0.0
+var _tug_down := false
+var _tug_down_x := 0.0
+var _tug_down_h := 0.0
+var _tug_heave := 0.0
+var _tug_lead := 0.0
+var _tug_from := Vector2.ZERO
+var _tug_to := Vector2.ZERO
+var _tug_guide := Vector2(640, 360)
+var _tug_heaves := 0
+var _tug_dry := 0
+var _tug_half := 0
+var _tug_travel := 0.0
+var _tug_near_sum := 0.0
+var _tug_near_time := 0.0
+var _tug_idle := 0.0
+var _tug_teach := false
+var _tug_follow: Creature
+var _tug_bar: TugGame.PullBar
+var _tug_word: Label
+var _tug_hearts: HBoxContainer
+## Showing how (HowTo): the hand up now, what it teaches ("rub", "food", "toys", "tug"...), how
+## to show it again, and how long the kid has rested since.
+var _how: HowTo
+var _how_key := ""
+var _how_spec := {}
+var _how_idle := 0.0
+## The drawer's item buttons by id, in drawer order, so the hand can point at one.
+var _item_buttons := {}
+## Quick taps on pets with no rub in between - after three, the hand shows how to rub.
+var _pats := 0
+var _pat_last := 0.0
+## Where the finger that took something from a drawer came down (screen), and whether it has
+## been far from there since: let go on the drawer without going anywhere, it was a tap.
+var _grab_screen := Vector2.ZERO
+var _grab_far := false
 ## Where the finger holding something is, in world space - set by every drag event, so tug of
 ## war follows the finger rather than wherever a mouse cursor happens to be.
 var _finger := Vector2.ZERO
@@ -234,7 +299,8 @@ func _greet() -> void:
 			_show_hint("It's bath day for %s! Open the Bath drawer." % c.pet["name"])
 			return
 	if first_visit:
-		_show_hint("Welcome home, %s! Rub it to pet it. Open a drawer to feed it, play, decorate or dress up." % focus.pet["name"])
+		_show_hint("Welcome home, %s! Rub it to pet it." % focus.pet["name"])
+		_teach_rub(focus)
 		focus.perform("celebrate", 1.8)
 		for i in 3:
 			_on_emote("heart", focus.top_global() + Vector2(randf_range(-30, 30), 0))
@@ -247,8 +313,8 @@ func _greet() -> void:
 			missed = true
 		if Places.liking(c.pet["place"], home["place"]) >= 1.0 and randf() < 0.5:
 			c.say("star")
-	_show_hint("They missed you!" if missed else
-		"Rub a pet to pet it - keep rubbing its tummy for a belly rub! Tap a pet to see how it's doing.")
+	_show_hint("They missed you!" if missed else "Rub a pet - or tap it to see how it's doing!")
+	_teach_rub(focus)
 
 
 # --- HUD -------------------------------------------------------------------------------------
@@ -351,16 +417,18 @@ func open_tab(which: String) -> void:
 	tab = "" if tab == which else which
 	if tab == "bath" and not _hinted.has("bath"):
 		_hinted["bath"] = true
-		_show_hint("Bath day! once a week - or rub off a little mud with the sponge.")
+		_show_hint("Tap Bath day! for a bath - or sponge off some mud.")
 	for t in _tab_buttons:
 		_tab_buttons[t].set_pressed_no_signal(t == tab)
 	_select_furniture(null)
 	_fill_drawer()
+	_teach_drawer()
 
 
 func _fill_drawer() -> void:
 	for c in _drawer.get_children():
 		c.queue_free()
+	_item_buttons.clear()
 	if tab == "":
 		var l := UI.label("Open a drawer: Food, Toys, Decorate, Wardrobe or Bath.", 22)
 		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -404,6 +472,7 @@ func _fill_drawer() -> void:
 			b.add_child(n)
 		b.button_down.connect(_grab.bind(id))
 		_drawer.add_child(b)
+		_item_buttons[id] = b
 
 
 func _show_hint(text: String) -> void:
@@ -424,6 +493,8 @@ func _show_panel(c: Creature) -> void:
 ## Drags that start on a drawer button arrive at the button, not the world - read them here,
 ## before the GUI does.
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_touched()
 	if _held == null:
 		return
 	if event is InputEventMouseMotion:
@@ -445,8 +516,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_drag(at)
 
 
-## A finger comes down: on furniture (decorating), a toy, a pet, or the ground.
+## A finger comes down: on furniture (decorating), a toy, a pet, or the ground. In tug of war,
+## anywhere: it takes hold of the knot again.
 func _press(at: Vector2) -> void:
+	if _tug != null:
+		_tug_press(_screen_of(at).x)
+		return
 	if tab == "furniture":
 		var f := _furniture_at(at)
 		if f != null:
@@ -457,8 +532,14 @@ func _press(at: Vector2) -> void:
 			return
 		_select_furniture(null)
 	if _toy_at(at):
-		if toy_state == "offer" and toy.play() == "tug":
-			take_toy(at)  # it is holding out the other end: grab it and pull, straight away
+		if toy_state == "offer":
+			# Held out to you: a touch takes it. A rope's end, and it is tug of war straight away;
+			# anything else is in your hand - flick it, or just lift: a tap throws it for you.
+			var tug := toy.play() == "tug"
+			take_toy(at)
+			if not tug:
+				_tap_take = true
+				_tap_take_time = _now()
 			return
 		# A tap squeaks or bounces it; a drag (or a hold) picks it up.
 		_toy_press = true
@@ -485,6 +566,9 @@ func _press(at: Vector2) -> void:
 
 
 func _drag(at: Vector2) -> void:
+	if _tug_down:
+		_tug_drag(_screen_of(at).x)
+		return
 	if _toy_press:
 		if at.distance_to(_toy_press_at) > 12.0:
 			_toy_press = false
@@ -502,6 +586,7 @@ func _drag(at: Vector2) -> void:
 
 
 func _release() -> void:
+	_tug_down = false
 	if _toy_press:
 		_toy_press = false
 		tap_toy()
@@ -513,6 +598,12 @@ func _release() -> void:
 	c.touch_at = Vector2.INF
 	if _pet_moved < 14.0 and _now() - _pet_press_time < 0.45:
 		boop(c)
+		# Little ones pat. Three pats and no rub: the hand shows them how to rub.
+		_pats = _pats + 1 if _now() - _pat_last < 6.0 else 1
+		_pat_last = _now()
+		if _pats >= 3 and c.action() != "sleep":
+			_pats = 0
+			_show_rub(c)
 	elif c.action() == "belly":
 		c.extend_action(0.8)  # a moment more on its back, then it rolls the right way up
 
@@ -549,6 +640,19 @@ func _creature_at(at: Vector2) -> Creature:
 		if creatures[i].hit(at):
 			return creatures[i]
 	return null
+
+
+## The pet nearest `at`, if `at` is within `reach` px of its body.
+func _creature_near(at: Vector2, reach: float) -> Creature:
+	var best: Creature = null
+	var best_d := INF
+	for c in creatures:
+		var mid := c.global_position.lerp(c.top_global(), 0.5)
+		var d := mid.distance_to(at) - (c.top_global() - c.global_position).length() * 0.5
+		if d < reach and d < best_d:
+			best = c
+			best_d = d
+	return best
 
 
 func _furniture_at(at: Vector2) -> Furniture:
@@ -603,6 +707,8 @@ func stroke_pet(c: Creature, distance: float, at := Vector2.INF, speed := 0.0) -
 		return
 	_pet_dist = 0.0
 	_pet_hearts += 1
+	_pats = 0
+	_taught("rub")
 	var belly := c.action() == "belly"
 	# Every heart shows; every other one it says so, so a long rub is not a wall of noise.
 	if _pet_hearts % 2 == 1 and not asleep:
@@ -627,23 +733,31 @@ func _grab(id: String) -> void:
 	var item := Items.get_item(id)
 	if item.is_empty():
 		return
+	# Something new out of a drawer: the pet lets go of the rope, if you were tugging.
+	_end_tug()
 	_held_item = item
 	_samples.clear()
+	_grab_screen = get_viewport().get_mouse_position()
+	_grab_far = false
+	_tap_take = false
 	match item["category"]:
 		"food":
-			if food != null and is_instance_valid(food) and _eater == null:
+			# A snack lying uneaten makes way for the new one - but not one a pet is going for.
+			if food != null and is_instance_valid(food) and food != _eating:
 				food.queue_free()
 			food = _new_item(item)
 			_held = food
 			_held_kind = "food"
 		"toy":
 			if toy != null and is_instance_valid(toy):
-				_end_tug(false)
 				_reset_toy_play()
 				toy.queue_free()
 			toy = _new_item(item)
+			_nudges = 0
+			_nudger = null
 			_held = toy
 			_held_kind = "toy"
+			_taught("toys")
 			var play := toy.play()
 			if not _hinted.has(play):
 				_hinted[play] = true
@@ -676,7 +790,7 @@ func _new_item(item: Dictionary) -> PlaceItem:
 	for c in creatures:
 		h = maxf(h, c.height_px)
 	it.setup(item, clampf(h * 0.42, 50.0, 170.0))
-	it.bounds = Rect2(GROUND.position - Vector2(30, 0), GROUND.size + Vector2(60, 0))
+	it.bounds = Rect2(GROUND.position, GROUND.size + Vector2(30, 0))
 	it.bounced.connect(_on_bounce.bind(it))
 	world.add_child(it)
 	return it
@@ -684,11 +798,13 @@ func _new_item(item: Dictionary) -> PlaceItem:
 
 func _move_held(at: Vector2) -> void:
 	_finger = at
+	if _screen_of(at).distance_to(_grab_screen) > 24.0:
+		_grab_far = true
 	match _held_kind:
 		"food", "toy":
 			var it := _held as PlaceItem
 			if _tug != null:
-				it.stretch_to = at
+				_tug_drag(_screen_of(at).x)
 				return
 			it.position = Vector2(at.x, clampf(at.y + 60.0, it.bounds.position.y, it.bounds.end.y))
 			it.z = maxf(0.0, it.position.y - at.y - it.radius * 0.9 * it.scale.y)
@@ -717,23 +833,42 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 	_held = null
 	_held_kind = ""
 	var over_bar := screen_at.y > get_viewport().get_visible_rect().size.y - 118.0
+	# Let go on the drawer without going anywhere: a tap on its button. Dragged about and back
+	# onto the drawer (or a swipe along it, scrolling): put back, nothing happens.
+	var tapped := over_bar and not _grab_far
+	var put_back := over_bar and _grab_far
 	match kind:
 		"food":
 			(held as PlaceItem).held = false
 			_told_full = false
-			# Let go over the drawer (a tap) or near the bowl: it goes in the bowl.
-			if over_bar or at.distance_to(_bowl.position) < 110.0:
+			if put_back and at.distance_to(_bowl.position) >= 110.0:
+				if food == held:
+					food = null
+				held.queue_free()
+				return
+			# A tap, or let go near the bowl: it goes in the bowl.
+			if tapped or at.distance_to(_bowl.position) < 110.0:
 				_into_bowl(held as PlaceItem)
+			_taught("food")
 			if int(_held_item.get("uses", 0)) > 0:
 				game.profile.use_up(_held_item["id"])
 				_fill_drawer()
 		"toy":
 			(held as PlaceItem).held = false
+			var tap_take := _tap_take
+			_tap_take = false
 			if _tug_caller != null:
 				_tug_caller.stop()
 				_tug_caller = null
 			if _tug != null:
-				_end_tug(true)
+				# Tug of war goes on: the knot pays out, and a touch anywhere takes it up again.
+				_tug_down = false
+				return
+			if put_back and not tap_take:
+				_reset_toy_play()
+				if toy == held:
+					toy = null
+				held.queue_free()
 				return
 			# The flick: how fast the finger was going as it let go. A finger that stopped
 			# before letting go puts the toy down.
@@ -744,19 +879,25 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 				var dt: float = maxf(b[0] - a[0], 0.016)
 				if _now() - float(b[0]) < 0.12:
 					v = (b[1] - a[1]) / dt
+			# Taken from a pet with a tap: thrown for you, up and away from it - fetch!
+			if tap_take and not _grab_far and _now() - _tap_take_time < 0.5:
+				v = Vector2(_tap_dir * 650.0, -750.0)
 			_toy_dropped_on = _creature_at(at)
 			throw_toy(v)
 		"furniture":
 			var f := held as Furniture
-			if over_bar:
+			if put_back:
 				furniture.erase(f)
 				f.queue_free()
 				return
+			if tapped:
+				f.position = _free_floor_spot(f)
 			f.entry["pos"] = PetBuilder.arr(f.position)
 			home["items"].append(f.entry)
 			game.profile.save()
 			Sounds.play_varied("place", 1.0, 0.05)
 			_select_furniture(f)
+			_taught("decorate")
 			if game.profile.count_today("decorate", 3):
 				game.reward(1, "Nice decorating!")
 		"move":
@@ -770,6 +911,12 @@ func _drop_held(at: Vector2, screen_at: Vector2) -> void:
 		"clothing":
 			held.queue_free()
 			var c := _creature_at(at)
+			if c == null and not over_bar:
+				c = _creature_near(at, 70.0)  # a near miss on a pet that moved still counts
+			if tapped:
+				# A tap on the clothes: on the pet whose card is open, or the one this home is
+				# looking at.
+				c = _panel_pet if _panel.visible and _panel_pet != null else _focus_creature()
 			if c != null:
 				dress(c, _held_item)
 		"bath":
@@ -789,6 +936,7 @@ func dress(c: Creature, item: Dictionary) -> void:
 	c.say("star")
 	_train(c, "charm", 0.8)
 	PetStore.save_pet(c.pet)
+	_taught("wardrobe")
 	if c == _panel_pet:
 		_panel.refresh()
 
@@ -909,6 +1057,7 @@ func throw_toy(v: Vector2) -> void:
 func _start_chase() -> void:
 	toy_state = "chase"
 	_toy_fresh = false
+	_chase_from = _now()
 	for c in creatures:
 		if not _free_for_toy(c):
 			continue
@@ -938,7 +1087,6 @@ func _reset_toy_play() -> void:
 	_chasers.clear()
 	_leapt.clear()
 	_caught_in_air = false
-	_nudges = 0
 	_pushing = false
 
 
@@ -973,6 +1121,13 @@ func _carry(c: Creature) -> void:
 
 func _update_toy(delta: float) -> void:
 	_tug_call_in -= delta
+	# A rope held out keeps calling, finger moving or not - resting it on the drawer still wants
+	# a game, and a pet that ended up out of reach comes round again.
+	if _tug == null and _held_kind == "toy" and _held == toy and toy.play() == "tug" and _tug_call_in <= 0.0:
+		_tug_call_in = 0.5
+		_try_start_tug(toy, _finger)
+		if _tug == null:
+			_call_for_tug(_finger)
 	if _toy_press and _now() - _toy_press_time > 0.3:
 		_toy_press = false
 		take_toy(_toy_press_at)  # held still on it: picked up
@@ -1022,7 +1177,7 @@ func _update_chase() -> void:
 			and toy.z < c.height_px * 0.9 + c.z
 		# Lying still on the grass, it just stoops for it - no drawn neck is long enough to reach.
 		var at_it := toy.z < 8.0 and c.position.distance_to(aim.clamp(c.bounds.position, c.bounds.end)) < 14.0
-		if in_reach or at_it:
+		if (in_reach or at_it) and _now() - _chase_from > 0.35:
 			_catch(c)
 			return
 
@@ -1077,17 +1232,21 @@ func _on_fetched() -> void:
 	_offer(c)
 
 
-## Back with it, it holds the toy out: take it to throw again - or, a rope, grab the end.
+## Back with it, it holds the toy out: tap it and it is thrown again - or, a rope, tap the end
+## and it is tug of war. It waits a good while: a kid who is slow to see it has not done wrong.
 func _offer(c: Creature) -> void:
 	toy_state = "offer"
-	_offer_left = 5.0
+	_offer_left = 8.0
 	c.face_toward(640.0)
-	c.perform("look", 5.0)
+	c.perform("look", _offer_left)
 	c.say("note")
+	var tug := toy.play() == "tug"
+	var shown := _teach("offer", {"gesture": "tap", "at": _toy_point,
+		"caption": "Tap the rope to pull!" if tug else "Tap it to throw again!"})
 	var key := "offer_" + toy.play()
-	if not _hinted.has(key):
+	if not shown and not _hinted.has(key):
 		_hinted[key] = true
-		_show_hint("Grab the end and pull!" if toy.play() == "tug" else "Take it and throw it again!")
+		_show_hint("Tap the rope - tug of war!" if tug else "Tap it to throw it again!")
 
 
 ## Nobody took it: it drops it - and a chewy one gets chewed.
@@ -1118,6 +1277,10 @@ func take_toy(at: Vector2) -> void:
 		return
 	var had: Creature = _toy_pet if toy_state != "" else null
 	var offered := toy_state == "offer"
+	_grab_screen = _screen_of(at)
+	_grab_far = false
+	if offered:
+		_taught("offer")
 	if offered and toy.play() == "tug":
 		toy_state = ""
 		_toy_pet = null
@@ -1127,6 +1290,10 @@ func take_toy(at: Vector2) -> void:
 		_samples.clear()
 		_start_tug(had, at)
 		return
+	# Thrown for you on a tap: away from the pet, the way it was holding it out.
+	_tap_dir = signf(toy.position.x - had.position.x) if had != null else 1.0
+	if _tap_dir == 0.0:
+		_tap_dir = 1.0
 	_reset_toy_play()
 	toy.end_stretch()
 	_held = toy
@@ -1140,16 +1307,23 @@ func take_toy(at: Vector2) -> void:
 		had.say("heart" if offered else "question")
 
 
-## A tap on a toy lying about: it hops - and a squeaky one squeaks, and a pet pounces on it.
+## A tap on a toy lying about: it hops - and a squeaky one squeaks, and a pet pounces on it. A
+## treat ball rolls, which helps whoever is nosing it: the treat comes out sooner.
 func tap_toy() -> void:
 	if toy == null or not is_instance_valid(toy) or toy.held or toy.carrier != null:
 		return
 	_look_at_toy()
 	if toy.has_word("squeaky"):
+		_taught("squeak")
 		_squeak_toy()
 		toy.hop(130.0)
 		if not (toy_state == "busy" and _toy_pet != null):
 			_send_pouncer()
+	elif toy.play() == "puzzle":
+		toy.hop(120.0, Vector2(randf_range(-1.0, 1.0) * 170.0, 0.0))
+		Sounds.play_varied("bounce", 1.25, 0.08, -6.0)
+		if toy_state == "busy" and _toy_pet != null:
+			_nudges = mini(_nudges + 1, 2)  # the pet still gets the last nudge - and the treat
 	else:
 		toy.hop(220.0)
 
@@ -1176,13 +1350,19 @@ func _toy_landed() -> void:
 	var play := toy.play()
 	if play == "squeak":
 		_look_at_toy()
+		# The hand taps it - squeak! - so a kid sees what a tap does.
+		_teach("squeak", {"gesture": "tap", "at": _toy_point, "caption": "Tap it to squeak!",
+			"on_press": _squeak_shown})
 		return
 	var c := _toy_dropped_on if _toy_dropped_on != null and _free_for_toy(_toy_dropped_on) \
 		else _nearest_free(toy.position)
 	_toy_dropped_on = null
 	if c == null:
-		_show_hint("Everyone's too sleepy to play. Let them rest on something cozy!")
+		_show_hint("Everyone's too sleepy to play - let them rest!")
 		return
+	if play == "puzzle" and c != _nudger:
+		_nudges = 0  # a new pet on the treat ball starts from the beginning
+		_nudger = c
 	toy_state = "busy"
 	_toy_pet = c
 	c.interrupt()
@@ -1365,6 +1545,8 @@ func _nudged(c: Creature) -> void:
 		get_tree().create_timer(1.0).timeout.connect(_nudge.bind(c))
 		return
 	# Out it pops!
+	_nudges = 0
+	_nudger = null
 	var shiny := _shiny()
 	for i in 2:
 		_on_emote("crumb", toy.global_position + Vector2(randf_range(-20, 20), -toy.z - 20.0))
@@ -1460,6 +1642,31 @@ func _sfx_times(id: String, count: int, gap: float, pitch := 1.0, vol := 0.0) ->
 
 
 # --- Tug of war ------------------------------------------------------------------------------
+# The same pull as the Tug-of-War Cup (TugGame), so playing at home is practice for it: the pet
+# takes the rope's other end and backs off to the right, facing you, and your end - the orange
+# knot on a strip of paper beside it (TugGame.PullBar) - slides LEFT to pull and back RIGHT to let
+# go, in time with a guide ring and a drum. A finger anywhere moves the knot one to one; lifting
+# it lets the rope pay out, which is letting go too. Each pull in time is a HEAVE: the knot
+# flashes, the pet leans back and growls, a heart fills - and strength grows (`_train`). Fill all
+# TUG_GOAL hearts and the pet lets go happily: you win, it celebrates. Out of time costs nothing,
+# and nothing a finger does ends it badly. A kid who wanders off leaves the pet holding its end
+# for a while, then it drops it - no winner, no fuss.
+
+## Hearts to fill - good heaves - to win.
+const TUG_GOAL := 5
+## How good a pull has to be to fill a heart (TugGame grades it 0..1: how far, how near the ring).
+## Kinder than the cup's 0.7: this is play.
+const TUG_GOOD := 0.55
+## The knot's slide in screen px (one to one under the finger), and the gap from the pet's mouth
+## to the knot let right out.
+const TUG_STROKE := 240.0
+const TUG_GAP := 190.0
+## The pet's mouth must be this far from the left edge to leave room for the strip and its arrows
+## clear of the buttons down the left; if it is not, the pet backs off to the right to get a grip.
+const TUG_MOUTH_MIN := 120.0 + 130.0 + TUG_STROKE + TUG_GAP
+## No finger on the rope this long (seconds) and the pet drops its end.
+const TUG_REST := 8.0 * TugGame.BEAT
+
 
 ## Holding a stretchy toy right by a pet's mouth: it grabs the other end.
 func _try_start_tug(it: PlaceItem, at: Vector2) -> void:
@@ -1472,112 +1679,354 @@ func _try_start_tug(it: PlaceItem, at: Vector2) -> void:
 
 
 ## Holding out a stretchy toy: the nearest pet that wants to play comes for the other end -
-## the kid does not have to find its mouth.
+## the kid does not have to find its mouth. It comes round to the right of the finger, so it
+## faces your end of the rope the way it will pull.
 func _call_for_tug(at: Vector2) -> void:
 	var c := _tug_caller if _tug_caller != null else _nearest_free(at)
 	if c == null:
 		return
 	_tug_caller = c
-	var side := signf(c.position.x - at.x)
-	if side == 0.0:
-		side = 1.0
+	var side := 1.0 if at.x + c.mouth_reach() < GROUND.end.x - 20.0 else -1.0
 	# Stand so its mouth comes to the finger: its mouth is this far above and in front of its feet.
 	var up := c.global_position.y - c.mouth_global().y
 	c.go_to(Vector2(at.x + side * c.mouth_reach(), at.y + up), _tug_arrived.bind(c), true)
 
 
+## There: it takes the end. Near enough is near enough - the finger may be resting on the
+## drawer, below where a pet can stand - unless the finger has gone off somewhere else since.
 func _tug_arrived(c: Creature) -> void:
 	if _tug != null or _held_kind != "toy" or _held != toy or c != _tug_caller:
 		return
 	c.face_toward(_finger.x)
-	# As close as it can get - if the finger is up in the sky, near enough is near enough.
-	if c.mouth_global().distance_to(_finger) < maxf(c.height_px * 1.2, 110.0):
+	if absf(c.mouth_global().x - _finger.x) < maxf(c.height_px * 1.5, 220.0):
 		_start_tug(c, _finger)
 
 
+## It has the other end. The finger that brought the rope is already on it: it holds the knot.
 func _start_tug(c: Creature, at: Vector2) -> void:
 	_tug = c
 	_tug_caller = null
+	_finger = at
 	Sounds.play("tug")
-	_tug_time = 0.0
 	c.interrupt()
+	c.rest_z = 0.0
 	c.perform("tug", 999.0)
 	toy.held = false
 	toy.pick_up(c)
-	toy.stretch_to = at
-	_finger = at
-	_show_hint("Tug of war! Pull, pull!")
+	_panel.visible = false
+	# The camera holds still while you tug, so your end stays under the knot on the screen.
+	_tug_follow = _follow
+	_follow = null
+	# Facing your end, on its left - backing off to the right first if it needs the room, and
+	# to the front, where no bed or tree hides it.
+	c.facing = -1.0
+	var reach := c.mouth_reach()
+	var up := c.position.y - c.mouth_global().y
+	_tug_from = c.position
+	_tug_to = Vector2(c.position.x, maxf(c.position.y, GROUND.end.y - 20.0))
+	var m := _hud_of(_tug_to + Vector2(-reach, -up))
+	if m.x < TUG_MOUTH_MIN:
+		_tug_to.x = minf(_world_of_hud(Vector2(TUG_MOUTH_MIN + 24.0, m.y)).x + reach, GROUND.end.x)
+		m = _hud_of(_tug_to + Vector2(-reach, -up))
+	# A beat to get a grip ("Ready..."), two if it has a way to back off.
+	_tug_lead = TugGame.BEAT * (2.0 if _tug_from.distance_to(_tug_to) > 220.0 else 1.0)
+	_tug_t = -_tug_lead
+	_tug_half = -999
+	_tug_h = 0.0
+	_tug_prev_h = 0.0
+	_tug_vel = 0.0
+	_tug_heave = 0.0
+	_tug_travel = 0.0
+	_tug_near_sum = 0.0
+	_tug_near_time = 0.0
+	_tug_heaves = 0
+	_tug_dry = 0
+	_tug_idle = 0.0
+	_tug_down = true
+	_tug_down_x = _screen_of(at).x
+	_tug_down_h = 0.0
+	_build_tug_hud(m)
+	# The first few times, the hand rides the guide ring: pull left with it, let go, again.
+	_tug_teach = HowTo.first_times(game.profile, "howto_home_tug", HOW_TIMES)
+	_tug_guide_point()
+	if _tug_teach:
+		_how_key = "tug"
+		var y := _tug_bar.y
+		_how_spec = {"gesture": "follow", "follow": _tug_guide_point, "until_touch": true,
+			"caption": "Pull left, let go, again!",
+			"caption_y": y - 170.0 if y - 170.0 >= 96.0 else y + 100.0}
+		_show_how()
+	else:
+		_show_hint("Tug of war! Pull left with the ring, let go, again!")
+
+
+## The rope's handle, the PULL!/let go word over it and the hearts to fill under it - beside the
+## pet's mouth (`m`, on the screen), so the rope runs from its mouth to your knot.
+func _build_tug_hud(m: Vector2) -> void:
+	_drop_tug_hud([_tug_bar, _tug_word, _tug_hearts])
+	var y := clampf(m.y, 240.0, 470.0)
+	_tug_bar = TugGame.PullBar.new()
+	_tug_bar.y = y
+	_tug_bar.loose_x = m.x - TUG_GAP
+	_tug_bar.pulled_x = m.x - TUG_GAP - TUG_STROKE
+	_hud_root.add_child(UI.full_rect(_tug_bar))
+	var mid := m.x - TUG_GAP - TUG_STROKE / 2.0
+	_tug_word = UI.title("Ready...", 40)
+	_tug_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tug_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tug_word.position = Vector2(mid - 200.0, y - 100.0)
+	_tug_word.size = Vector2(400, 54)
+	_hud_root.add_child(_tug_word)
+	_tug_hearts = UI.hearts(0, 40)
+	_tug_hearts.position = Vector2(mid - 100.0, y + 46.0)
+	_hud_root.add_child(_tug_hearts)
+
+
+## Frees what is left of a tug's HUD (some of it may be gone already).
+func _drop_tug_hud(nodes: Array) -> void:
+	for n in nodes:
+		if is_instance_valid(n):
+			n.queue_free()
+
+
+## Where the guide ring is on the screen, for the hand to ride (where it last was, as the hand
+## fades after the rope is let go).
+func _tug_guide_point() -> Vector2:
+	if _tug_bar != null and is_instance_valid(_tug_bar):
+		_tug_guide = Vector2(_tug_bar.x_of(TugGame.guide_at(_tug_t)), _tug_bar.y)
+	return _tug_guide
+
+
+## A finger comes down anywhere while tugging: it takes hold of the knot where it is.
+func _tug_press(x: float) -> void:
+	_tug_down = true
+	_tug_down_x = x
+	_tug_down_h = _tug_h
+	_tug_idle = 0.0
+
+
+## The finger slides: left pulls the knot, right lets it out - one to one.
+func _tug_drag(x: float) -> void:
+	if not _tug_down:
+		return
+	_tug_h = clampf(_tug_down_h + (_tug_down_x - x) / TUG_STROKE, 0.0, 1.0)
+	# Pinned at an end: the next move the other way answers at once.
+	if _tug_h <= 0.0 or _tug_h >= 1.0:
+		_tug_down_x = x
+		_tug_down_h = _tug_h
+	_tug_idle = 0.0
 
 
 func _update_tug(delta: float) -> void:
-	if _tug == null or toy == null or not is_instance_valid(toy):
-		return
-	var c := _tug
-	_tug_time += delta
-	toy.global_position = c.mouth_global() + Vector2(0, toy.radius * 0.3)
-	toy.z = 0.0
-	var span := _finger - c.mouth_global()
-	var slack := c.height_px * 0.35
-	var tension := maxf(0.0, span.length() - slack)
-	# It pulls back with its strength; a strong pet barely gets dragged.
-	var give := tension * 2.2 / (1.0 + Stats.value(c.pet, "strength") / 25.0)
-	c.position += span.normalized() * give * delta
-	c.position = c.position.clamp(GROUND.position, GROUND.end)
-	if absf(span.x) > 4.0:
-		c.facing = -signf(span.x)
-	_train(c, "strength", 0.6 * delta * clampf(tension / 80.0, 0.0, 1.5) * _shiny())
-	_tug_creak_in -= delta
-	if tension > 40.0 and _tug_creak_in <= 0.0:
-		_tug_creak_in = randf_range(0.45, 0.7)
-		Sounds.play_varied("tug", 1.0, 0.1, linear_to_db(clampf(tension / 160.0, 0.3, 1.0)))
-		if randf() < 0.3:
-			Voice.speak(c.pet, "tug", c)
-	if span.length() > 520.0:
-		_end_tug(true)
-
-
-## Ends tug of war. When the kid lets go, the pet wins - it always does.
-func _end_tug(pet_wins: bool) -> void:
 	if _tug == null:
 		return
+	if toy == null or not is_instance_valid(toy) or not is_instance_valid(_tug):
+		_end_tug()
+		return
+	var c := _tug
+	_tug_t += delta
+	var live := _tug_t >= 0.0
+	# The knot: under the finger, or paying out on its own.
+	if not _tug_down:
+		_tug_h = move_toward(_tug_h, 0.0, delta * 2.5)
+		_tug_idle += delta
+	var dh := _tug_h - _tug_prev_h
+	_tug_prev_h = _tug_h
+	_tug_vel = lerpf(_tug_vel, dh / maxf(delta, 0.001), minf(1.0, delta * 12.0))
+	# A new half-beat: the drum on a pull, and the pull just finished graded.
+	var half := int(floor(_tug_t / (TugGame.BEAT * 0.5)))
+	if half != _tug_half:
+		_tug_half = half
+		_tug_new_half()
+		if _tug == null:
+			return  # that was the winning heave
+	var near := TugGame.nearness(_tug_h, _tug_t)
+	var pulling := TugGame.is_pull(_tug_t)
+	var want := 0.0
+	if pulling and live:
+		if dh > 0.0:
+			_tug_travel += dh
+		_tug_near_sum += near * delta
+		_tug_near_time += delta
+		# Going left with the ring, at its pace (wiggling back and forth counts no more).
+		var v := maxf(0.0, _tug_vel) if _tug_travel <= 1.05 else 0.0
+		want = near * clampf(v / (0.7 / (0.5 * TugGame.BEAT)), 0.0, 1.0)
+	_tug_heave = move_toward(_tug_heave, want, delta * 6.0)
+	# The pet: backs off to get a grip, then leans back and growls harder the better you pull -
+	# and a good heave draws it your way a little.
+	var grip := 1.0 if _tug_lead <= 0.0 else clampf(1.0 + _tug_t / _tug_lead, 0.0, 1.0)
+	grip = grip * grip * (3.0 - 2.0 * grip)
+	c.position = _tug_from.lerp(_tug_to, grip) - Vector2(34.0 * _tug_heave, 0.0)
+	c.facing = -1.0
+	c.effort = clampf(0.2 + 0.8 * _tug_heave, 0.0, 1.0)
+	toy.global_position = c.mouth_global() + Vector2(0, toy.radius * 0.3)
+	toy.z = 0.0
+	toy.stretch_to = _world_of_hud(Vector2(_tug_bar.x_of(_tug_h), _tug_bar.y))
+	_tug_bar.t = _tug_t
+	_tug_bar.h = _tug_h
+	_tug_bar.near = near if live else 0.0
+	if not live:
+		_tug_word.text = "Ready..."
+		_tug_word.add_theme_color_override("font_color", UI.INK)
+		_tug_word.add_theme_font_size_override("font_size", 36)
+	else:
+		_tug_word.text = "PULL!" if pulling else "let go..."
+		var col := TugGame.PULL_GREEN if pulling else TugGame.LET_GO
+		_tug_word.add_theme_color_override("font_color", col)
+		_tug_word.add_theme_font_size_override("font_size", 46 if pulling else 32)
+	# Resting, or not quite getting it: the hand comes back to show it again.
+	var resting := _tug_idle > 2.0 * TugGame.BEAT or _tug_dry >= 3
+	if _tug_teach and _how_key == "tug" and _how == null and resting:
+		_tug_dry = 0
+		_show_how()
+	if _tug_idle > TUG_REST:
+		_show_hint("%s dropped the rope - tug again any time!" % c.pet["name"])
+		_end_tug()
+
+
+func _tug_new_half() -> void:
+	if not TugGame.is_pull(_tug_t):
+		# A pull just ended: how was it? (Not while it is still getting a grip.)
+		if _tug_t > 0.0:
+			var grade := minf(_tug_travel, 1.0) * (_tug_near_sum / maxf(_tug_near_time, 0.001))
+			if grade >= TUG_GOOD:
+				_tug_heaved()
+			else:
+				_tug_dry += 1
+				if grade >= 0.25:
+					Sounds.play_varied("tug", 1.0, 0.1)
+					_train(_tug, "strength", 0.15 * _shiny())
+		_tug_travel = 0.0
+		_tug_near_sum = 0.0
+		_tug_near_time = 0.0
+		return
+	# A pull starts: the drum - or, getting a grip, a tick.
+	Sounds.play("drum_beat" if _tug_t >= -0.05 else "count_tick")
+
+
+## A pull in time: HEAVE! The knot flashes, the pet growls and leans back, a heart fills.
+func _tug_heaved() -> void:
+	var c := _tug
+	_tug_heaves += 1
+	_tug_dry = 0
+	_tug_bar.flash = 1.0
+	Sounds.play("heave")
+	Voice.speak(c.pet, "tug", c)
+	_on_emote("heart", c.top_global())
+	_train(c, "strength", 0.5 * _shiny())
+	_fill_tug_heart(_tug_heaves - 1)
+	# They have got it: the hand can go.
+	if _how_key == "tug":
+		_drop_how()
+	if _tug_heaves >= TUG_GOAL:
+		_tug_won()
+
+
+func _fill_tug_heart(i: int) -> void:
+	if _tug_hearts == null or i < 0 or i >= _tug_hearts.get_child_count():
+		return
+	var r := _tug_hearts.get_child(i) as TextureRect
+	r.texture = Items.art_texture("icon_heart")
+	r.pivot_offset = r.size / 2.0
+	r.scale = Vector2(1.7, 1.7)
+	var pop := create_tween().tween_property(r, "scale", Vector2.ONE, 0.3)
+	pop.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Every heart filled: it lets go of its end, happily, and the rope flies to your side - you win,
+## and it is so pleased it played.
+func _tug_won() -> void:
+	var knot := _world_of_hud(Vector2(_tug_bar.x_of(_tug_h), _tug_bar.y))
+	var c := _tug_stop()
+	if toy != null and is_instance_valid(toy):
+		toy.drop_at(Vector2(knot.x, c.position.y + 4.0), maxf(0.0, c.position.y - knot.y))
+		toy.vz = 260.0
+	c.perform("celebrate", 1.8)
+	c.say("heart")
+	for i in 3:
+		_on_emote("heart", c.top_global() + Vector2(randf_range(-40, 40), randf_range(-20, 10)))
+	Sounds.play("cheer")
+	_love(c, 1)
+	PetStore.change_need(c.pet, "fun", 0.12)
+	PetStore.change_need(c.pet, "energy", -0.03)
+	if toy != null and is_instance_valid(toy):
+		_train_words(c, 1.0 * _shiny())
+	Journal.add_once(c.pet, "first_tug", "Played tug of war!")
+	game.reward_daily("tug", 5, 1, "You won tug of war with %s!" % c.pet["name"])
+	_tug_word.text = "You win!"
+	_tug_word.add_theme_color_override("font_color", TugGame.PULL_GREEN)
+	_tug_word.add_theme_font_size_override("font_size", 50)
+	_tug_bar.flash = 1.0
+	# The win stays up a moment, then the rope's handle goes.
+	get_tree().create_timer(1.8).timeout.connect(_drop_tug_hud.bind([_tug_bar, _tug_word, _tug_hearts]))
+	_tug_bar = null
+	_tug_word = null
+	_tug_hearts = null
+
+
+## Tug of war stops with no winner - another toy came out, or the kid went off to do something
+## else. The pet just drops its end.
+func _end_tug() -> void:
+	if _tug == null:
+		return
+	var c := _tug_stop()
+	if toy != null and is_instance_valid(toy) and is_instance_valid(c):
+		toy.drop_at(c.position + Vector2(c.facing * c.mouth_reach(), 6.0), 10.0)
+	_drop_tug_hud([_tug_bar, _tug_word, _tug_hearts])
+	_tug_bar = null
+	_tug_word = null
+	_tug_hearts = null
+
+
+## Lets go of the other end: the pet stops pulling, the finger lets go, the camera follows again.
+## Returns the pet that was tugging.
+func _tug_stop() -> Creature:
 	var c := _tug
 	_tug = null
+	_tug_down = false
+	if is_instance_valid(c):
+		c.effort = 0.0
+		c.interrupt()
 	if toy != null and is_instance_valid(toy):
 		toy.end_stretch()
-		toy.drop_at(c.position + Vector2(c.facing * c.mouth_reach(), 6.0), 10.0)
-	c.interrupt()
-	if pet_wins and _tug_time > 0.6:
-		c.perform("celebrate", 1.4)
-		c.say("star")
-		_love(c, 1)
-		PetStore.change_need(c.pet, "fun", 0.1)
-		game.reward_daily("tug", 5, 1, "%s won tug of war!" % c.pet["name"])
-		Journal.add_once(c.pet, "first_tug", "Won a tug of war!")
+		toy.held = false
+		if _held == toy:
+			_held = null
+			_held_kind = ""
+	_follow = _tug_follow
+	_tug_follow = null
+	if _how_key == "tug":
+		_how_key = ""
+		_drop_how()
+	return c
 
 
 # --- Feeding ---------------------------------------------------------------------------------
 
 func _update_food(delta: float) -> void:
-	if food == null or not is_instance_valid(food):
-		return
 	if _eater != null:
-		if food.has_meta("in_bowl") and _eater.action() == "eat_bowl":
-			food.sprite.scale *= 1.0 - delta * 0.35
+		# Busy with its snack - another the kid holds out waits for whoever is next.
+		if _eating == null or not is_instance_valid(_eating):
+			return
+		if _eating.has_meta("in_bowl") and _eater.action() == "eat_bowl":
+			_eating.sprite.scale *= 1.0 - delta * 0.35
 			if randf() < delta * 2.5:
 				_on_emote("crumb", _bowl.position + Vector2(randf_range(-20, 20), -40))
 			_munch_in -= delta
 			if _munch_in <= 0.0:
 				_munch_in = randf_range(0.3, 0.42)
 				Sounds.play_varied("munch", _eater._size_pitch(), 0.1)
-		elif food.carrier == _eater:
-			food.hold_in_mouth(_eater)
-			food.sprite.scale *= 1.0 - delta * 0.3
+		elif _eating.carrier == _eater:
+			_eating.hold_in_mouth(_eater)
+			_eating.sprite.scale *= 1.0 - delta * 0.3
 			if randf() < delta * 2.5:
 				_on_emote("crumb", _eater.mouth_global())
 			_munch_in -= delta
 			if _munch_in <= 0.0:
 				_munch_in = randf_range(0.3, 0.42)
 				Sounds.play_varied("munch", _eater._size_pitch(), 0.1)
+		return
+	if food == null or not is_instance_valid(food):
 		return
 	if not food.landed() or toy_state in ["chase", "return"]:
 		return
@@ -1596,6 +2045,7 @@ func _update_food(delta: float) -> void:
 				_show_hint("Everyone's full! Maybe later.")
 		return
 	_eater = hungriest
+	_eating = food
 	hungriest.interrupt()
 	hungriest.rest_z = 0.0
 	var side := signf(food.position.x - hungriest.position.x)
@@ -1605,31 +2055,35 @@ func _update_food(delta: float) -> void:
 
 
 func _arrive_at_food() -> void:
-	if food == null or not is_instance_valid(food) or _eater == null:
+	if _eating == null or not is_instance_valid(_eating) or _eater == null or _eating.held:
 		_eater = null
+		_eating = null
 		return
-	_eater.face_toward(food.position.x)
-	if food.has_meta("in_bowl"):
+	_eater.face_toward(_eating.position.x)
+	if _eating.has_meta("in_bowl"):
 		# Eaten from the bowl, nose down.
 		_munch_in = 0.0
 		_eater.perform("eat_bowl", 2.6, _ate)
 		return
 	# It picks the food up to munch it - no drawn neck is long enough to reach the ground.
-	food.pick_up(_eater)
+	_eating.pick_up(_eater)
 	_munch_in = 0.0
 	_eater.perform("eat", 2.4, _ate)
 
 
 func _ate() -> void:
 	var c := _eater
+	var snack := _eating
 	_eater = null
+	_eating = null
 	if c == null:
 		return
 	Care.fed(c.pet)
-	var item: Dictionary = food.item if food != null and is_instance_valid(food) else {}
-	if food != null and is_instance_valid(food):
-		food.queue_free()
-	food = null
+	var item: Dictionary = snack.item if snack != null and is_instance_valid(snack) else {}
+	if snack != null and is_instance_valid(snack):
+		snack.queue_free()
+	if food == snack:
+		food = null
 	PetStore.change_need(c.pet, "food", 0.4)
 	_love(c, 2)
 	var favourite := Items.get_item(c.pet.get("food", {}).get("item", ""))
@@ -2117,7 +2571,9 @@ func snap() -> void:
 		return
 	var layer := _hud_root.get_parent() as CanvasLayer
 	layer.visible = false
-	await RenderingServer.frame_post_draw
+	await _frame_drawn()
+	if not is_inside_tree():
+		return
 	var img := get_viewport().get_texture().get_image()
 	layer.visible = true
 	Sounds.play("camera")
@@ -2135,6 +2591,23 @@ func snap() -> void:
 	_editor.pets = pets
 	_editor.on_done = _photo_done
 	_hud_root.add_child(UI.full_rect(_editor))
+
+
+## Waits for the next frame to be drawn - with the buttons hidden, for the photo. A window that is
+## hidden (or a phone with its screen off) may never draw one, so after two seconds of frames it
+## draws one itself, as GameRoot.capture does, rather than leave the camera stuck.
+func _frame_drawn() -> void:
+	var drawn := [false]
+	var mark := func(): drawn[0] = true
+	RenderingServer.frame_post_draw.connect(mark, CONNECT_ONE_SHOT)
+	var waited := 0
+	while not drawn[0] and waited < 120 and is_inside_tree():
+		await get_tree().process_frame
+		waited += 1
+	if not drawn[0]:
+		if RenderingServer.frame_post_draw.is_connected(mark):
+			RenderingServer.frame_post_draw.disconnect(mark)
+		RenderingServer.force_draw()
 
 
 func _photo_done(id: String) -> void:
@@ -2262,6 +2735,7 @@ func _scrub(at: Vector2) -> void:
 		return
 	_on_emote("bubble", at + Vector2(randf_range(-22, 22), randf_range(-16, 6)))
 	if Mud.scrub_near(c, at, maxf(80.0, c.height_px * 0.3)):
+		_taught("sponge")
 		c.refresh_mud()
 		_on_emote("bubble", at)
 		Sounds.play_varied("bubble", 1.3, 0.2, -2.0)
@@ -2447,6 +2921,284 @@ func _asleep_hint() -> bool:
 	return false
 
 
+# --- Showing how -----------------------------------------------------------------------------
+# The first few times a kid comes to each thing here - rubbing a pet, the food, the toys, a toy
+# held out, a squeaky toy, decorating, dressing up, the sponge, tug of war - a drawn hand (HowTo)
+# does the move where it happens, with a few words. It goes at their first touch; if they rest
+# with the move still to do, it comes back after HOW_IDLE seconds; once they have done it
+# (`_taught`), it stays away. One at a time: a new one takes over, and the hint line hides while
+# it is up. The hand only ever shows a move that works: a tap on a snack does fill the bowl.
+
+## Visits to each thing that get the hand, per kid.
+const HOW_TIMES := 3
+const HOW_IDLE := 6.0
+## Below two reward toasts (GameRoot stacks them from y 96), so they never cover it.
+const HOW_CAPTION_Y := 232.0
+
+
+## Shows the hand for `key` (see `_show_how` for `spec`), the first HOW_TIMES times for this kid -
+## `after` seconds from now, if the kid has not touched anything by then. True if it will show.
+func _teach(key: String, spec: Dictionary, after := 0.0) -> bool:
+	if not HowTo.first_times(game.profile, "howto_home_" + key, HOW_TIMES):
+		return false
+	_how_key = key
+	_how_spec = spec
+	if after > 0.0:
+		_drop_how()
+		_how_idle = HOW_IDLE - after
+	else:
+		_show_how()
+	return true
+
+
+## The hand, from `_how_spec`: gesture, at, to, follow, period, caption, caption_y, on_press and
+## until_touch, as HowTo has them. Points are in the HUD's space; Callables let it ride a thing.
+func _show_how() -> void:
+	_drop_how()
+	var h := HowTo.new()
+	h.gesture = _how_spec.get("gesture", "tap")
+	h.caption = _how_spec.get("caption", "")
+	h.at = _how_spec.get("at", Vector2(640, 420))
+	h.to = _how_spec.get("to", Vector2(840, 420))
+	h.follow = _how_spec.get("follow", Callable())
+	h.period = _how_spec.get("period", 1.3)
+	h.on_press = _how_spec.get("on_press", Callable())
+	h.until_touch = _how_spec.get("until_touch", true)
+	h.caption_y = _how_spec.get("caption_y", HOW_CAPTION_Y)
+	_how = h
+	_how_idle = 0.0
+	_hint_time = 0.0  # its words say it now; an old hint line coming back after would be stale
+	_hud_root.add_child(h)
+
+
+func _drop_how() -> void:
+	if _how != null and is_instance_valid(_how):
+		_how.dismiss()
+	_how = null
+
+
+## The kid has done it: no more hand for it now.
+func _taught(key: String) -> void:
+	if _how_key == key:
+		_how_key = ""
+		_drop_how()
+
+
+## Any finger down: the rest is over, and a hand that goes at a touch has gone.
+func _touched() -> void:
+	_how_idle = 0.0
+	if _how != null and is_instance_valid(_how) and _how.until_touch:
+		_how = null
+
+
+## Is the move the hand teaches still the thing to do? (Its drawer shut, the toy taken... no.)
+func _how_wanted(key: String) -> bool:
+	if _editor != null or _ask != null or _held != null:
+		return false
+	match key:
+		"rub":
+			var c = _how_spec.get("pet")
+			return tab == "" and _tug == null and toy_state == "" and _petting == null \
+				and is_instance_valid(c) and (c as Creature).action() != "sleep"
+		"food":
+			return tab == "food"
+		"toys":
+			return tab == "toy" and _tug == null and toy_state == ""
+		"offer":
+			return toy_state == "offer"
+		"squeak":
+			return toy_state == "" and toy != null and is_instance_valid(toy) and toy.has_word("squeaky") \
+				and not toy.held and toy.carrier == null
+		"decorate":
+			return tab == "furniture" and _selected == null
+		"wardrobe":
+			return tab == "clothing"
+		"sponge":
+			return tab == "bath" and _muddiest() != null
+	return false
+
+
+## Every frame: a hand whose move is no longer wanted goes, and one the kid rested on comes back.
+## (Tug of war brings its own back, by the beat.)
+func _update_how(delta: float) -> void:
+	if _how != null and not is_instance_valid(_how):
+		_how = null
+	if _how_key == "" or _how_key == "tug":
+		return
+	if not _how_wanted(_how_key):
+		_drop_how()
+		_how_idle = 0.0
+		return
+	if _how != null:
+		return
+	_how_idle += delta
+	if _how_idle >= HOW_IDLE:
+		_show_how()
+
+
+## Rub your pet: the hand strokes back and forth across its body.
+func _rub_spec(c: Creature) -> Dictionary:
+	return {"gesture": "drag", "at": _pet_point.bind(c, -44.0), "to": _pet_point.bind(c, 44.0),
+		"period": 0.9, "caption": "Rub your pet!", "pet": c}
+
+
+## On arrival: the hand rubs the pet you came to see - stood at the front first, before anything
+## is drawn, so no bed or tree hides it and the hand is plainly on the pet, not the furniture. It
+## comes once the welcome (its hello, the reward toasts) is over, unless the kid is in first.
+func _teach_rub(c: Creature) -> void:
+	if c != null and c.action() != "sleep" and _teach("rub", _rub_spec(c), 3.2):
+		c.position = Vector2(clampf(c.position.x, 360.0, 920.0), GROUND.end.y - 24.0)
+
+
+## Little ones pat: after three pats with no rub, the hand shows them how to rub - the card the
+## pats opened goes, so the pet is in plain view.
+func _show_rub(c: Creature) -> void:
+	if not HowTo.first_times(game.profile, "howto_home_pats", HOW_TIMES):
+		return
+	_panel.visible = false
+	_how_key = "rub"
+	_how_spec = _rub_spec(c)
+	_show_how()
+
+
+## A drawer just opened: the hand does what its things are for - drags a snack to the bowl (a
+## tap puts it there too), flicks a ball (or drags a toy onto the grass), drags furniture into
+## the room (or a tap), clothes onto the pet (or a tap), the sponge onto the mud.
+func _teach_drawer() -> void:
+	var id := _first_item()
+	if id == "":
+		return
+	match tab:
+		"food":
+			_teach("food", {"gesture": "swipe", "at": _button_point.bind(id, Vector2.ZERO), "to": _bowl_point,
+				"period": 1.8, "caption": "Drag a snack to the bowl!"})
+		"toy":
+			var fetch := Words.toy_play(Items.get_item(id).get("words", [])) == "fetch"
+			_teach("toys", {"gesture": "swipe", "at": _button_point.bind(id, Vector2.ZERO),
+				"to": _button_point.bind(id, Vector2(-60, -280) if fetch else Vector2(0, -210)),
+				"period": 0.9 if fetch else 1.8,
+				"caption": "Flick it to throw!" if fetch else "Drag it onto the grass!"})
+		"furniture":
+			if _selected == null:
+				_teach("decorate", {"gesture": "swipe", "at": _button_point.bind(id, Vector2.ZERO),
+					"to": _hud_of(_free_floor_spot()), "period": 1.8, "caption": "Drag it into the room!"})
+		"clothing":
+			var c := _panel_pet if _panel.visible and _panel_pet != null else _focus_creature()
+			if c != null:
+				_teach("wardrobe", {"gesture": "swipe", "at": _button_point.bind(id, Vector2.ZERO),
+					"to": _pet_point.bind(c, 0.0), "period": 1.8, "caption": "Drag it onto your pet!"})
+		"bath":
+			var c := _muddiest()
+			var sponge := ""
+			for i in _item_buttons:
+				if Items.get_item(i).get("words", []).has("soapy"):
+					sponge = i
+					break
+			if c != null and sponge != "":
+				_teach("sponge", {"gesture": "swipe", "at": _button_point.bind(sponge, Vector2.ZERO),
+					"to": _mud_point.bind(c), "period": 1.8, "caption": "Drag the sponge onto the mud!"})
+
+
+## The first thing in the open drawer, or "".
+func _first_item() -> String:
+	for id in _item_buttons:
+		return id
+	return ""
+
+
+## The first muddy pet, or null.
+func _muddiest() -> Creature:
+	for c in creatures:
+		if Mud.count(c.pet) > 0:
+			return c
+	return null
+
+
+# Where things are, in the HUD's space (where the hand and the tug handle are drawn) - Callables
+# that keep up with a thing as it moves.
+
+## A point in the world, on the screen.
+func _screen_of(world_at: Vector2) -> Vector2:
+	return get_canvas_transform() * world_at
+
+
+## A point in the world, in the HUD's space.
+func _hud_of(world_at: Vector2) -> Vector2:
+	return _hud_root.get_global_transform_with_canvas().affine_inverse() * (get_canvas_transform() * world_at)
+
+
+## A point in the HUD's space, in the world.
+func _world_of_hud(p: Vector2) -> Vector2:
+	return get_canvas_transform().affine_inverse() * (_hud_root.get_global_transform_with_canvas() * p)
+
+
+## The middle of a drawer button (and `off` from it).
+func _button_point(id: String, off: Vector2) -> Vector2:
+	var b = _item_buttons.get(id)
+	if not is_instance_valid(b):
+		return Vector2(640, 660) + off
+	var r := (b as Control).get_global_rect()
+	return r.get_center() - _hud_root.get_global_rect().position + off
+
+
+## A pet's body (and `dx` across it).
+func _pet_point(c: Creature, dx: float) -> Vector2:
+	if not is_instance_valid(c):
+		return Vector2(640, 400)
+	return _hud_of(c.global_position.lerp(c.top_global(), 0.42)) + Vector2(dx, 0)
+
+
+func _bowl_point() -> Vector2:
+	return _hud_of(_bowl.position + Vector2(0, -16))
+
+
+func _toy_point() -> Vector2:
+	if toy == null or not is_instance_valid(toy):
+		return Vector2(640, 500)
+	return _hud_of(toy.sprite.global_position)
+
+
+## A spot of mud on a pet, else its body.
+func _mud_point(c: Creature) -> Vector2:
+	if not is_instance_valid(c):
+		return Vector2(640, 400)
+	var spots: Array = c.pet.get("mud", [])
+	if not spots.is_empty():
+		var at := Mud.where_is(c, spots[0])
+		if at.x != INF:
+			return _hud_of(at)
+	return _pet_point(c, 0.0)
+
+
+## The hand taps the squeaky toy: it squeaks and hops, and everyone looks - what a tap does.
+func _squeak_shown() -> void:
+	if toy == null or not is_instance_valid(toy) or toy.held or toy.carrier != null:
+		return
+	_squeak_toy()
+	toy.hop(90.0)
+	_look_at_toy()
+
+
+## An open bit of floor for a piece of furniture tapped in from the drawer: along the middle of
+## the ground, as far as it can be from what is already there.
+func _free_floor_spot(skip: Node2D = null) -> Vector2:
+	var best := Vector2(640, GROUND.position.y + 90.0)
+	var best_d := -1.0
+	for i in 9:
+		var p := Vector2(lerpf(GROUND.position.x + 110.0, GROUND.end.x - 110.0, i / 8.0),
+			GROUND.position.y + 70.0 + (i % 3) * 30.0)
+		var d := p.distance_to(_bowl.position)
+		for f in furniture:
+			if f != skip:
+				d = minf(d, f.position.distance_to(p))
+		for c in creatures:
+			d = minf(d, c.position.distance_to(p) * 1.5)
+		if d > best_d:
+			best_d = d
+			best = p
+	return best
+
+
 # --- Training, trust and rewards -------------------------------------------------------------
 
 func _train(c: Creature, stat: String, amount: float) -> void:
@@ -2509,6 +3261,8 @@ func _process(delta: float) -> void:
 		for c in creatures:
 			if c.is_busy() or c == _toy_pet or c == _eater or c == _tug or c == _tug_caller or _chasers.has(c):
 				continue
+			if _how_key == "rub" and _how_spec.get("pet") == c:
+				continue  # waiting to be rubbed, out in front, not off behind the furniture
 			if night and _now() > float(_up_till.get(c, 0.0)):
 				if randf() < 0.3:
 					_go_to_bed(c)
@@ -2522,9 +3276,10 @@ func _process(delta: float) -> void:
 				_play_with_furniture(c)
 	if _follow != null:
 		_cam.position = _follow.position + Vector2(0, -_follow.height_px * 0.5 + CAM_DROP)
+	_update_how(delta)
+	# One sentence at a time: while the hand is showing how, its words stand in for the hint.
 	_hint_time -= delta
-	if _hint_time < 1.0:
-		_hint.modulate.a = maxf(0.0, _hint_time)
+	_hint.modulate.a = 0.0 if _how != null else clampf(_hint_time, 0.0, 1.0)
 	_save_in -= delta
 	if _save_in <= 0.0:
 		_save_in = 10.0
