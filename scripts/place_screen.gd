@@ -153,6 +153,9 @@ var _tug_hearts: HBoxContainer
 ## Showing how (HowTo): the hand up now, what it teaches ("rub", "food", "toys", "tug"...), how
 ## to show it again, and how long the kid has rested since.
 var _how: HowTo
+## The camera's first pose and its Snap! button, for Photo Day's hand.
+var _cam_pose: Control
+var _cam_snap: Control
 var _how_key := ""
 var _how_spec := {}
 var _how_idle := 0.0
@@ -2461,8 +2464,10 @@ func _start_fun_day() -> void:
 	match fun_day:
 		"party":
 			var friends := FunDays.friends(2)
+			# Near the middle, in plain view - not off by the trees at the edge.
 			for i in friends.size():
-				var c := _add_guest(friends[i], Vector2(GROUND.end.x - 120.0 - i * 160.0, GROUND.position.y + 60.0 + i * 50.0))
+				var x := lerpf(GROUND.position.x, GROUND.end.x, 0.62) + i * 170.0
+				var c := _add_guest(friends[i], Vector2(x, GROUND.position.y + 60.0 + i * 50.0))
 				c.perform("greet", 2.0)
 			var confetti := PlacePainter.Drift.new()
 			confetti.kind = "sprinkles"
@@ -2471,9 +2476,13 @@ func _start_fun_day() -> void:
 			for c in creatures:
 				c.perform("celebrate", 1.6)
 			FunDays.join(game, "party")
+			_teach("party", {"gesture": "tap", "at": _pet_point.bind(guests[guests.size() - 1], 0.0),
+				"caption": "Tap a friend to say hi!"}, 2.5)
 		"photo":
 			open_tab("camera")
 			_show_hint("It's Photo Day! Pick a pose, then Snap! your pets.")
+			_teach("photo", {"gesture": "taps", "targets": [_control_point.bind(_cam_pose),
+				_control_point.bind(_cam_snap)], "caption": "Pick a pose, then Snap!"}, 1.5)
 
 
 func _add_guest(pet: Dictionary, at: Vector2) -> Creature:
@@ -2493,7 +2502,7 @@ func _add_guest(pet: Dictionary, at: Vector2) -> Creature:
 ## A friend family's pet drops in (Visitors): the first time a home is opened each day, and now
 ## and then after that. Not at night (it would be asleep at home), and not in the middle of a party.
 func _maybe_visitor() -> void:
-	if fun_day == "party" or Clock.is_night() or Visitors.families(game.profile).is_empty():
+	if fun_day != "" or Clock.is_night() or Visitors.families(game.profile).is_empty():
 		return
 	if not game.profile.count_today("visitor_" + home["id"], 1) and randf() > 0.3:
 		return
@@ -2510,6 +2519,7 @@ func _maybe_visitor() -> void:
 func _tap_guest(at: Vector2) -> bool:
 	for g in guests:
 		if g.hit(at):
+			_taught("party")
 			if g.action() == "":
 				g.perform("look", 0.9)
 				g.leap(g.height_px * 0.12, 0.3)
@@ -2538,8 +2548,12 @@ func _fill_camera() -> void:
 	var snap_btn := UI.icon_button("icon_camera", "Snap!", snap, 52, Vector2(110, 96))
 	snap_btn.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 3))
 	_drawer.add_child(snap_btn)
+	_cam_snap = snap_btn
 	for p in POSES:
-		_drawer.add_child(UI.icon_button(p[0], p[1], pose.bind(p[2]), 48, Vector2(92, 96)))
+		var b := UI.icon_button(p[0], p[1], pose.bind(p[2]), 48, Vector2(92, 96))
+		if p[2] == "happy":
+			_cam_pose = b
+		_drawer.add_child(b)
 	_drawer.add_child(UI.icon_button("icon_album", "Album", _open_album, 48, Vector2(92, 96)))
 	if not _hinted.has("camera"):
 		_hinted["camera"] = true
@@ -2567,6 +2581,7 @@ func pose(kind: String) -> void:
 
 ## Snap! The place and the pets just as they are - not the buttons - for the photo editor.
 func snap() -> void:
+	_taught("photo")
 	if _editor != null:
 		return
 	var layer := _hud_root.get_parent() as CanvasLayer
@@ -2961,6 +2976,7 @@ func _show_how() -> void:
 	h.at = _how_spec.get("at", Vector2(640, 420))
 	h.to = _how_spec.get("to", Vector2(840, 420))
 	h.follow = _how_spec.get("follow", Callable())
+	h.targets = _how_spec.get("targets", [])
 	h.period = _how_spec.get("period", 1.3)
 	h.on_press = _how_spec.get("on_press", Callable())
 	h.until_touch = _how_spec.get("until_touch", true)
@@ -3015,6 +3031,10 @@ func _how_wanted(key: String) -> bool:
 			return tab == "clothing"
 		"sponge":
 			return tab == "bath" and _muddiest() != null
+		"party":
+			return fun_day == "party" and tab == "" and not guests.is_empty()
+		"photo":
+			return tab == "camera"
 	return false
 
 
@@ -3139,6 +3159,13 @@ func _button_point(id: String, off: Vector2) -> Vector2:
 		return Vector2(640, 660) + off
 	var r := (b as Control).get_global_rect()
 	return r.get_center() - _hud_root.get_global_rect().position + off
+
+
+## The middle of a button (the camera's), in the HUD's space.
+func _control_point(b: Control) -> Vector2:
+	if not is_instance_valid(b):
+		return Vector2(640, 660)
+	return b.get_global_rect().get_center() - _hud_root.get_global_rect().position
 
 
 ## A pet's body (and `dx` across it).

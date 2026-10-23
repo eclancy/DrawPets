@@ -52,6 +52,9 @@ var hand_height := 150.0
 
 ## Leans a little, the way a real finger comes at a screen.
 const LEAN := -0.32
+## Nearer the bottom of the screen than this, the hand reaches down from above instead, or it
+## would be off the screen with only its fingertip showing (buttons along the bottom).
+const FROM_ABOVE := 190.0
 
 var _t := 0.0
 var _finger := Vector2.ZERO
@@ -123,8 +126,8 @@ func _step(delta: float) -> void:
 	if phase.is_valid():
 		# The game's cycle, shifted so the press (u near 0.5) lands on its moment.
 		u = fposmod(float(phase.call()), 1.0)
-	var lift := Vector2(26, 46)
 	var spot := _point(at)
+	var lift := Vector2(26, -46) if _down_from_above(spot) else Vector2(26, 46)
 	match gesture:
 		"tap", "taps":
 			if gesture == "taps" and not targets.is_empty():
@@ -169,6 +172,10 @@ func _step(delta: float) -> void:
 	_trail = _trail.filter(func(p): return p[1] > 0.0)
 
 
+func _down_from_above(p: Vector2) -> bool:
+	return p.y > size.y - FROM_ABOVE
+
+
 ## 0 -> 1 -> 0 over [a, b] of the cycle.
 static func _bump(u: float, a: float, b: float) -> float:
 	if u <= a or u >= b:
@@ -193,7 +200,7 @@ func _draw() -> void:
 	if _hand == null:
 		return
 	var k := hand_height / maxf(float(_hand.get_height()), 1.0)
-	draw_set_transform(_finger, LEAN, Vector2(k, k))
+	draw_set_transform(_finger, PI - LEAN if _down_from_above(_finger) else LEAN, Vector2(k, k))
 	draw_texture(_hand, -_pivot)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
