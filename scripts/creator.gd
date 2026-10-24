@@ -1,14 +1,16 @@
 class_name Creator
 extends Control
 ## Making a new pet (.ai/creature-pipeline.md):
-##   draw the whole creature on one sheet, part by part (CreatureSheet) - tap Wings, draw the
-##   wings where they go, "Done with the wings" and watch them flap
+##   what will it have - how many heads, eyes, ears, arms, legs and tails (PartPlanner)
+##   -> draw the whole creature on one sheet, guided one part at a time (CreatureSheet) - "Draw a
+##   LEG", "LEG 2 of 4!", "Done with the legs" and watch them walk - then "Anything else?" for
+##   wings, horns, tentacles and the rest
 ##   -> name, size, favourite place -> two personality words -> its coat -> its voice
 ##   -> favourite food and toy (pick or draw) -> where it will live -> meet it at home.
 ##
 ## Stop (on the sheet, and on the steps after it) offers to save it for later or throw it away.
-## A pet half made is a DRAFT in user://draft: every layer of the drawing, saved each time a part
-## is put down, and with the page as it is when the kid chooses to save. Starting a new pet offers
+## A pet half made is a DRAFT in user://draft: the plan and every layer of the drawing, saved each
+## time a part is put down, and with the page as it is when the kid chooses to save. Starting a new pet offers
 ## to finish it. A shiny marker used anywhere in the pet lasts until the pet is finished, and is
 ## used up then.
 
@@ -25,8 +27,9 @@ var sheet: CreatureSheet
 ## The drawing, a layer per part type (CreatureSheet), and the part being drawn.
 var _layers := {}
 var _active := "body"
-## Parts the sheet has opened by itself (type -> true): a part skipped with Done stays skipped.
-var _offered := {}
+## What the pet will have, in drawing order ([[type, how many], ...] - PartTypes.plan_from).
+## The sheet changes it in place: a part skipped stays skipped, "Anything else?" adds to it.
+var _plan: Array = []
 ## Shiny markers used in this pet: mode -> true. Used up when it is finished.
 var _markers_used := {}
 var _after_drawing := false
@@ -52,7 +55,7 @@ func _ready() -> void:
 	elif has_draft():
 		_offer_draft()
 	else:
-		_open_sheet()
+		_ask_plan()
 
 
 func _show(screen: Control) -> void:
@@ -88,12 +91,27 @@ func _markers() -> Dictionary:
 
 # --- Drawing it ------------------------------------------------------------------------------
 
+## "What will your pet have?" - how many heads, eyes, ears, arms, legs and tails.
+func _ask_plan() -> void:
+	var s := PartPlanner.new()
+	s.mode = "start"
+	s.on_done = _planned
+	s.on_back = game.go_home
+	_show(s)
+
+
+func _planned(counts: Dictionary) -> void:
+	_plan = PartTypes.plan_from(counts)
+	_active = "body"
+	_open_sheet()
+
+
 func _open_sheet() -> void:
 	_after_drawing = false
 	var s := CreatureSheet.new()
 	s.layers = _layers
 	s.start = _active
-	s.offered = _offered
+	s.plan = _plan
 	s.profile = game.profile
 	s.markers = _markers()
 	s.markers_used = _markers_used
@@ -128,6 +146,8 @@ func go_back() -> void:
 		return
 	elif current is DetailsScreen:
 		(current as DetailsScreen)._back()
+	elif current is PartPlanner:
+		game.go_home()
 	else:
 		_ask_quit()
 
@@ -240,7 +260,7 @@ func _write_draft() -> void:
 			list.append(e)
 		layers[type] = list
 	var data := {"version": DRAFT_VERSION, "layers": layers, "active": _active,
-		"markers": _markers_used.keys(), "after": _after_drawing, "offered": _offered.keys(),
+		"markers": _markers_used.keys(), "after": _after_drawing, "plan": _plan,
 		"pet": {"name": pet.get("name", ""), "size": pet.get("size", "medium"),
 			"place": pet.get("place", "meadow")}}
 	var f := FileAccess.open(DRAFT_DIR + "/draft.json", FileAccess.WRITE)
@@ -406,7 +426,8 @@ static func _read_draft() -> Dictionary:
 func _start_fresh() -> void:
 	delete_draft()
 	_saved.clear()
-	_open_sheet()
+	_layers = {}
+	_ask_plan()
 
 
 ## Picks the draft up where it was left: the page it was on, drawing and all.
@@ -417,9 +438,7 @@ func resume_draft() -> void:
 		return
 	_layers = d.get("layers", {})
 	_active = str(d.get("active", "body"))
-	_offered = {}
-	for t in d.get("offered", []):
-		_offered[str(t)] = true
+	_plan = _plan_of(d)
 	var saved: Dictionary = d.get("pet", {})
 	for key in ["name", "size", "place"]:
 		if saved.has(key):
@@ -432,6 +451,23 @@ func resume_draft() -> void:
 		_details()
 		return
 	_open_sheet()
+
+
+## The draft's plan - or, for a draft from before there were plans, a cat-or-dog plan with every
+## part already drawn in it.
+static func _plan_of(d: Dictionary) -> Array:
+	var out := []
+	for e in d.get("plan", []):
+		if e is Array and e.size() == 2 and PartTypes.GUIDE_ORDER.has(str(e[0])) and int(e[1]) > 0:
+			out.append([str(e[0]), int(e[1])])
+	if not out.is_empty():
+		return out
+	var counts := {}
+	for type in PartTypes.PLAN_ASK:
+		counts[type] = int(PartTypes.PLAN_ASK[type][2])
+	for type in d.get("layers", {}):
+		counts[type] = maxi(int(counts.get(type, 0)), 1)
+	return PartTypes.plan_from(counts)
 
 
 # --- After drawing ---------------------------------------------------------------------------

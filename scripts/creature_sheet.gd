@@ -1,15 +1,18 @@
 class_name CreatureSheet
 extends Control
-## The whole creature, drawn on one big sheet (.ai/creature-pipeline.md). The kid taps a part -
-## Legs - and draws a leg right where it goes, on the creature itself. Then "Draw another leg" for
-## the next, or "Copy this leg" and slide the copy where it goes; "Done with the legs" shows them
-## walking, and the sheet is straight back with the next part to draw. Nothing else on the
-## screen moves about: the same crayons, the same buttons, the same drawing, every time.
+## The whole creature, drawn on one big sheet (.ai/creature-pipeline.md), one part at a time and
+## each right where it goes, GUIDED by the plan the kid made first (PartPlanner: one head, two
+## eyes, four legs...). The sheet asks for each in turn - "Draw a LEG", then "LEG 2 of 4! Draw it
+## - or copy the last one" - with "Copy" sliding a copy of the last one where it goes. When a
+## kind of part is all drawn it shows off (legs walk), and the next is asked for; when the plan is
+## all drawn, "Anything else?" offers wings, horns, tentacles and the rest. The parts in the plan
+## sit on the right with a dot for each one, filled as they are drawn - tap one to go back to it.
+## Nothing else on the screen moves about: the same crayons, the same buttons, the same drawing.
 ##
 ## Every part the kid draws is its own DRAWING, so nothing is ever copied or joined behind their
-## back: four legs are four drawings (or four legs drawn in one go), a copy is a button they
-## pressed. Each drawing goes IN FRONT of what it grows from or BEHIND it - the kid's choice, one
-## button - and the sheet shows the creature stacked exactly as it will be.
+## back: four legs are four drawings (or four legs drawn in one go - they count), a copy is a
+## button they pressed. Each drawing goes IN FRONT of what it grows from or BEHIND it - the kid's
+## choice, one button - and the sheet shows the creature stacked exactly as it will be.
 ##
 ## The bold drawing is the one being drawn; the rest of the creature is faint around it, so it is
 ## clear which lines the crayon, eraser and undo touch. The bucket in a faint drawing of the same
@@ -28,11 +31,14 @@ const BRUSHES := [[8.0, 4.0], [16.0, 8.0], [32.0, 14.0]]
 ## The rest of the creature is a little faint while a part is drawn, so it is clear which lines
 ## are this part's - the ones the eraser rubs out.
 const OTHERS_ALPHA := 0.6
-## Parts a creature usually has one of: their Done button says "the head", not "the heads", and
-## the Draw another / Copy buttons do not bounce for them.
+## Parts a creature usually has one of: their Done button says "the head", not "the heads".
 const ONE_OF := ["body", "head", "mouth", "nose", "tail", "hair", "other"]
 ## The first few copies get the hand showing the slide.
 const HOW_COPIES := 3
+## A tool on the left, with its word under its picture.
+const TOOL_SIZE := Vector2(64, 58)
+## The room the plan's parts have on the right: four rows of them.
+const STRIP_HEIGHT := 272.0
 
 ## type -> [drawing, ...], in the order drawn. A drawing is {image (cropped to its ink), at (sheet
 ## px of its top-left), shine ({} or {mode, mask} the same size), behind (bool), z (its place in the
@@ -45,9 +51,10 @@ var markers_used := {}
 var profile: Profile
 ## The part to start on; "" for none (between parts).
 var start := "body"
-## Parts the game has opened by itself once (type -> true), so Done on an empty one moves on for
-## good - shared with the caller, so it lasts across Back to drawing and a saved draft.
-var offered := {}
+## What the kid said the pet will have, in drawing order: [[type, how many], ...]
+## (PartTypes.plan_from). Shared with the caller, which saves it in the draft; changed in place -
+## "No more legs" takes legs down to the ones drawn, "Anything else?" adds to it.
+var plan: Array = []
 var on_stop := Callable()
 var on_change := Callable()
 var on_finished := Callable()
@@ -69,11 +76,15 @@ var _switching := false
 var _cache := {}
 var _prompt: Label
 var _message: Label
-var _part_buttons := {}
+## The plan's parts on the right: type -> its button, its dots, its tick.
+var _tiles := {}
+var _dots := {}
 var _ticks := {}
+var _strip: GridContainer
+var _strip_types: Array = []
+var _more: PartPlanner
 var _tool_buttons := {}
 var _row: HBoxContainer
-var _another: Button
 var _copy: Button
 var _stack_box: HBoxContainer
 var _front: Button
@@ -104,19 +115,20 @@ func _ready() -> void:
 	tools.add_theme_constant_override("separation", 4)
 	row.add_child(tools)
 	var tool_group := ButtonGroup.new()
-	for entry in [["tool_crayon", DrawCanvas.Tool.PEN], ["tool_fill", DrawCanvas.Tool.FILL],
-			["tool_eraser", DrawCanvas.Tool.ERASER], ["tool_hand", DrawCanvas.Tool.HAND]]:
-		var b := _picture_button(entry[0], _set_tool.bind(entry[1]), tool_group)
+	# Each with its word under it: a crumpled page is "Clear", the hand is "Move".
+	for entry in [["tool_crayon", DrawCanvas.Tool.PEN, "Crayon"], ["tool_fill", DrawCanvas.Tool.FILL, "Paint"],
+			["tool_eraser", DrawCanvas.Tool.ERASER, "Eraser"], ["tool_hand", DrawCanvas.Tool.HAND, "Move"]]:
+		var b := _picture_button(entry[0], _set_tool.bind(entry[1]), tool_group, TOOL_SIZE, entry[2])
 		b.button_pressed = entry[1] == DrawCanvas.Tool.PEN
 		_tool_buttons[entry[1]] = b
 		tools.add_child(b)
 	tools.add_child(HSeparator.new())
-	tools.add_child(_picture_button("tool_undo", _undo))
-	tools.add_child(_picture_button("tool_clear", _clear))
+	tools.add_child(_picture_button("tool_undo", _undo, null, TOOL_SIZE, "Undo"))
+	tools.add_child(_picture_button("tool_clear", _clear, null, TOOL_SIZE, "Clear"))
 	tools.add_child(HSeparator.new())
-	tools.add_child(_picture_button("tool_zoom_in", _zoom.bind(1)))
-	tools.add_child(_picture_button("tool_zoom_out", _zoom.bind(-1)))
-	tools.add_child(_picture_button("tool_fit", _zoom.bind(0)))
+	tools.add_child(_picture_button("tool_zoom_in", _zoom.bind(1), null, TOOL_SIZE, "Zoom in"))
+	tools.add_child(_picture_button("tool_zoom_out", _zoom.bind(-1), null, TOOL_SIZE, "Zoom out"))
+	tools.add_child(_picture_button("tool_fit", _zoom.bind(0), null, TOOL_SIZE, "See all"))
 	var gap := Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tools.add_child(gap)
@@ -154,22 +166,22 @@ func _ready() -> void:
 	slot.add_child(UI.full_rect(_message))
 	side.add_child(slot)
 
-	var parts := GridContainer.new()
-	parts.columns = 5
-	parts.add_theme_constant_override("h_separation", 5)
-	parts.add_theme_constant_override("v_separation", 4)
-	for type in PartTypes.SHEET_PARTS:
-		parts.add_child(_part_button(type))
-	side.add_child(parts)
+	# The plan's parts, a dot for each one; tap one to go back to it. Its room is kept whatever
+	# the plan, so nothing below it moves.
+	var strip_room := Control.new()
+	strip_room.custom_minimum_size = Vector2(350, STRIP_HEIGHT)
+	_strip = GridContainer.new()
+	_strip.add_theme_constant_override("h_separation", 5)
+	_strip.add_theme_constant_override("v_separation", 4)
+	strip_room.add_child(_strip)
+	side.add_child(strip_room)
 
-	# Another one, a copy, in front or behind - for the part being drawn. The row keeps its room
-	# even when it has nothing to offer (the body), so the screen never changes shape.
+	# A copy, in front or behind - for the part being drawn. The row keeps its room even when it
+	# has nothing to offer (the body), so the screen never changes shape.
 	_row = HBoxContainer.new()
 	_row.custom_minimum_size = Vector2(350, 68)
 	_row.add_theme_constant_override("separation", 6)
-	_another = _row_button(press_another, 108)
-	_copy = _row_button(press_copy, 108)
-	_row.add_child(_another)
+	_copy = _row_button(press_copy, 210)
 	_row.add_child(_copy)
 	# In front | Behind: two halves, the one it is now lit - tap the one you want.
 	_stack_box = HBoxContainer.new()
@@ -223,7 +235,8 @@ func _ready() -> void:
 	_done_button.add_child(UI.full_rect(done_row))
 	side.add_child(_done_button)
 
-	offered["body"] = true
+	if PartTypes.planned(plan, "body") == 0:
+		PartTypes.add_to_plan(plan, {"body": 1})
 	if not layers.has("body"):
 		_open("body")
 	elif start == "":
@@ -234,30 +247,99 @@ func _ready() -> void:
 
 # --- The parts -------------------------------------------------------------------------------
 
-## A part's button: its picture and name, a tick once it is drawn.
-func _part_button(type: String) -> Button:
-	var b := Button.new()
-	b.custom_minimum_size = Vector2(66, 58)
-	b.pressed.connect(pick.bind(type))
-	var pic := UI.icon(PartTypes.icon(type), 36)
-	pic.position = Vector2(15, 1)
-	pic.size = Vector2(36, 36)
+## The plan's parts on the right, again if the plan has changed: a tile for each kind of part in
+## it, in drawing order, and Add more at the end.
+func _build_strip() -> void:
+	var types := []
+	for e in plan:
+		types.append(str(e[0]))
+	if types == _strip_types:
+		return
+	_strip_types = types
+	for c in _strip.get_children():
+		UI.retire(c)
+	_tiles.clear()
+	_dots.clear()
+	_ticks.clear()
+	var wide := types.size() + 1 <= 20
+	_strip.columns = 5 if wide else 6
+	var w := 66.0 if wide else 54.0
+	for type in types:
+		_strip.add_child(_tile(type, w))
+	var more := _tile_button(w, ask_more)
+	var pic := UI.icon("ui_plus", 30)
+	pic.position = Vector2((w - 30.0) / 2.0, 4)
+	more.add_child(pic)
+	more.add_child(_tile_words("Add more"))
+	_strip.add_child(more)
+
+
+## A part in the plan: its picture, a dot for each one (filled when drawn), its name, and a tick
+## once they are all drawn.
+func _tile(type: String, w: float) -> Button:
+	var b := _tile_button(w, pick.bind(type))
+	var pic := UI.icon(PartTypes.icon(type), 32)
+	pic.position = Vector2((w - 32.0) / 2.0, 1)
 	b.add_child(pic)
-	var l := UI.label(name_of(type).capitalize(), 11)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b.add_child(l)
-	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	l.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	l.offset_top = -21
-	l.offset_bottom = -3
+	var dots := Dots.new()
+	dots.position = Vector2(2, 34)
+	dots.size = Vector2(w - 4.0, 10)
+	b.add_child(dots)
+	_dots[type] = dots
+	b.add_child(_tile_words(name_of(type).capitalize()))
 	var tick := UI.icon("tool_done", 22, "none")
-	tick.position = Vector2(46, -4)
+	tick.position = Vector2(w - 20.0, -4)
 	tick.size = Vector2(22, 22)
 	b.add_child(tick)
 	_ticks[type] = tick
-	_part_buttons[type] = b
+	_tiles[type] = b
 	return b
+
+
+func _tile_button(w: float, on_press: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(w, 64)
+	b.pressed.connect(on_press)
+	return b
+
+
+func _tile_words(text: String) -> Label:
+	var l := UI.label(text, 11)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	l.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	l.offset_top = -19
+	l.offset_bottom = -2
+	return l
+
+
+func _bounce_tile(type: String) -> void:
+	if _tiles.has(type):
+		_bounce(_tiles[type])
+
+
+## A dot for each of a part the plan has: filled once drawn. One-of parts and bunches show none
+## (their tick says it).
+class Dots extends Control:
+	var n := 0
+	var have := 0
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		if n <= 1:
+			return
+		var gap := minf(9.0, (size.x - 8.0) / float(n - 1))
+		var r := minf(3.6, gap * 0.42)
+		var x0 := size.x / 2.0 - gap * (n - 1) / 2.0
+		for i in n:
+			var c := Vector2(x0 + gap * i, size.y / 2.0)
+			if i < have:
+				draw_circle(c, r, UI.GOOD.darkened(0.25))
+			else:
+				draw_arc(c, r, 0.0, TAU, 12, UI.INK_SOFT, 1.5, true)
 
 
 ## Tapping a part: put down the one being drawn, and draw this one.
@@ -277,29 +359,8 @@ func pick(type: String) -> void:
 	on_change.call()
 
 
-## "Draw another leg": this leg is put down, and the next is drawn by hand - in front or behind as
-## the part usually goes, not as the last one was put.
-func press_another() -> void:
-	if _busy or active == "" or active == "body":
-		return
-	_busy = true
-	await _fold()
-	_busy = false
-	if not _in_list and layers.get(active, []).is_empty():
-		_nope("Draw one first!")
-		return
-	Sounds.play("ui_tap")
-	canvas.restart()
-	canvas.mark_loaded()
-	_start_fresh(PartCutter.BEHIND.has(active))
-	_show_others()
-	_prompt.text = PartTypes.DRAW_MORE % PartTypes.one_name(active).to_upper()
-	_refresh_row()
-	on_change.call()
-
-
-## "Copy this leg": the same leg again, just beside it, to slide where it goes. On a fresh page
-## (just after Draw another) it copies the last one drawn.
+## "Copy this leg": the same leg again, just beside it, to slide where it goes - the next one. On
+## a fresh page ("LEG 2 of 4!") it copies the last one drawn into it.
 func press_copy() -> void:
 	if _busy or active == "" or active == "body":
 		return
@@ -375,34 +436,67 @@ func _copy_at(d: Dictionary) -> Vector2:
 	return at.clamp(Vector2.ZERO, (Vector2(SIZE) - Vector2(img.get_size())).max(Vector2.ZERO))
 
 
-## "Done with the legs": they come alive for a moment, then on to the next part. Done on a part
-## with nothing drawn just moves on - the kid did not want one.
+## Done: on to the next one of these ("Next leg"), or - when they are all drawn - they come alive
+## for a moment ("Done with the legs") and the next part in the plan is asked for. Done on an empty
+## page means no more of these ("No more legs", "Skip the tail"): the plan comes down to the ones
+## drawn. When the plan is all drawn, "Anything else?".
 func press_done() -> void:
 	if _busy or active == "":
 		return
 	_busy = true
 	var type := active
+	var blank := not _bold_has_ink()
+	var was_open := _first_unfinished() != ""
 	await _fold()
 	_busy = false
-	if not layers.has(type):
-		if type == "body" or not layers.has("body"):
-			_say("Draw its BODY first - big!")
-			return
-		offered[type] = true
-		Sounds.play("ui_tap")
-		_next()
-		return
 	if not layers.has("body"):
-		_open("body")
-		_say("Draw its BODY first - then the rest goes on it!")
+		if type != "body":
+			_open("body")
+		_nope("Draw its BODY first - big!")
 		return
+	var have := count_of(type)
+	if blank:
+		if have == 0 and PartTypes.NEEDED.has(type):
+			_nope("Every creature needs %s! Draw %s." % [_needs_words(type), "it" if ONE_OF.has(type) else "one"])
+			return
+		_set_planned(type, have)
+		Sounds.play("ui_tap")
+		on_change.call()
+		if have == 0:
+			_after_part(was_open)
+		else:
+			_show_off(type, was_open)
+		return
+	if have < _planned(type):
+		Sounds.play("ui_tap")
+		_open_new(type)
+		on_change.call()
+		return
+	_set_planned(type, maxi(have, _planned(type)))
 	Sounds.play("done")
 	on_change.call()
+	_show_off(type, was_open)
+
+
+## The part comes alive for a moment (PartPreview), then on.
+func _show_off(type: String, was_open: bool) -> void:
 	var p := PartPreview.new()
 	p.pet = build()
 	p.part_type = type
-	p.on_done = _next
+	p.on_done = _after_part.bind(was_open)
 	add_child(UI.full_rect(p))
+
+
+## On to the next part the plan wants - or, if that was the last of it, "Anything else?".
+func _after_part(was_open: bool) -> void:
+	_next()
+	if active == "" and was_open:
+		ask_more()
+
+
+## "a MOUTH", "EYES".
+func _needs_words(type: String) -> String:
+	return "a " + type.to_upper() if ONE_OF.has(type) else PartTypes.info(type)["plural"].to_upper()
 
 
 ## "It's finished!" - if it has everything a creature needs.
@@ -419,12 +513,18 @@ func press_finished() -> void:
 	if not missing.is_empty():
 		var words := []
 		for type in missing:
-			words.append("a " + type.to_upper() if ONE_OF.has(type) else PartTypes.info(type)["plural"].to_upper())
-		_say("Every creature needs %s! Tap %s to draw %s." % [" and ".join(words),
-			"them" if missing.size() > 1 else "it", "them" if missing.size() > 1 else "it"])
+			words.append(_needs_words(type))
+		# Straight to the first one missing.
+		for type in missing:
+			if _planned(type) == 0:
+				_set_planned(type, 1)
+		if active != missing[0]:
+			_open(missing[0])
+		_say("Every creature needs %s! Draw %s here." % [" and ".join(words),
+			"them" if missing.size() > 1 else "it"])
 		Sounds.play("ui_nope")
 		for type in missing:
-			_bounce(_part_buttons[type])
+			_bounce_tile(type)
 		return
 	Sounds.play("done")
 	on_finished.call(build())
@@ -505,17 +605,130 @@ func _open(type: String) -> void:
 	_refresh()
 
 
-## On to the first part a creature usually has that is not drawn yet and has not been offered.
-## When there are none left, between parts: the page can't be drawn on until a part is picked
-## (what would the lines be?).
+## A fresh page for one more of `type` (the next leg), the rest of the creature faint around it.
+func _open_new(type: String) -> void:
+	_opening = true
+	active = type
+	canvas.restart()
+	canvas.placing = false
+	canvas.mark_loaded()
+	canvas.shine = _pen_shine
+	_start_fresh(PartCutter.BEHIND.has(type))
+	_row_bounced = false
+	_opening = false
+	_dismiss_how()
+	_show_others()
+	_say("")
+	_refresh()
+	# There is one to copy now.
+	if layers.has(type) and not ONE_OF.has(type):
+		_row_bounced = true
+		_bounce(_copy)
+
+
+## On to the first part in the plan not all drawn yet - a fresh page for the next one. When the
+## plan is all drawn, between parts: the page can't be drawn on until a part is picked (what would
+## the lines be?).
 func _next() -> void:
-	for type in PartTypes.SUGGESTED:
-		if not layers.has(type) and not offered.has(type):
-			offered[type] = true
-			_open(type)
-			_bounce(_part_buttons[type])
-			return
-	_between_parts()
+	var type := _first_unfinished()
+	if type == "":
+		_between_parts()
+		return
+	if layers.has(type):
+		_open_new(type)
+	else:
+		_open(type)
+	_bounce_tile(type)
+
+
+## The first part in the plan with fewer drawn than planned, or "".
+func _first_unfinished() -> String:
+	for e in plan:
+		if count_of(str(e[0])) < int(e[1]):
+			return str(e[0])
+	return ""
+
+
+## How many of `type` are drawn: every separate piece of its drawings (four legs drawn in one go
+## are four), as PartCutter will cut them. A bunch (spikes) is one, however many.
+func count_of(type: String) -> int:
+	var n := 0
+	for d in layers.get(type, []):
+		n += _pieces_in(d)
+	if PartTypes.BUNCH.has(type):
+		return mini(n, 1)
+	return n
+
+
+func _pieces_in(d: Dictionary) -> int:
+	var img: Image = d["image"]
+	if not _cache.has(img):
+		_cache[img] = PartCutter.pieces(img, Vector2i(d["at"]))
+	return (_cache[img] as Array).size()
+
+
+func _planned(type: String) -> int:
+	return PartTypes.planned(plan, type)
+
+
+func _set_planned(type: String, n: int) -> void:
+	PartTypes.add_to_plan(plan, {type: n})
+
+
+## Which of its kind the bold drawing is: 1 for the first leg, 2 for the next...
+func _step_no() -> int:
+	var n := 0
+	for d in layers.get(active, []):
+		if not (_in_list and d == _bold):
+			n += _pieces_in(d)
+	return n + 1
+
+
+## Is there anything on the bold drawing?
+func _bold_has_ink() -> bool:
+	return canvas.op_count() > 0 or _in_list
+
+
+# --- Anything else? ------------------------------------------------------------------------------
+
+## "Anything else?" (PartPlanner) over the drawing: wings, horns, tentacles... added to the plan
+## and drawn next. From Add more any time, and by itself when the plan is all drawn.
+func ask_more() -> void:
+	if _busy or (_more != null and is_instance_valid(_more)):
+		return
+	_busy = true
+	await _fold()
+	_busy = false
+	var m := PartPlanner.new()
+	m.mode = "more"
+	m.plan = plan
+	m.on_done = _add_more
+	m.on_back = close_more
+	m.on_finished = _finish_from_more
+	_more = m
+	add_child(UI.full_rect(m))
+	_refresh()
+
+
+func close_more() -> void:
+	if _more != null and is_instance_valid(_more):
+		UI.retire(_more)
+	_more = null
+
+
+func _add_more(counts: Dictionary) -> void:
+	close_more()
+	PartTypes.add_to_plan(plan, counts)
+	on_change.call()
+	if active == "":
+		_next()
+	else:
+		_refresh()
+
+
+func _finish_from_more() -> void:
+	close_more()
+	press_finished()
 
 
 func _between_parts() -> void:
@@ -528,7 +741,7 @@ func _between_parts() -> void:
 
 
 func _tapped_between_parts(_at: Vector2) -> void:
-	_say("Tap a part to draw more - or tap It's finished!")
+	_say("Tap a part to fix it, or Add more - or tap It's finished!")
 	_bounce(_finish_button)
 
 
@@ -763,7 +976,7 @@ func _whose(at: Vector2, verb: String) -> bool:
 			var n := name_of(type)
 			_say("That's its %s! Tap %s first, then %s it." % [n.to_upper(), n.capitalize(), verb])
 			Sounds.play("ui_nope")
-			_bounce(_part_buttons[type])
+			_bounce_tile(type)
 			return true
 	return false
 
@@ -881,47 +1094,79 @@ func _raise(d: Dictionary) -> void:
 
 # --- Showing it ----------------------------------------------------------------------------------
 
-## The prompt, the Done button, the row, and the part buttons: the one being drawn lit up, ticks
-## on the ones drawn, the rest faded until there is a body.
+## The prompt, the Done button, the row, and the plan's parts: the one being drawn lit up, its
+## dots filled as they are drawn, ticks on the ones all drawn, the rest faded until there is a
+## body.
 func _refresh() -> void:
-	if active != "":
-		_prompt.text = PartTypes.DRAW[active]
-		_done_label.text = "Done with this" if active == "other" else "Done with the %s" % name_of(active)
-	else:
-		_prompt.text = "Tap a part to draw more - or tap It's finished!"
+	_build_strip()
+	_prompt.text = _prompt_for(active) if active != "" else "All drawn! Tap a part to fix it, or Add more."
 	_done_button.visible = active != ""
+	_update_done()
 	var ready := true
 	for type in PartTypes.NEEDED:
 		if not layers.has(type) and type != active:
 			ready = false
 	_finish_button.visible = ready
-	for type in _part_buttons:
-		var b: Button = _part_buttons[type]
-		var drawn := layers.has(type)
+	for type in _tiles:
+		var b: Button = _tiles[type]
+		var n := _planned(type)
+		var have := count_of(type)
 		if type == active:
 			b.add_theme_stylebox_override("normal", UI._box(UI.HILITE, UI.ACCENT, 5))
-		elif drawn:
+		elif have >= n:
 			b.add_theme_stylebox_override("normal", UI._box(Color("#eef8e6"), UI.GOOD.darkened(0.3), 3))
 		else:
 			b.remove_theme_stylebox_override("normal")
-		(_ticks[type] as Control).visible = drawn and type != active
+		var dots: Dots = _dots[type]
+		dots.n = 0 if PartTypes.BUNCH.has(type) else maxi(n, have)
+		dots.have = have
+		dots.queue_redraw()
+		(_ticks[type] as Control).visible = have >= n and type != active
 		b.modulate.a = 1.0 if type == "body" or layers.has("body") else 0.45
 	_refresh_row()
 
 
-## The row: Draw another / Copy / In front | Behind, for any part but the body - the first two lit
-## once there is something to copy or to draw another of.
+## What to draw now: the part's own words, or "LEG 2 of 4! Draw it - or copy the last one." With no
+## head, the face goes on the body.
+func _prompt_for(type: String) -> String:
+	var n := _planned(type)
+	var k := _step_no()
+	if n > 1 and k > 1 and k <= n and not _in_list and not PartTypes.BUNCH.has(type):
+		return PartTypes.DRAW_NEXT % [PartTypes.one_name(type).to_upper(), k, n]
+	var text: String = PartTypes.DRAW[type]
+	if _planned("head") == 0 and not layers.has("head"):
+		text = text.replace("its head", "its body")
+	return text
+
+
+## Done says what it will do: "Next leg" while there are more to draw, "Done with the legs" on the
+## last, and on an empty page "No more legs" (or "Skip the tail" before there is one).
+func _update_done() -> void:
+	if active == "":
+		return
+	var blank := not _bold_has_ink() and active != "body"
+	if blank and layers.has(active):
+		_done_label.text = "No more %s" % PartTypes.info(active)["plural"].to_lower()
+	elif blank and not PartTypes.NEEDED.has(active):
+		_done_label.text = "Skip this" if active == "other" else "Skip the %s" % name_of(active)
+	elif active == "other":
+		_done_label.text = "Done with this"
+	elif _step_no() < _planned(active) and not _in_list:
+		_done_label.text = "Next %s" % PartTypes.one_name(active)
+	elif _planned(active) == 1 and not PartTypes.BUNCH.has(active):
+		_done_label.text = "Done with the %s" % PartTypes.one_name(active)
+	else:
+		_done_label.text = "Done with the %s" % name_of(active)
+
+
+## The row: Copy / In front | Behind, for any part but the body.
 func _refresh_row() -> void:
 	var show := active != "" and active != "body"
-	_another.visible = show
 	_copy.visible = show
 	_stack_box.visible = show and not ALWAYS_FRONT.has(active)
 	if not show:
 		return
-	var one := PartTypes.one_name(active)
 	var icon := PartTypes.icon(active)
-	_dress(_another, "Draw another %s" % one, [[icon, Vector2(2, 0), 32, 1.0], ["tool_crayon", Vector2(22, 8), 24, 1.0]])
-	_dress(_copy, "Copy this %s" % one, [[icon, Vector2(0, 0), 28, 0.55], [icon, Vector2(16, 4), 28, 1.0]])
 	# What it grows from: a face part's head, a hand's arm, a foot's leg - or the body.
 	var host_icon := "part_body"
 	var usual: String = PartTypes.info(active).get("host", "body")
@@ -945,16 +1190,22 @@ func _lit(b: Button, on: bool) -> void:
 		b.remove_theme_stylebox_override("hover")
 
 
-## Lit when there is ink to copy or to follow with another; a faded one still answers a tap.
+## Copy: "Copy this leg" once it has ink, "Copy the last leg" on a fresh page after one - lit when
+## there is something to copy; a faded one still answers a tap ("Draw one first!").
 func _update_row() -> void:
+	_update_done()
 	if active == "" or active == "body":
 		return
-	var has := canvas.op_count() > 0 or _in_list
-	_another.modulate.a = 1.0 if has else 0.45
-	_copy.modulate.a = 1.0 if has else 0.45
-	if has and not _row_bounced and not ONE_OF.has(active):
+	var one := PartTypes.one_name(active)
+	var icon := PartTypes.icon(active)
+	var mine := _bold_has_ink()
+	var text := "Copy this %s" % one if mine or not layers.has(active) else "Copy the last %s" % one
+	if _copy.get_meta("text", "") != text:
+		_copy.set_meta("text", text)
+		_dress(_copy, text, [[icon, Vector2(0, 0), 28, 0.55], [icon, Vector2(16, 4), 28, 1.0]])
+	_copy.modulate.a = 1.0 if mine or layers.has(active) else 0.45
+	if mine and not _row_bounced and not ONE_OF.has(active) and _step_no() < _planned(active):
 		_row_bounced = true
-		_bounce(_another)
 		_bounce(_copy)
 
 
@@ -973,7 +1224,7 @@ func _dress(b: Button, text: String, pics: Array, art_x := 32.0) -> void:
 	var w := b.custom_minimum_size.x
 	var art := Control.new()
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art.position = Vector2(art_x if w > 80.0 else 6.0, 1)
+	art.position = Vector2((w - 48.0) / 2.0 if w > 150.0 else (art_x if w > 80.0 else 6.0), 1)
 	art.size = Vector2(48, 32)
 	b.add_child(art)
 	for p in pics:
@@ -1012,7 +1263,7 @@ func _on_copy_dropped() -> void:
 func _on_moving_ended() -> void:
 	_dismiss_how()
 	if active != "":
-		_prompt.text = PartTypes.DRAW[active]
+		_prompt.text = _prompt_for(active)
 
 
 func _nope(text: String) -> void:
@@ -1071,8 +1322,12 @@ func state() -> void:
 	_busy = false
 
 
-## Android's back gesture, while a part is showing off: carry on.
+## Android's back gesture, while a part is showing off: carry on; over "Anything else?": back to
+## the drawing.
 func skip_preview() -> bool:
+	if _more != null and is_instance_valid(_more):
+		close_more()
+		return true
 	for c in get_children():
 		if c is PartPreview and not c.is_queued_for_deletion():
 			(c as PartPreview).skip()
@@ -1139,8 +1394,9 @@ func _zoom(way: int) -> void:
 	Sounds.play("ui_tap")
 
 
+## A tool: its picture, and its word under it if it has one.
 func _picture_button(icon: String, on_press: Callable, group: ButtonGroup = null,
-		min_size := Vector2(64, 56)) -> Button:
+		min_size := Vector2(64, 56), words := "") -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = min_size
 	if group != null:
@@ -1148,9 +1404,12 @@ func _picture_button(icon: String, on_press: Callable, group: ButtonGroup = null
 		b.button_group = group
 	b.pressed.connect(on_press)
 	if icon != "":
-		var pic := UI.icon(icon, 42)
-		pic.position = (min_size - Vector2(42, 42)) / 2.0
+		var px := 42.0 if words == "" else 34.0
+		var pic := UI.icon(icon, px)
+		pic.position = Vector2((min_size.x - px) / 2.0, (min_size.y - px) / 2.0 if words == "" else 2.0)
 		b.add_child(pic)
+	if words != "":
+		b.add_child(_tile_words(words))
 	return b
 
 

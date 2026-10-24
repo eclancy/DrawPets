@@ -3,7 +3,7 @@
 How a kid's drawings become a creature that moves. Read before touching `DrawCanvas`,
 `CreatureSheet`, `PartCutter`, `PartTypes`, `PetBuilder`, `Creature` or `CreaturePart`.
 
-## The flow - one sheet (decided)
+## The flow - one sheet, guided by a plan (decided)
 
 The whole creature is drawn on **one big sheet**, part by part, each part right where it goes
 (`CreatureSheet`). Eric: "Drawing pets is confusing ... when they click on wings, it shouldn't
@@ -11,68 +11,97 @@ immediately change the UI a whole bunch. It should just let them draw wings and 
 It replaced a staged flow (how many heads/arms/legs, a sheet per host, tap where each add-on goes,
 a zoomed sheet per add-on, then an assembly screen), which kids found hard to follow.
 
-1. **The screen never changes shape.** Tools down the left (crayon, bucket, eraser, hand; undo,
-   clear; zoom in, zoom out, whole sheet; Stop), the sheet as big as the screen allows
-   (`CreatureSheet.SIZE`, 1024 x 896), and on the right the prompt, a button for every part type
-   (`PartTypes.SHEET_PARTS`), a row of three for the part being drawn (below), the crayons and
-   brush sizes, and the Done button. The prompt and anything the game has to say share one slot:
-   one sentence at a time.
-2. **Tap a part, draw it in place.** Tapping Legs lights that button, the prompt says what to
-   draw ("Draw a LEG, coming down from the body. It walks!" - `PartTypes.DRAW`, one of it) and
-   Done reads "Done with the legs". Nothing else moves. The rest of the creature shows around it,
-   a little faint (`OTHERS_ALPHA`), stacked exactly as the creature will be, so it is clear which
-   lines are the bold drawing's; the crayon, eraser and undo only touch them.
-3. **Draw another, Copy, In front / Behind** (decided - Eric: "we should have an explicit
-   'duplicate leg' button next to a 'draw next leg' button ... any part has an explicit way to
-   duplicate ... they should be able to select for each part whether it goes in front of or
-   behind the body / head / other parts"). Under the parts, for any part but the body:
-   - **Draw another leg** puts this leg down and starts the next on a fresh page (the others
-     faint), the prompt "Draw another LEG!", in front or behind as legs usually go.
-   - **Copy this leg** puts a copy just beside it, bold, with a dashed line round it, and the
-     prompt says "Drag it where it goes!": a crayon or hand press on the copy's ink slides it
-     (relative, any zoom; it only ever lands on whole pixels, so its lines are never softened),
-     until the kid draws somewhere else or picks another tool. The page slides to show it if it
-     landed out of view. The drawn hand shows the slide the first three times (`HowTo`). Right
-     after Draw another, it copies the last one drawn.
+**Guided** (decided, 2026-10-23 - Eric: "a guided procedure again, where they select how many
+heads / eyes / arms etc ahead of time and then we guide them through the process, then we ask
+them if they want to add any other specific parts after, like tentacles"). The counting is back,
+the separate sheets are not:
+
+- **First, "What will your pet have?"** (`PartPlanner`, "start"): heads, eyes, ears, arms, legs
+  and tails, each a picture with - and + (`PartTypes.PLAN_ASK`: fewest, most, start - set to a
+  cat or a dog: 1, 2, 2, 0, 4, 1; eyes at least one). The body and a mouth come with every pet.
+  That makes the **plan**: [[type, how many], ...] in `PartTypes.GUIDE_ORDER` (body, head, eyes,
+  mouth, nose, ears, horns, antennae, hair, arms, hands, legs, feet, claws, tail, wings, fins,
+  spikes, tentacles, other - what a part grows from before the part).
+- **The sheet asks for each in turn**: the first part in the plan with fewer drawn than planned.
+  "Draw a LEG, coming down from the body. It walks!", then "LEG 2 of 4! Draw it - or copy the
+  last one." (`PartTypes.DRAW_NEXT`) on a fresh page, with Copy bouncing. **Drawn is counted in
+  pieces** (`CreatureSheet.count_of`, PartCutter's own pieces), so four legs drawn in one go are
+  four and the sheet moves on; spikes, hair and claws are a bunch (`PartTypes.BUNCH`) - any is
+  enough.
+- **"Anything else?"** (`PartPlanner`, "more", over the sheet) appears when the plan is all
+  drawn: every part not in the plan yet, a picture to tap (it comes in at its usual number -
+  `MORE_START`: a pair of wings, a hand for each arm, a foot for each leg) and - +; bunches are
+  yes or no. "Draw them!" adds them to the plan and the sheet asks for them; "No - it's
+  finished!" goes on to its name; "Back to drawing" closes it. **Add more**, at the end of the
+  plan's parts, opens it any time. It is not asked again when the kid only went back to fix a
+  part that was already drawn.
+
+1. **The screen never changes shape.** Tools down the left, each with its word under it (Crayon,
+   Paint, Eraser, Move; Undo, Clear; Zoom in, Zoom out, See all; Stop - a kid asked what the
+   crumpled page and the hand were), the sheet as big as the screen allows
+   (`CreatureSheet.SIZE`, 1024 x 896), and on the right the prompt, **the plan's parts** (a tile
+   for each kind, a dot for each one - filled once drawn - a tick when they are all drawn, the
+   one being drawn lit; tap one to go back to it; Add more), a row for the part being drawn
+   (below), the crayons and brush sizes, and the Done button. The plan's parts keep the room of
+   four rows, so nothing below them moves. The prompt and anything the game has to say share one
+   slot: one sentence at a time.
+2. **Draw it in place.** The prompt says what to draw (`PartTypes.DRAW`, one of it; "on its
+   body" when there is no head) and **Done says what it will do**: "Next leg" while there are
+   more to draw, "Done with the legs" on the last, and on an empty page "No more legs" (the plan
+   comes down to the ones drawn) or "Skip the tail" - never for the body, eyes or a mouth, which
+   every creature needs. The rest of the creature shows around it, a little faint
+   (`OTHERS_ALPHA`), stacked exactly as the creature will be, so it is clear which lines are the
+   bold drawing's; the crayon, eraser and undo only touch them.
+3. **Copy, In front / Behind** (decided - Eric: "we should have an explicit 'duplicate leg'
+   button next to a 'draw next leg' button ... any part has an explicit way to duplicate ...
+   they should be able to select for each part whether it goes in front of or behind the body /
+   head / other parts"). Under the parts, for any part but the body (the plan's Next leg is the
+   "draw next leg"):
+   - **Copy the last leg** (on the fresh page for the next one) or **Copy this leg** puts a copy
+     just beside it - the next leg - bold, with a dashed line round it, and the prompt says "Drag
+     it where it goes!": a crayon or hand press on the copy's ink slides it (relative, any zoom;
+     it only ever lands on whole pixels, so its lines are never softened), until the kid draws
+     somewhere else or picks another tool. The page slides to show it if it landed out of view.
+     The drawn hand shows the slide the first three times (`HowTo`). Copying past the plan's
+     number adds to it.
    - **In front | Behind**: two halves, the side it is on now lit - tap the one you want. Their
      pictures are the part with what it grows from (the head for an ear). The bold drawing goes
      to the front or back of the stack, and the sheet shows it there at once; while it is behind
      something, that something is nearly solid on the sheet, as on the creature. Tails, spikes
      and fins start behind (`PartCutter.BEHIND`), everything else in front; eyes, mouths and
      noses have no switch (behind, they would vanish).
-   The first two are faded (and say "Draw one first!") until there is something to copy, and
-   bounce once when there is, for the parts that come in several.
+   Copy is faded (and says "Draw one first!") until there is something to copy, and bounces when
+   a fresh page for the next one opens.
    Nothing is ever copied or joined behind the kid's back: the old automatic far-side twin of a
    single wing, ear or leg is gone (it turned four touching legs into eight). A copy is a button
    they pressed.
-4. **Done with a part shows it off** (`PartPreview`, about 3 s, tap to carry on): wings flap,
+4. **The last of a part shows it off** (`PartPreview`, about 3 s, tap to carry on): wings flap,
    legs walk, eyes blink - the real rig and the real recipes - with a picture of the part for
    each one found (four leg pictures for four legs), so a kid who cannot read can count them.
-   Then straight back to the sheet with the next suggested part (`PartTypes.SUGGESTED`: body,
-   head, eyes, mouth, legs) opened (its button bounces once), and a tick on every part drawn.
-   **Done on a part with nothing drawn moves on** - the kid did not want one - and the game never
-   opens that part by itself again. Tapping another part instead of Done puts this one down
-   without the show.
+   Then straight back to the sheet with the next part in the plan (its tile bounces once).
+   Tapping another part instead of Done puts this one down without the show.
 5. **Any drawing can be fixed.** Picking a part reopens its last drawing. The bucket tapped inside
    another drawing of the same part, the eraser put on one, or the crayon put on or inside one
    once the bold drawing has something on it, makes that one the bold one and carries on there -
    stripes on the first leg go on the first leg, never into a new loose "leg". The bucket or the
    eraser on another part's drawing says "That's its BODY! Tap Body first, then colour it." Undo
    takes back strokes, and once a new drawing or copy has nothing left, the new drawing itself.
-   A part skipped with Done stays skipped, through Back to drawing and a saved draft; a draft
-   keeps the name, size and place too.
-6. **The body comes first** - the other buttons are faded until there is one, and say so.
-   **"It's finished!"** appears once there is a body, eyes and a mouth (`PartTypes.NEEDED`) and
-   goes on to the name, size and favourite place - where **Back to drawing** goes back to the
-   sheet, all still there - then personality; coat; voice; favourite food and toy; where it
-   lives. Those steps carry a Stop the creator floats top-right (hidden while a
+   The plan - with a part skipped staying skipped - lasts through Back to drawing and a saved
+   draft; a draft keeps the name, size and place too.
+6. **The body comes first** - the other tiles are faded until there is one, and say so.
+   **"It's finished!"** appears once there is a body, eyes and a mouth (`PartTypes.NEEDED`) - so
+   a kid can stop before the plan is done - and goes on to the name, size and favourite place
+   (missing eyes or a mouth: the sheet opens on them instead). There **Back to drawing** goes back
+   to the sheet, all still there - then personality; coat; voice; favourite food and toy; where
+   it lives. Those steps carry a Stop the creator floats top-right (hidden while a
    favourite snack or toy is being drawn).
 7. **Zoom** for small things: pinch or the wheel, or the buttons; two fingers, the hand tool or a
    right-drag slide the sheet about. A pinch that starts with a finger already drawing takes that
    stroke back, and the bucket pours when the finger lifts, so zooming never leaves marks.
 8. **Stop** asks "Save it for later / Throw it away / Keep drawing" (and, held by a grown-up,
    "report a bug"). A saved pet is a **draft** in `user://draft/` (version 3: draft.json, with
-   each drawing's place and stacking, plus a PNG per drawing, `layer_<type>_<n>.png`), written
+   the plan and each drawing's place and stacking, plus a PNG per drawing,
+   `layer_<type>_<n>.png`; a draft from before plans gets a cat-or-dog one), written
    each time a drawing is put down - only the ones that changed - and with the page as it is on
    Save or when the app goes to the background. Starting a new pet offers to finish it. A
    version 2 draft (a picture per part) becomes one drawing per part; a version 1 draft (the

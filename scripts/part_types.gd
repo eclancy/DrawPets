@@ -139,19 +139,79 @@ const DRAW := {
 	"foot": "Draw a FOOT on the bottom of a leg.",
 	"claw": "Draw CLAWS on a foot or a hand.",
 }
-## After "Draw another leg" (with the part's name, in capitals), and after "Copy this leg".
-const DRAW_MORE := "Draw another %s!"
+## The next of several ("LEG 2 of 4!"), and after "Copy this leg".
+const DRAW_NEXT := "%s %d of %d! Draw it - or copy the last one."
 const DRAG_COPY := "Drag it where it goes!"
-## The buttons on the creature sheet, in the order a kid is nudged through (body, head, eyes,
-## mouth, legs), then everything else.
-const SHEET_PARTS := ["body", "head", "eye", "mouth", "leg", "arm", "ear", "nose", "tail", "wing",
-	"hand", "foot", "horn", "antenna", "hair", "spike", "fin", "tentacle", "claw", "other"]
-const SUGGESTED := ["body", "head", "eye", "mouth", "leg"]
 ## A creature needs a body, and eyes and a mouth on it somewhere.
 const NEEDED := ["body", "eye", "mouth"]
 
+## Drawing a pet is guided (.ai/creature-pipeline.md): the kid says up front how many of these it
+## has - type -> [fewest, most, to start with], a cat or a dog to start - then draws them one at a
+## time, in GUIDE_ORDER, and is asked "Anything else?" at the end for the rest. The body and the
+## mouth are always one each.
+const PLAN_ASK := {"head": [0, 3, 1], "eye": [1, 8, 2], "ear": [0, 4, 2], "arm": [0, 6, 0],
+	"leg": [0, 8, 4], "tail": [0, 3, 1]}
+const PLAN_ORDER := ["head", "eye", "ear", "arm", "leg", "tail"]
+## The order the parts are drawn in: what a part grows from before the part (a hand after the
+## arms), the face together.
+const GUIDE_ORDER := ["body", "head", "eye", "mouth", "nose", "ear", "horn", "antenna", "hair",
+	"arm", "hand", "leg", "foot", "claw", "tail", "wing", "fin", "spike", "tentacle", "other"]
+## Drawn as a bunch, not counted: some spikes, some hair, some claws - yes or no.
+const BUNCH := ["hair", "spike", "claw"]
+## How many "Anything else?" starts a part at when it is tapped: a pair of wings, a nose. Hands
+## and feet start at one per arm and per leg.
+const MORE_START := {"head": 1, "eye": 2, "ear": 2, "arm": 2, "leg": 4, "tail": 1, "nose": 1,
+	"horn": 2, "antenna": 2, "hair": 1, "wing": 2, "fin": 2, "spike": 1, "tentacle": 4, "claw": 1,
+	"other": 1, "hand": 2, "foot": 4}
+
 ## Food and toys have no body to attach to; the dot is just their middle.
 const ITEM := {"label": "Item", "max": 1, "zoom": 1.0, "dot": Vector2(256, 256)}
+
+
+## The plan for a new pet from the counts picked up front: [[type, how many], ...] in the order
+## they are drawn, with the body and a mouth.
+static func plan_from(counts: Dictionary) -> Array:
+	var all := counts.duplicate()
+	all["body"] = 1
+	all["mouth"] = 1
+	var out := []
+	for type in GUIDE_ORDER:
+		if int(all.get(type, 0)) > 0:
+			out.append([type, int(all[type])])
+	return out
+
+
+## Adds `counts` (type -> how many) to a plan in place, keeping it in drawing order; 0 takes a
+## part out of it.
+static func add_to_plan(plan: Array, counts: Dictionary) -> void:
+	var all := {}
+	for e in plan:
+		all[str(e[0])] = int(e[1])
+	for type in counts:
+		all[type] = int(counts[type])
+	plan.clear()
+	for type in GUIDE_ORDER:
+		if int(all.get(type, 0)) > 0:
+			plan.append([type, int(all[type])])
+
+
+## The most of a part a pet can be planned with: a hand for every arm, a foot for every leg (a
+## part's own "max" is per host for those).
+static func most(type: String) -> int:
+	match type:
+		"hand":
+			return int(TYPES["arm"]["max"])
+		"foot":
+			return int(TYPES["leg"]["max"])
+	return int(info(type)["max"])
+
+
+## How many of `type` a plan has (0 if none).
+static func planned(plan: Array, type: String) -> int:
+	for e in plan:
+		if str(e[0]) == type:
+			return int(e[1])
+	return 0
 
 
 static func info(type: String) -> Dictionary:

@@ -66,14 +66,20 @@ func _build_first_home() -> void:
 
 # --- Making a pet ----------------------------------------------------------------------------
 
-## The parts the demo draws on its creature, in the order it taps them (after the body).
-const PARTS := ["head", "eye", "mouth", "ear", "leg", "foot", "tail", "wing", "arm", "hand"]
-
-
-## Starts a pet, draws its body, stops with "Save it for later" - then starts a new pet from
-## home and picks the saved one up again, body and all. Returns the creator carrying on.
+## Starts a pet: what will it have? - one head, two eyes, two ears, an arm (one more than it
+## starts at), four legs (one fewer, then back), a tail - draws its body, stops with "Save it for
+## later", then starts a new pet from home and picks the saved one up again, plan and all.
+## Returns the creator carrying on.
 func _draft_round_trip() -> Creator:
 	var creator := game.start_creator()
+	await _wait(0.6)
+	var planner := creator.current as PartPlanner
+	planner.change("arm", 1)
+	planner.change("leg", -1)
+	planner.change("leg", 1)
+	await _wait(0.2)
+	await _shot("plan")
+	planner.press_go()
 	await _wait(0.6)
 	await _shot("sheet_start")
 	await _draw_part("body", creator.sheet.canvas)
@@ -88,55 +94,98 @@ func _draft_round_trip() -> Creator:
 	await _shot("draft_offer")
 	creator.resume_draft()
 	await _wait(0.6)
+	print("[demo] the plan came back with the draft: %s" % str(creator._plan))
 	return creator
 
 
-## The whole creature on its one sheet: Done with the body (it bounces), then each part picked,
-## drawn where it goes and shown off - zoomed in for the eyes. Legs are one leg, two copies slid
-## along the belly and one more drawn by hand; the ear and the wing are copied too, the wing's copy
-## put behind the body. Done on a part with nothing drawn moves on. Then back to the head to add
-## to it, "It's finished!", back to the drawing from its name, and finished again.
+## The whole creature on its one sheet, as the plan asks for it: Done with the body (it bounces),
+## then the head, both eyes in one go (they count as two - zoomed in), the mouth, an ear and a
+## copy of it for "EAR 2 of 2", the arm, the legs one at a time (a copy, a copy taken back with
+## undo, one by hand) and the tail. "Anything else?" then adds wings, a hand, feet and horns; Done
+## on the horns' empty page skips them; the wing is drawn, copied and put behind. Asked again, it
+## goes back to drawing; then back to the
+## legs (the bucket in another leg colours that one) and the head to add to them - no "Anything
+## else?" for fixing - "It's finished!", back to the drawing from its name, and finished again.
 func _draw_creature(sheet: CreatureSheet) -> void:
 	await _shot("draft_resumed")
 	await sheet.press_done()
 	await _through_preview(sheet, "preview_body")
 	await _wait(0.3)
 	await _shot("sheet_next_head")
-	for type in PARTS:
-		if sheet.active != type:
-			await sheet.pick(type)
-		await _wait(0.2)
-		if type == "eye":
-			# Closer, for something small.
-			var c := sheet.canvas
-			c.zoom_at(2.6, c._sheet.position + Vector2(745, 290) * c._sheet.scale.x)
-			await _wait(0.2)
-		match type:
-			"leg":
-				await _draw_legs(sheet)
-			"ear":
-				await _draw_part("ear", sheet.canvas)
-				await _copy_to(sheet, Vector2(130, -24))
-			"wing":
-				await _draw_part("wing", sheet.canvas)
-				await _copy_to(sheet, Vector2(-70, -16))
-				await sheet.press_stack()
-				await _wait(0.3)
-			_:
-				await _draw_part(type, sheet.canvas)
-		await _wait(0.2)
-		if type in ["head", "eye", "wing"]:
-			await _shot("sheet_" + type)
-		if type == "eye":
-			sheet.canvas.reset_view()
-		await sheet.press_done()
-		await _through_preview(sheet, "preview_" + type if type in ["eye", "leg", "wing", "tail"] else "")
-		await _wait(0.3)
-	# Done on a part with nothing drawn: no horns, thanks - it moves on.
-	await sheet.pick("horn")
+	print("[demo] after the body it asks for the head: %s" % (sheet.active == "head"))
+	await _draw_done(sheet, "head", "sheet_head")
+	# Closer, for something small - both eyes in one go.
+	var c := sheet.canvas
+	c.zoom_at(2.6, c._sheet.position + Vector2(745, 290) * c._sheet.scale.x)
+	await _wait(0.2)
+	await _draw_part("eye", c)
+	await _wait(0.2)
+	await _shot("sheet_eye")
+	c.reset_view()
+	await sheet.press_done()
+	await _through_preview(sheet, "preview_eye")
+	print("[demo] two eyes drawn at once count as two: %s" % (sheet.active == "mouth"))
+	await _draw_done(sheet, "mouth")
+	# One ear, then "EAR 2 of 2!" - copy the last one and slide it along.
+	await _draw_part("ear", c)
 	await sheet.press_done()
 	await _wait(0.3)
-	print("[demo] Done on an empty part moves on: %s" % (sheet.active != "horn"))
+	await _shot("sheet_ear_next")
+	print("[demo] Next ear asks for ear 2 of 2: %s" % sheet._prompt.text.begins_with("EAR 2 of 2"))
+	await _copy_last(sheet, Vector2(130, -24))
+	await sheet.press_done()
+	await _through_preview(sheet)
+	await _draw_done(sheet, "arm")
+	await _draw_legs(sheet)
+	await _draw_part("tail", c)
+	await sheet.press_done()
+	await _through_preview(sheet, "preview_tail")
+	# All planned parts drawn: "Anything else?"
+	await _wait(0.4)
+	var more := sheet._more
+	print("[demo] Anything else? when the plan is drawn: %s" % (more != null))
+	if more != null:
+		await _shot("anything_else")
+		for type in ["wing", "hand", "foot", "horn"]:
+			more.toggle(type)
+		await _wait(0.2)
+		await _shot("anything_else_picked")
+		more.press_go()
+		await _wait(0.4)
+	# No horns after all: Done on the empty page skips them.
+	print("[demo] horns asked for first: %s" % (sheet.active == "horn"))
+	await sheet.press_done()
+	await _wait(0.3)
+	print("[demo] Done on an empty part moves on: %s" % (sheet.active == "hand"))
+	await _draw_done(sheet, "hand")
+	await _draw_done(sheet, "foot")
+	await _draw_part("wing", c)
+	await sheet.press_done()
+	await _copy_last(sheet, Vector2(-70, -16))
+	await sheet.press_stack()
+	await _wait(0.3)
+	await _shot("sheet_wing")
+	await sheet.press_done()
+	await _through_preview(sheet, "preview_wing")
+	await _wait(0.4)
+	# Asked again; Back to drawing, to fix a couple of things first.
+	if sheet._more != null:
+		await _shot("anything_else_again")
+		sheet._more._back()
+		await _wait(0.3)
+	print("[demo] Back to drawing from Anything else: %s" % (sheet._more == null and sheet.active == ""))
+	# Back to the legs: the bucket in the fourth colours it, the bucket in the second switches to it.
+	await sheet.pick("leg")
+	await _wait(0.2)
+	c = sheet.canvas
+	await _fill(c, Vector2(642, 690), UI.PALETTE[3])
+	await _fill(c, Vector2(442, 690), UI.PALETTE[5])
+	await _wait(0.6)
+	var last: Dictionary = sheet.layers["leg"].back()
+	print("[demo] bucket switched to the second leg: %s" % (last["at"].x > 400.0 and last["at"].x < 500.0))
+	await _shot("sheet_leg_switched")
+	await sheet.press_done()
+	await _through_preview(sheet)
 	# Back to the head, to give it a spot - its lines come back to draw on.
 	await sheet.pick("head")
 	await _wait(0.3)
@@ -145,6 +194,7 @@ func _draw_creature(sheet: CreatureSheet) -> void:
 	await sheet.press_done()
 	await _through_preview(sheet)
 	await _wait(0.4)
+	print("[demo] fixing a part does not ask Anything else: %s" % (sheet._more == null))
 	await _shot("sheet_done")
 	var creator := sheet.get_parent() as Creator
 	await sheet.press_finished()
@@ -163,18 +213,38 @@ func _draw_creature(sheet: CreatureSheet) -> void:
 	var counts := {}
 	for part in creator.pet["parts"]:
 		counts[part["type"]] = int(counts.get(part["type"], 0)) + 1
-	print("[demo] parts: legs %d ears %d wings %d feet %d arms %d" % [counts.get("leg", 0),
-		counts.get("ear", 0), counts.get("wing", 0), counts.get("foot", 0), counts.get("arm", 0)])
+	print("[demo] parts: legs %d ears %d wings %d feet %d arms %d horns %d" % [counts.get("leg", 0),
+		counts.get("ear", 0), counts.get("wing", 0), counts.get("foot", 0), counts.get("arm", 0),
+		counts.get("horn", 0)])
 
 
-## Legs, one at a time: one drawn and coloured, copied and slid along twice, a fourth drawn as an
-## outline by hand - and coloured from a fresh page, which makes that leg the bold one again.
+## Draws the part the sheet is asking for, checks it is `type`, Done, and through its show.
+func _draw_done(sheet: CreatureSheet, type: String, shot := "") -> void:
+	if sheet.active != type:
+		print("[demo] expected to be asked for %s, but it is %s" % [type, sheet.active])
+		await sheet.pick(type)
+	await _draw_part(type, sheet.canvas)
+	await _wait(0.2)
+	if shot != "":
+		await _shot(shot)
+	await sheet.press_done()
+	await _through_preview(sheet, "preview_" + type if type in ["leg", "foot"] else "")
+	await _wait(0.3)
+
+
+## Legs, one at a time: one drawn and coloured; Next leg ("LEG 2 of 4!"); the last one copied and
+## slid along, twice; a copy taken back with undo; and the fourth drawn as an outline by hand.
 func _draw_legs(sheet: CreatureSheet) -> void:
 	var c := sheet.canvas
+	print("[demo] the legs are next: %s" % (sheet.active == "leg"))
 	_line(c, _leg_outline(320.0), UI.PALETTE[0], 11.0, 8)
 	await _fill(c, Vector2(342, 690), UI.PALETTE[3])
 	await _wait(0.2)
 	await _shot("sheet_leg_one")
+	await sheet.press_done()
+	await _wait(0.3)
+	await _shot("sheet_leg_next")
+	print("[demo] Next leg asks for leg 2 of 4: %s" % sheet._prompt.text.begins_with("LEG 2 of 4"))
 	for x in [420.0, 520.0]:
 		await sheet.press_copy()
 		await _wait(0.3)
@@ -183,36 +253,30 @@ func _draw_legs(sheet: CreatureSheet) -> void:
 		var r := c.loaded_rect()
 		c.drag_copy(r.get_center(), r.get_center() + Vector2(x - 2.0 - r.position.x, 570.0 - r.position.y))
 		await _wait(0.2)
-	await sheet.press_another()
+		await sheet.press_done()
+		await _wait(0.2)
+	# A copy, then thought better of it: undo takes it back, to the third leg.
+	await sheet.press_copy()
+	sheet._undo()
+	await _wait(0.2)
+	print("[demo] undo took back the copied leg: %s" % (sheet.layers.get("leg", []).size() == 3))
+	await sheet.press_done()
 	await _wait(0.2)
 	_line(c, _leg_outline(620.0), UI.PALETTE[0], 11.0, 11)
 	await _wait(0.2)
 	await _shot("sheet_leg")
-	# Another, then thought better of it: undo takes the empty one back.
-	await sheet.press_another()
-	sheet._undo()
-	await _wait(0.2)
-	print("[demo] undo took back the empty leg: %s" % (sheet.layers.get("leg", []).size() == 4))
-	# A fresh page, and the bucket inside the fourth leg: it becomes the bold one, coloured.
-	await sheet.press_another()
-	c.tool = DrawCanvas.Tool.FILL
-	c.color = UI.PALETTE[3]
-	await c.fill_at(Vector2(642, 690))
-	await _wait(0.6)
-	var last: Dictionary = sheet.layers["leg"].back()
-	print("[demo] bucket switched to the fourth leg: %s" % (last["at"].x > 600.0))
-	await _shot("sheet_leg_switched")
+	await sheet.press_done()
+	await _through_preview(sheet, "preview_leg")
+	await _wait(0.3)
 
 
 func _leg_outline(x: float) -> PackedVector2Array:
 	return PackedVector2Array([Vector2(x, 570), Vector2(x - 2, 720), Vector2(x + 46, 720), Vector2(x + 44, 570)])
 
 
-## Copy this part, and slide the copy `by` from where the one copied is.
-func _copy_to(sheet: CreatureSheet, by: Vector2) -> void:
-	var src: Dictionary = sheet._bold
-	await sheet._fold()
-	src = sheet._bold
+## On a fresh page for the next one: copy the last one drawn, and slide the copy `by` from it.
+func _copy_last(sheet: CreatureSheet, by: Vector2) -> void:
+	var src: Dictionary = sheet.layers[sheet.active].back()
 	await sheet.press_copy()
 	await _wait(0.3)
 	var r := sheet.canvas.loaded_rect()

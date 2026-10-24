@@ -137,6 +137,16 @@ drawing, with "Draw another leg", "Copy this leg" and "In front / Behind" for an
 hidden copies (a kid had drawn four legs and got them all doubled - in 0.2.1 the staged creator
 gave sixteen). Next: watch a kid use it.
 
+## M1.21 - Drawing a pet is guided again (built)
+
+Eric: "a guided procedure again, where they select how many heads / eyes / arms etc ahead of
+time and then we guide them through the process, then we ask them if they want to add any other
+specific parts after, like tentacles". Still one sheet: first "What will your pet have?" (heads,
+eyes, ears, arms, legs, tails, - and +), then the sheet asks for each one in turn ("LEG 2 of 4!
+Draw it - or copy the last one", Next leg, No more legs), the plan's parts on the right with a dot
+for each one, and "Anything else?" at the end for wings, horns, tentacles and the rest. The tools
+have their words under them (Clear, Move...). Next: watch a kid use it.
+
 ## M1.20 - Every game shows what to do (built)
 
 Eric: "the games can be confusing ... each game should be clear what to do." Every game now shows
