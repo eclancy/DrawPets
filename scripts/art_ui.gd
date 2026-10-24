@@ -75,7 +75,7 @@ const ASSETS := {
 	"ui_move_home": {"pivot": "center", "look": "a little house with a curved arrow swooping into its door"},
 	"ui_settings": {"pivot": "center", "look": "a friendly gear / cog"},
 	# How to play (HowTo): a hand that shows the gesture - its pivot is the fingertip.
-	"ui_point": {"pivot": Vector2(226, 40), "look": "a cartoon hand pointing straight UP with a chunky index finger and fingernail, the rest curled into a fist with the thumb tucked across, a straight wrist and a sleeve cuff"},
+	"ui_point": {"pivot": Vector2(196, 56), "look": "the computer pointer hand, from the back: index finger straight UP, the other three curled with their tops stepping down to the right, the thumb along the left, a sleeve cuff"},
 	# Sound buttons.
 	"snd_play": {"pivot": "center", "look": "a big play triangle inside a circle"},
 	"snd_record": {"pivot": "center", "look": "an old round microphone on a little stand, with a red record dot"},
@@ -477,39 +477,30 @@ static func _tool_hand(c: CanvasItem) -> void:
 	_mark(c, _union(bits), skin, 3301, 11.0)
 
 
-## Marker: a cartoon hand pointing up - a chunky index finger with a fingernail, the other
-## fingers curled into a squarish fist (their knuckles showing down its side), the thumb tucked
-## across them, a straight wrist and a blue sleeve cuff. Its fingertip is the pivot, so it can touch exactly where
-## to tap.
+## Marker: the pointing hand everyone knows from a computer's pointer, seen from the back - the
+## index finger up, the other three curled, their tops stepping down to the right, the thumb
+## along the left, a wide fist and a blue sleeve cuff. Its fingertip is the pivot, so it can touch
+## exactly where to tap.
 static func _point(c: CanvasItem) -> void:
 	var skin := Color("#f6c7a1")
 	var cuff := Color("#8fc4ee")
-	var line := skin.darkened(0.45)
-	# The fist: a squarish palm on a straight wrist, the three curled fingers as bumps down its
-	# right side, and the index finger standing up from its left.
-	var hand := [_round_poly(PackedVector2Array([Vector2(172, 232), Vector2(348, 232), Vector2(350, 404),
-		Vector2(176, 404)]), 46.0)]
-	hand.append(PackedVector2Array([Vector2(200, 360), Vector2(338, 360), Vector2(334, 452), Vector2(204, 452)]))
-	for i in 3:
-		var y := 258.0 + i * 50.0
-		hand.append(_capsule(Vector2(312, y), Vector2(352, y + 2), 54.0))
-	hand.append(_capsule(Vector2(226, 300), Vector2(226, 82), 90.0))
+	var line := skin.darkened(0.5)
+	var hand := [_round_poly(PackedVector2Array([Vector2(156, 270), Vector2(442, 296), Vector2(432, 360),
+		Vector2(390, 440), Vector2(206, 440), Vector2(156, 380)]), 30.0)]
+	hand.append(_capsule(Vector2(196, 300), Vector2(196, 92), 84.0))
+	hand.append(_capsule(Vector2(276, 300), Vector2(276, 262), 78.0))
+	hand.append(_capsule(Vector2(350, 310), Vector2(350, 280), 72.0))
+	hand.append(_capsule(Vector2(412, 322), Vector2(412, 300), 62.0))
+	hand.append(_capsule(Vector2(196, 384), Vector2(124, 300), 74.0))
 	_mark(c, _union(hand), skin, 3402, 11.0)
-	_mark(c, _round_poly(PackedVector2Array([Vector2(184, 424), Vector2(354, 424), Vector2(358, 500),
-		Vector2(180, 500)]), 20.0), cuff, 3401, 10.0)
-	# Where the curled fingers meet, and the thumb tucked across their front - fat at its root on
-	# the palm's left edge, rounding off at its tip in the middle.
-	for i in 2:
-		var y := 284.0 + i * 50.0
-		Crayon.marker_line(c, PackedVector2Array([Vector2(370, y), Vector2(328, y + 4)]), line, 8.0, 3403 + i, false)
-	var thumb := _union([Crayon.ellipse(Vector2(208, 382), Vector2(38, 34), 20),
-		_capsule(Vector2(214, 376), Vector2(278, 326), 48.0)])
-	_mark(c, thumb, skin.lightened(0.05), 3405, 9.0)
-	# A fingernail near the tip, and a shine down the finger.
-	var nail := Crayon.ellipse(Vector2(226, 114), Vector2(22, 26), 16)
-	Crayon.marker_fill(c, nail, Color("#fde3d0"), 3406)
-	Crayon.marker_line(c, nail, line.lightened(0.25), 5.0, 3407)
-	Crayon.line(c, Vector2(206, 152), Vector2(206, 236), SHINE, 10.0, 3408)
+	_mark(c, _round_poly(PackedVector2Array([Vector2(194, 424), Vector2(400, 424), Vector2(404, 500),
+		Vector2(190, 500)]), 20.0), cuff, 3401, 10.0)
+	# Where the curled fingers meet, and where the thumb leaves the fist.
+	var gaps := [[Vector2(238, 236), Vector2(238, 292)], [Vector2(314, 262), Vector2(313, 304)],
+		[Vector2(384, 290), Vector2(382, 324)], [Vector2(156, 306), Vector2(206, 358)]]
+	for i in gaps.size():
+		Crayon.marker_line(c, PackedVector2Array(gaps[i]), line, 8.0, 3403 + i, false)
+	Crayon.line(c, Vector2(176, 112), Vector2(176, 220), SHINE, 10.0, 3408)
 
 
 ## Pencil: a crumpled ball of paper - a jagged round lump, creases criss-crossing it, a shaded side.
