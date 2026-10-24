@@ -454,7 +454,8 @@ func _pause(seconds: float) -> Signal:
 
 ## The big sign: a green TAP! circle with a tapping finger, or a red STOP with an open hand, and a
 ## ring round it running down the time left. `t` is the rhythm's clock (set by the owner every
-## frame); `pop` bounces it (a tap in time), `shake` wobbles it (a tap on STOP). Used by the cup,
+## frame); `pop` bounces it (a tap in time), `shake` sways it gently (a tap on STOP - a slow
+## rock side to side, never a buzz). Used by the cup,
 ## the cup's how-to picture and the rope tug at home.
 class TapSign extends Control:
 	const BOX := Vector2(220, 220)
@@ -485,7 +486,7 @@ class TapSign extends Control:
 
 	func _process(delta: float) -> void:
 		pop = maxf(0.0, pop - delta * 4.0)
-		shake = maxf(0.0, shake - delta * 3.0)
+		shake = maxf(0.0, shake - delta * 1.6)
 		var pulling := TugGame.is_pull(t)
 		var now := 0 if pulling else 1
 		if now != _was:
@@ -502,14 +503,16 @@ class TapSign extends Control:
 		queue_redraw()
 
 	func _draw() -> void:
-		var c := size / 2.0 + Vector2(sin(shake * 40.0) * 10.0 * shake, 0.0)
+		# A slow rock: one and a half sways over the shake's 0.6 s, a little tilt and a little shift.
+		var sway := sin(shake * TAU * 1.5) * shake
+		var c := size / 2.0 + Vector2(sway * 6.0, 0.0)
 		var r := radius * (1.0 + 0.12 * pop)
 		var pulling := TugGame.is_pull(t)
 		var col := TugGame.PULL_GREEN if pulling else TugGame.STOP_RED
 		var shape := PackedVector2Array()
 		var corners := 24 if pulling else 8
 		for i in corners:
-			var a := TAU * (i + (0.0 if pulling else 0.5)) / corners
+			var a := TAU * (i + (0.0 if pulling else 0.5)) / corners + sway * 0.12
 			shape.append(c + Vector2.from_angle(a) * r)
 		Crayon.marker_fill(self, shape, col, 61 if pulling else 62)
 		Crayon.marker_line(self, shape, col.darkened(0.35), 6.0, 63)
