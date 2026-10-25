@@ -274,6 +274,8 @@ Every problem found goes in as a test the demo kid can repeat, where it can be.
 
 Installed over wireless debugging (`adb pair` with the code from Developer options > Wireless
 debugging > Pair device; `adb mdns services` finds the phone's address and ports by itself).
+When `adb devices` comes up empty later, the phone has usually just moved to a new port: `adb
+mdns services` shows it, and `adb connect <ip:port>` gets it back with no pairing again.
 - Runs: OpenGL ES 3.2 on a Mali-G715, every sound loads, no script errors.
 - **Fixed:** `!is_inside_tree()` from `can_process` on taps - a lifted finger is a mouse release
   then a touch release, and steps removed from the tree in between made Godot complain. `UI.retire`.
