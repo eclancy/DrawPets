@@ -35,10 +35,16 @@ const OTHERS_ALPHA := 0.6
 const ONE_OF := ["body", "head", "mouth", "nose", "tail", "hair", "other"]
 ## The first few copies get the hand showing the slide.
 const HOW_COPIES := 3
-## A tool on the left, with its word under its picture.
-const TOOL_SIZE := Vector2(64, 58)
-## The room the plan's parts have on the right: four rows of them.
-const STRIP_HEIGHT := 272.0
+## A tool on the left, two to a row, with its word under its picture - big enough for a small
+## finger on a phone, where the whole screen is about 7 cm tall.
+const TOOL_SIZE := Vector2(84, 76)
+## The parts, the crayons and Done, on the right.
+const SIDE_W := 420.0
+## The plan's parts: three rows of them, as wide as fits.
+const TILE_H := 76.0
+const STRIP_HEIGHT := 240.0
+## What to draw now, across the top of the drawing: where the kid is looking.
+const BANNER_H := 76.0
 
 ## type -> [drawing, ...], in the order drawn. A drawing is {image (cropped to its ink), at (sheet
 ## px of its top-left), shine ({} or {mode, mask} the same size), behind (bool), z (its place in the
@@ -74,8 +80,14 @@ var _copying := false
 var _row_bounced := false
 var _switching := false
 var _cache := {}
-var _prompt: Label
-var _message: Label
+## The banner over the drawing: the part's picture, what to draw ("Draw a LEG", "LEG 2 of 4") and
+## a line under it - how, or anything the game has to say ("That's its BODY!").
+var _banner_box: Control
+var _banner_icon: TextureRect
+var _head: Label
+var _tip: Label
+var _tip_text := ""
+var _said := ""
 ## The plan's parts on the right: type -> its button, its dots, its tick.
 var _tiles := {}
 var _dots := {}
@@ -107,13 +119,19 @@ const ALWAYS_FRONT := ["eye", "mouth", "nose"]
 func _ready() -> void:
 	add_child(UI.paper_background())
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	add_child(UI.full_rect(UI.margin(row, 12)))
+	row.add_theme_constant_override("separation", 10)
+	add_child(UI.full_rect(UI.margin(row, 8)))
 
-	# Tools down the left, the sheet as big as it can be, the parts and crayons on the right.
+	# Tools down the left, two to a row; what to draw over the sheet, which is as big as it can be;
+	# the parts and crayons on the right.
 	var tools := VBoxContainer.new()
-	tools.add_theme_constant_override("separation", 4)
+	tools.add_theme_constant_override("separation", 8)
 	row.add_child(tools)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	tools.add_child(grid)
 	var tool_group := ButtonGroup.new()
 	# Each with its word under it: a crumpled page is "Clear", the hand is "Move".
 	for entry in [["tool_crayon", DrawCanvas.Tool.PEN, "Crayon"], ["tool_fill", DrawCanvas.Tool.FILL, "Paint"],
@@ -121,24 +139,38 @@ func _ready() -> void:
 		var b := _picture_button(entry[0], _set_tool.bind(entry[1]), tool_group, TOOL_SIZE, entry[2])
 		b.button_pressed = entry[1] == DrawCanvas.Tool.PEN
 		_tool_buttons[entry[1]] = b
-		tools.add_child(b)
-	tools.add_child(HSeparator.new())
-	tools.add_child(_picture_button("tool_undo", _undo, null, TOOL_SIZE, "Undo"))
-	tools.add_child(_picture_button("tool_clear", _clear, null, TOOL_SIZE, "Clear"))
-	tools.add_child(HSeparator.new())
-	tools.add_child(_picture_button("tool_zoom_in", _zoom.bind(1), null, TOOL_SIZE, "Zoom in"))
-	tools.add_child(_picture_button("tool_zoom_out", _zoom.bind(-1), null, TOOL_SIZE, "Zoom out"))
-	tools.add_child(_picture_button("tool_fit", _zoom.bind(0), null, TOOL_SIZE, "See all"))
+		grid.add_child(b)
+	grid.add_child(_picture_button("tool_undo", _undo, null, TOOL_SIZE, "Undo"))
+	grid.add_child(_picture_button("tool_clear", _clear, null, TOOL_SIZE, "Clear"))
+	grid.add_child(_picture_button("tool_zoom_in", _zoom.bind(1), null, TOOL_SIZE, "Zoom in"))
+	grid.add_child(_picture_button("tool_zoom_out", _zoom.bind(-1), null, TOOL_SIZE, "Zoom out"))
+	grid.add_child(_picture_button("tool_fit", _zoom.bind(0), null, TOOL_SIZE, "See all"))
+	var sizes := HBoxContainer.new()
+	sizes.add_theme_constant_override("separation", 6)
+	var size_group := ButtonGroup.new()
+	for entry in BRUSHES:
+		var b := _picture_button("", _set_brush.bind(entry[0]), size_group, Vector2(54, 54))
+		var d := DrawScreen.SizeDot.new()
+		d.radius = entry[1]
+		b.add_child(UI.full_rect(d))
+		b.button_pressed = entry[0] == 16.0
+		sizes.add_child(b)
+	tools.add_child(sizes)
 	var gap := Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tools.add_child(gap)
-	tools.add_child(UI.icon_button("icon_home", "Stop", _stop, 28, Vector2(64, 64)))
+	tools.add_child(UI.icon_button("icon_home", "Stop", _stop, 36, Vector2(TOOL_SIZE.x * 2.0 + 6.0, 76)))
 
+	var middle := VBoxContainer.new()
+	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	middle.add_theme_constant_override("separation", 8)
+	row.add_child(middle)
+	middle.add_child(_banner())
 	canvas = DrawCanvas.new()
 	canvas.sheet_size = SIZE
 	canvas.brush = 16.0
-	canvas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(canvas)
+	canvas.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	middle.add_child(canvas)
 	canvas.message.connect(_say)
 	canvas.tapped.connect(_tapped_between_parts)
 	canvas.edited.connect(_on_edited)
@@ -148,46 +180,32 @@ func _ready() -> void:
 	canvas.chooser = _press_picks
 
 	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(350, 0)
-	side.add_theme_constant_override("separation", 7)
+	side.custom_minimum_size = Vector2(SIDE_W, 0)
+	side.add_theme_constant_override("separation", 8)
 	row.add_child(side)
-	# What to do, and anything the game has to say, share one slot: one sentence at a time, and
-	# nothing below it jumps about.
-	var slot := Control.new()
-	slot.custom_minimum_size = Vector2(350, 58)
-	slot.clip_contents = true
-	_prompt = UI.label("", 20, true)
-	_prompt.max_lines_visible = 2
-	slot.add_child(UI.full_rect(_prompt))
-	_message = UI.label("", 18, true)
-	_message.max_lines_visible = 2
-	_message.add_theme_color_override("font_color", Color("#d0482a"))
-	_message.visible = false
-	slot.add_child(UI.full_rect(_message))
-	side.add_child(slot)
 
 	# The plan's parts, a dot for each one; tap one to go back to it. Its room is kept whatever
 	# the plan, so nothing below it moves.
 	var strip_room := Control.new()
-	strip_room.custom_minimum_size = Vector2(350, STRIP_HEIGHT)
+	strip_room.custom_minimum_size = Vector2(SIDE_W, STRIP_HEIGHT)
 	_strip = GridContainer.new()
-	_strip.add_theme_constant_override("h_separation", 5)
-	_strip.add_theme_constant_override("v_separation", 4)
+	_strip.add_theme_constant_override("h_separation", 6)
+	_strip.add_theme_constant_override("v_separation", 6)
 	strip_room.add_child(_strip)
 	side.add_child(strip_room)
 
 	# A copy, in front or behind - for the part being drawn. The row keeps its room even when it
 	# has nothing to offer (the body), so the screen never changes shape.
 	_row = HBoxContainer.new()
-	_row.custom_minimum_size = Vector2(350, 68)
-	_row.add_theme_constant_override("separation", 6)
-	_copy = _row_button(press_copy, 210)
+	_row.custom_minimum_size = Vector2(SIDE_W, 76)
+	_row.add_theme_constant_override("separation", 8)
+	_copy = _row_button(press_copy, 240)
 	_row.add_child(_copy)
 	# In front | Behind: two halves, the one it is now lit - tap the one you want.
 	_stack_box = HBoxContainer.new()
-	_stack_box.add_theme_constant_override("separation", 2)
-	_front = _row_button(set_front.bind(true), 60)
-	_behind = _row_button(set_front.bind(false), 60)
+	_stack_box.add_theme_constant_override("separation", 4)
+	_front = _row_button(set_front.bind(true), 84)
+	_behind = _row_button(set_front.bind(false), 84)
 	_stack_box.add_child(_front)
 	_stack_box.add_child(_behind)
 	_row.add_child(_stack_box)
@@ -204,32 +222,20 @@ func _ready() -> void:
 		colours.add_child(_marker_swatch(mode, int(markers[mode]), colour_group))
 	side.add_child(colours)
 
-	var sizes := HBoxContainer.new()
-	sizes.add_theme_constant_override("separation", 6)
-	var size_group := ButtonGroup.new()
-	for entry in BRUSHES:
-		var b := _picture_button("", _set_brush.bind(entry[0]), size_group, Vector2(56, 44))
-		var d := DrawScreen.SizeDot.new()
-		d.radius = entry[1]
-		b.add_child(UI.full_rect(d))
-		b.button_pressed = entry[0] == canvas.brush
-		sizes.add_child(b)
-	side.add_child(sizes)
-
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(spacer)
-	_finish_button = UI.button("It's finished!", press_finished, Vector2(0, 56), 24)
+	_finish_button = UI.button("It's finished!", press_finished, Vector2(0, 64), 28)
 	_finish_button.add_theme_stylebox_override("normal", UI._box(UI.GOOD, UI.INK, 3))
 	side.add_child(_finish_button)
 	_done_button = UI.big_button("", press_done)
-	_done_button.custom_minimum_size = Vector2(0, 72)
+	_done_button.custom_minimum_size = Vector2(0, 84)
 	var done_row := HBoxContainer.new()
 	done_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	done_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	done_row.add_theme_constant_override("separation", 8)
-	done_row.add_child(UI.icon("tool_done", 40, "none"))
-	_done_label = UI.label("", 24)
+	done_row.add_theme_constant_override("separation", 10)
+	done_row.add_child(UI.icon("tool_done", 48, "none"))
+	_done_label = UI.label("", 30)
 	_done_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	done_row.add_child(_done_label)
 	_done_button.add_child(UI.full_rect(done_row))
@@ -243,6 +249,55 @@ func _ready() -> void:
 		_between_parts()
 	else:
 		_open(start)
+
+
+## What to draw now, over the sheet, lit like the part's tile: its picture, "Draw a LEG" big, and
+## the line under it.
+func _banner() -> Control:
+	var banner := PanelContainer.new()
+	_banner_box = banner
+	banner.custom_minimum_size = Vector2(0, BANNER_H)
+	banner.add_theme_stylebox_override("panel", UI._box(UI.HILITE, UI.ACCENT, 4, 18, 12))
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 14)
+	banner.add_child(line)
+	_banner_icon = UI.icon("part_body", 60, "none")
+	_banner_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(_banner_icon)
+	_head = UI.label("", 32)
+	_head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(_head)
+	_tip = UI.label("", 20, true)
+	_tip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_tip.max_lines_visible = 2
+	_tip.add_theme_constant_override("line_spacing", -2)
+	line.add_child(_tip)
+	return banner
+
+
+## The banner: this part's picture, what to draw, and how. A new part makes it bounce, so the
+## change is seen.
+func _direct(icon: String, head: String, tip: String) -> void:
+	_banner_icon.texture = Items.art_texture(icon)
+	if _head.text != head and _head.text != "":
+		_bounce(_banner_box, 1.06)
+	_head.text = head
+	_tip_text = tip
+	_show_tip()
+
+
+func _show_tip() -> void:
+	_tip.text = _said if _said != "" else _tip_text
+	_tip.add_theme_color_override("font_color", Color("#c8401f") if _said != "" else UI.INK_SOFT)
+
+
+func _refresh_direction() -> void:
+	if active == "":
+		_direct("tool_done", "All drawn!", "Tap a part to fix it, or Add more - or It's finished!")
+		return
+	var d := _direction_for(active)
+	_direct(PartTypes.icon(active), d[0], d[1])
 
 
 # --- The parts -------------------------------------------------------------------------------
@@ -261,16 +316,18 @@ func _build_strip() -> void:
 	_tiles.clear()
 	_dots.clear()
 	_ticks.clear()
-	var wide := types.size() + 1 <= 20
-	_strip.columns = 5 if wide else 6
-	var w := 66.0 if wide else 54.0
+	var n := types.size() + 1
+	var cols := 5 if n <= 15 else (6 if n <= 18 else 7)
+	_strip.columns = cols
+	var w := floorf((SIDE_W - 6.0 * (cols - 1)) / cols)
 	for type in types:
 		_strip.add_child(_tile(type, w))
 	var more := _tile_button(w, ask_more)
-	var pic := UI.icon("ui_plus", 30)
-	pic.position = Vector2((w - 30.0) / 2.0, 4)
+	var px := _tile_icon(w)
+	var pic := UI.icon("ui_plus", px * 0.85)
+	pic.position = Vector2((w - px * 0.85) / 2.0, 6)
 	more.add_child(pic)
-	more.add_child(_tile_words("Add more"))
+	more.add_child(_words("Add more", _tile_font(w)))
 	_strip.add_child(more)
 
 
@@ -278,18 +335,19 @@ func _build_strip() -> void:
 ## once they are all drawn.
 func _tile(type: String, w: float) -> Button:
 	var b := _tile_button(w, pick.bind(type))
-	var pic := UI.icon(PartTypes.icon(type), 32)
-	pic.position = Vector2((w - 32.0) / 2.0, 1)
+	var px := _tile_icon(w)
+	var pic := UI.icon(PartTypes.icon(type), px)
+	pic.position = Vector2((w - px) / 2.0, 3)
 	b.add_child(pic)
 	var dots := Dots.new()
-	dots.position = Vector2(2, 34)
+	dots.position = Vector2(2, 4.0 + px)
 	dots.size = Vector2(w - 4.0, 10)
 	b.add_child(dots)
 	_dots[type] = dots
-	b.add_child(_tile_words(name_of(type).capitalize()))
-	var tick := UI.icon("tool_done", 22, "none")
-	tick.position = Vector2(w - 20.0, -4)
-	tick.size = Vector2(22, 22)
+	b.add_child(_words(name_of(type).capitalize(), _tile_font(w)))
+	var tick := UI.icon("tool_done", 26, "none")
+	tick.position = Vector2(w - 22.0, -5)
+	tick.size = Vector2(26, 26)
 	b.add_child(tick)
 	_ticks[type] = tick
 	_tiles[type] = b
@@ -298,18 +356,27 @@ func _tile(type: String, w: float) -> Button:
 
 func _tile_button(w: float, on_press: Callable) -> Button:
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(w, 64)
+	b.custom_minimum_size = Vector2(w, TILE_H)
 	b.pressed.connect(on_press)
 	return b
 
 
-func _tile_words(text: String) -> Label:
-	var l := UI.label(text, 11)
+static func _tile_icon(w: float) -> float:
+	return 40.0 if w >= 70.0 else 34.0
+
+
+static func _tile_font(w: float) -> int:
+	return 15 if w >= 70.0 else 13
+
+
+## Words along the bottom of a button.
+func _words(text: String, font_size := 15) -> Label:
+	var l := UI.label(text, font_size)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	l.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	l.offset_top = -19
+	l.offset_top = -(font_size + 8)
 	l.offset_bottom = -2
 	return l
 
@@ -387,7 +454,8 @@ func press_copy() -> void:
 	Sounds.play("pickup")
 	_show_others()
 	_say("")
-	_prompt.text = PartTypes.DRAG_COPY
+	_tip_text = PartTypes.DRAG_COPY
+	_show_tip()
 	_refresh_row()
 	_show_how_drag()
 	on_change.call()
@@ -1099,7 +1167,7 @@ func _raise(d: Dictionary) -> void:
 ## body.
 func _refresh() -> void:
 	_build_strip()
-	_prompt.text = _prompt_for(active) if active != "" else "All drawn! Tap a part to fix it, or Add more."
+	_refresh_direction()
 	_done_button.visible = active != ""
 	_update_done()
 	var ready := true
@@ -1126,17 +1194,19 @@ func _refresh() -> void:
 	_refresh_row()
 
 
-## What to draw now: the part's own words, or "LEG 2 of 4! Draw it - or copy the last one." With no
-## head, the face goes on the body.
-func _prompt_for(type: String) -> String:
+## What to draw now, [what, how]: the part's own words ("Draw a LEG", "Coming down from the
+## body"), or "LEG 2 of 4" - "Draw it - or copy the last one." With no head, the face goes on the
+## body.
+func _direction_for(type: String) -> Array:
 	var n := _planned(type)
 	var k := _step_no()
 	if n > 1 and k > 1 and k <= n and not _in_list and not PartTypes.BUNCH.has(type):
-		return PartTypes.DRAW_NEXT % [PartTypes.one_name(type).to_upper(), k, n]
-	var text: String = PartTypes.DRAW[type]
+		return [PartTypes.DRAW_NEXT[0] % [PartTypes.one_name(type).to_upper(), k, n], PartTypes.DRAW_NEXT[1]]
+	var d: Array = PartTypes.DRAW[type]
+	var tip: String = d[1]
 	if _planned("head") == 0 and not layers.has("head"):
-		text = text.replace("its head", "its body")
-	return text
+		tip = tip.replace("its head", "its body")
+	return [d[0], tip]
 
 
 ## Done says what it will do: "Next leg" while there are more to draw, "Done with the legs" on the
@@ -1172,8 +1242,8 @@ func _refresh_row() -> void:
 	var usual: String = PartTypes.info(active).get("host", "body")
 	if usual != "body" and layers.has(usual):
 		host_icon = PartTypes.icon(usual)
-	_dress(_front, "In front", [[host_icon, Vector2(-2, 4), 30, 1.0], [icon, Vector2(14, 0), 28, 1.0]], 54)
-	_dress(_behind, "Behind", [[icon, Vector2(14, 0), 28, 1.0], [host_icon, Vector2(-2, 4), 30, 1.0]], 54)
+	_dress(_front, "In front", [[host_icon, Vector2(0, 4), 36, 1.0], [icon, Vector2(20, 0), 36, 1.0]])
+	_dress(_behind, "Behind", [[icon, Vector2(20, 0), 36, 1.0], [host_icon, Vector2(0, 4), 36, 1.0]])
 	var behind := bool(_bold.get("behind", false))
 	_lit(_front, not behind)
 	_lit(_behind, behind)
@@ -1202,7 +1272,7 @@ func _update_row() -> void:
 	var text := "Copy this %s" % one if mine or not layers.has(active) else "Copy the last %s" % one
 	if _copy.get_meta("text", "") != text:
 		_copy.set_meta("text", text)
-		_dress(_copy, text, [[icon, Vector2(0, 0), 28, 0.55], [icon, Vector2(16, 4), 28, 1.0]])
+		_dress(_copy, text, [[icon, Vector2(0, 0), 36, 0.55], [icon, Vector2(22, 4), 36, 1.0]])
 	_copy.modulate.a = 1.0 if mine or layers.has(active) else 0.45
 	if mine and not _row_bounced and not ONE_OF.has(active) and _step_no() < _planned(active):
 		_row_bounced = true
@@ -1211,21 +1281,21 @@ func _update_row() -> void:
 
 func _row_button(on_press: Callable, width: float) -> Button:
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(width, 68)
+	b.custom_minimum_size = Vector2(width, 76)
 	b.pressed.connect(on_press)
 	return b
 
 
 ## A row button's picture (some part pictures laid over each other: [icon, at, px, alpha]) and
 ## its words underneath.
-func _dress(b: Button, text: String, pics: Array, art_x := 32.0) -> void:
+func _dress(b: Button, text: String, pics: Array) -> void:
 	for c in b.get_children():
 		c.queue_free()
 	var w := b.custom_minimum_size.x
 	var art := Control.new()
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art.position = Vector2((w - 48.0) / 2.0 if w > 150.0 else (art_x if w > 80.0 else 6.0), 1)
-	art.size = Vector2(48, 32)
+	art.position = Vector2((w - 58.0) / 2.0, 2)
+	art.size = Vector2(58, 40)
 	b.add_child(art)
 	for p in pics:
 		var pic := UI.icon(p[0], float(p[2]), "none")
@@ -1233,22 +1303,22 @@ func _dress(b: Button, text: String, pics: Array, art_x := 32.0) -> void:
 		pic.size = Vector2(p[2], p[2])
 		pic.modulate.a = float(p[3])
 		art.add_child(pic)
-	var l := UI.label(text, 12, true)
+	var l := UI.label(text, 16, true)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.add_theme_constant_override("line_spacing", -4)
 	l.max_lines_visible = 2
 	l.clip_text = true
-	l.position = Vector2(2, 33)
-	l.size = Vector2(w - 4.0, 34)
+	l.position = Vector2(2, 42)
+	l.size = Vector2(w - 4.0, 32)
 	b.add_child(l)
 
 
 func _on_edited() -> void:
 	if _opening:
 		return
-	if _message.visible and not _switching:
+	if _said != "" and not _switching:
 		_say("")
 	_update_row()
 
@@ -1263,7 +1333,7 @@ func _on_copy_dropped() -> void:
 func _on_moving_ended() -> void:
 	_dismiss_how()
 	if active != "":
-		_prompt.text = _prompt_for(active)
+		_refresh_direction()
 
 
 func _nope(text: String) -> void:
@@ -1271,18 +1341,17 @@ func _nope(text: String) -> void:
 	_say(text)
 
 
-func _bounce(b: Control) -> void:
+func _bounce(b: Control, by := 1.15) -> void:
 	b.pivot_offset = b.size / 2.0
 	var t := b.create_tween()
-	t.tween_property(b, "scale", Vector2(1.15, 1.15), 0.12)
+	t.tween_property(b, "scale", Vector2(by, by), 0.12)
 	t.tween_property(b, "scale", Vector2.ONE, 0.12)
 
 
 ## The game's own words take the prompt's place for a while: one sentence at a time.
 func _say(text: String) -> void:
-	_message.text = text
-	_message.visible = text != ""
-	_prompt.visible = text == ""
+	_said = text
+	_show_tip()
 
 
 ## The first few copies: the hand slides the copy along, to show it can be.
@@ -1404,12 +1473,12 @@ func _picture_button(icon: String, on_press: Callable, group: ButtonGroup = null
 		b.button_group = group
 	b.pressed.connect(on_press)
 	if icon != "":
-		var px := 42.0 if words == "" else 34.0
+		var px := 42.0 if words == "" else 44.0
 		var pic := UI.icon(icon, px)
-		pic.position = Vector2((min_size.x - px) / 2.0, (min_size.y - px) / 2.0 if words == "" else 2.0)
+		pic.position = Vector2((min_size.x - px) / 2.0, (min_size.y - px) / 2.0 if words == "" else 3.0)
 		b.add_child(pic)
 	if words != "":
-		b.add_child(_tile_words(words))
+		b.add_child(_words(words, 16))
 	return b
 
 
@@ -1417,12 +1486,12 @@ func _swatch(c: Color, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(35, 35)
+	b.custom_minimum_size = Vector2(42, 42)
 	var light := c.get_luminance() > 0.8
 	for state_name in ["normal", "hover"]:
-		b.add_theme_stylebox_override(state_name, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 18, 4))
+		b.add_theme_stylebox_override(state_name, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 21, 4))
 	for state_name in ["pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(state_name, UI._box(c, UI.ACCENT, 6, 18, 4))
+		b.add_theme_stylebox_override(state_name, UI._box(c, UI.ACCENT, 7, 21, 4))
 	b.button_pressed = c == UI.PALETTE[0]
 	b.pressed.connect(_pick_colour.bind(c, ""))
 	return b
@@ -1433,9 +1502,9 @@ func _marker_swatch(mode: String, n: int, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(35, 35)
+	b.custom_minimum_size = Vector2(42, 42)
 	b.tooltip_text = "%s marker (%d left)" % [mode.capitalize(), n]
-	var pic := UI.icon(Items.MARKERS[mode][0], 31)
+	var pic := UI.icon(Items.MARKERS[mode][0], 38)
 	pic.position = Vector2(2, 2)
 	b.add_child(pic)
 	b.pressed.connect(_pick_colour.bind(Items.MARKERS[mode][1], mode))

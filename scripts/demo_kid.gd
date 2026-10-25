@@ -131,7 +131,7 @@ func _draw_creature(sheet: CreatureSheet) -> void:
 	await sheet.press_done()
 	await _wait(0.3)
 	await _shot("sheet_ear_next")
-	print("[demo] Next ear asks for ear 2 of 2: %s" % sheet._prompt.text.begins_with("EAR 2 of 2"))
+	print("[demo] Next ear asks for ear 2 of 2: %s" % (sheet._head.text == "EAR 2 of 2"))
 	await _copy_last(sheet, Vector2(130, -24))
 	await sheet.press_done()
 	await _through_preview(sheet)
@@ -244,7 +244,7 @@ func _draw_legs(sheet: CreatureSheet) -> void:
 	await sheet.press_done()
 	await _wait(0.3)
 	await _shot("sheet_leg_next")
-	print("[demo] Next leg asks for leg 2 of 4: %s" % sheet._prompt.text.begins_with("LEG 2 of 4"))
+	print("[demo] Next leg asks for leg 2 of 4: %s" % (sheet._head.text == "LEG 2 of 4"))
 	for x in [420.0, 520.0]:
 		await sheet.press_copy()
 		await _wait(0.3)

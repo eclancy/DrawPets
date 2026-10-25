@@ -36,15 +36,22 @@ the separate sheets are not:
   plan's parts, opens it any time. It is not asked again when the kid only went back to fix a
   part that was already drawn.
 
-1. **The screen never changes shape.** Tools down the left, each with its word under it (Crayon,
-   Paint, Eraser, Move; Undo, Clear; Zoom in, Zoom out, See all; Stop - a kid asked what the
-   crumpled page and the hand were), the sheet as big as the screen allows
-   (`CreatureSheet.SIZE`, 1024 x 896), and on the right the prompt, **the plan's parts** (a tile
-   for each kind, a dot for each one - filled once drawn - a tick when they are all drawn, the
-   one being drawn lit; tap one to go back to it; Add more), a row for the part being drawn
-   (below), the crayons and brush sizes, and the Done button. The plan's parts keep the room of
-   four rows, so nothing below them moves. The prompt and anything the game has to say share one
-   slot: one sentence at a time.
+1. **The screen never changes shape**, and **everything is big enough for a small finger on a
+   phone** (Eric: "buttons need to be bigger and more legible, and the directions for what
+   you're currently drawing should be more obvious" - on a phone the whole 720-unit-tall screen
+   is about 7 cm, so an 11 px word is a millimetre high). Tools down the left, two to a row
+   (`TOOL_SIZE` 84 x 76), each with its word under it (Crayon, Paint, Eraser, Move; Undo, Clear;
+   Zoom in, Zoom out, See all - a kid asked what the crumpled page and the hand were), the brush
+   sizes under them, and Stop. **Across the top of the sheet, a banner says what to draw now**,
+   lit like the part's tile: the part's picture, "Draw a LEG" (or "LEG 2 of 4") big, and a line
+   beside it - how ("Coming down from the body. It walks!"), or anything the game has to say, in
+   red ("That's its BODY!"); it bounces when the part changes. Under it the sheet, as big as the
+   room left allows (`CreatureSheet.SIZE`, 1024 x 896). On the right (`SIDE_W` 420): **the plan's
+   parts** (a tile for each kind, as wide as fits in three rows, a dot for each one - filled once
+   drawn - a tick when they are all drawn, the one being drawn lit; tap one to go back to it; Add
+   more), a row for the part being drawn (below), the crayons, and the Done button. The plan's
+   parts keep the room of three rows, so nothing below them moves. The drawing screen for food,
+   toys and the rest (`DrawScreen`) has the same big tools with their words.
 2. **Draw it in place.** The prompt says what to draw (`PartTypes.DRAW`, one of it; "on its
    body" when there is no head) and **Done says what it will do**: "Next leg" while there are
    more to draw, "Done with the legs" on the last, and on an empty page "No more legs" (the plan

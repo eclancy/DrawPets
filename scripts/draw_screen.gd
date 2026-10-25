@@ -44,11 +44,11 @@ func _ready() -> void:
 	row.add_child(side)
 
 	if step_text != "":
-		var step := UI.label(step_text, 18)
+		var step := UI.label(step_text, 20)
 		step.add_theme_color_override("font_color", UI.INK_SOFT)
 		side.add_child(step)
-	side.add_child(UI.label(prompt, 22, true))
-	_message = UI.label("", 19, true)
+	side.add_child(UI.label(prompt, 26, true))
+	_message = UI.label("", 20, true)
 	_message.add_theme_color_override("font_color", Color("#d0482a"))
 	side.add_child(_message)
 
@@ -63,9 +63,19 @@ func _ready() -> void:
 		colours.add_child(_marker_swatch(mode, int(markers[mode]), colour_group))
 	side.add_child(colours)
 
-	# Brush sizes, then the tools, then undo and clear - all pictures.
+	# The tools, each with its word under it; then brush sizes, undo and clear.
 	var tools := HBoxContainer.new()
 	tools.add_theme_constant_override("separation", 6)
+	var tool_group := ButtonGroup.new()
+	for entry in [["tool_crayon", DrawCanvas.Tool.PEN, "Crayon"], ["tool_fill", DrawCanvas.Tool.FILL, "Paint"],
+			["tool_eraser", DrawCanvas.Tool.ERASER, "Eraser"]]:
+		var b := _picture_toggle(entry[0], tool_group, func(): canvas.tool = entry[1], entry[2])
+		b.button_pressed = entry[1] == DrawCanvas.Tool.PEN
+		_tool_buttons[entry[1]] = b
+		tools.add_child(b)
+	side.add_child(tools)
+	var more := HBoxContainer.new()
+	more.add_theme_constant_override("separation", 6)
 	var size_group := ButtonGroup.new()
 	for entry in [[6.0, 5.0], [12.0, 9.0], [24.0, 15.0]]:
 		var b := _picture_toggle("", size_group, func(): canvas.brush = entry[0])
@@ -73,19 +83,11 @@ func _ready() -> void:
 		d.radius = entry[1]
 		b.add_child(UI.full_rect(d))
 		b.button_pressed = entry[0] == 12.0
-		tools.add_child(b)
-	tools.add_child(VSeparator.new())
-	var tool_group := ButtonGroup.new()
-	for entry in [["tool_crayon", DrawCanvas.Tool.PEN], ["tool_fill", DrawCanvas.Tool.FILL],
-			["tool_eraser", DrawCanvas.Tool.ERASER]]:
-		var b := _picture_toggle(entry[0], tool_group, func(): canvas.tool = entry[1])
-		b.button_pressed = entry[1] == DrawCanvas.Tool.PEN
-		_tool_buttons[entry[1]] = b
-		tools.add_child(b)
-	tools.add_child(VSeparator.new())
-	tools.add_child(_picture_button("tool_undo", func(): canvas.undo()))
-	tools.add_child(_picture_button("tool_clear", func(): canvas.clear()))
-	side.add_child(tools)
+		more.add_child(b)
+	more.add_child(VSeparator.new())
+	more.add_child(_picture_button("tool_undo", func(): canvas.undo(), "Undo"))
+	more.add_child(_picture_button("tool_clear", func(): canvas.clear(), "Clear"))
+	side.add_child(more)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -108,12 +110,12 @@ func _swatch(c: Color, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(48, 48)
+	b.custom_minimum_size = Vector2(52, 52)
 	var light := c.get_luminance() > 0.8
 	for state in ["normal", "hover"]:
-		b.add_theme_stylebox_override(state, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 24))
+		b.add_theme_stylebox_override(state, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 26))
 	for state in ["pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(state, UI._box(c, UI.ACCENT, 7, 24))
+		b.add_theme_stylebox_override(state, UI._box(c, UI.ACCENT, 7, 26))
 	b.button_pressed = c == UI.PALETTE[0]
 	b.pressed.connect(func():
 		canvas.color = c
@@ -128,9 +130,9 @@ func _marker_swatch(mode: String, n: int, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(48, 48)
+	b.custom_minimum_size = Vector2(52, 52)
 	b.tooltip_text = "%s marker (%d left)" % [mode.capitalize(), n]
-	var pic := UI.icon(Items.MARKERS[mode][0], 40)
+	var pic := UI.icon(Items.MARKERS[mode][0], 44)
 	pic.position = Vector2(4, 4)
 	b.add_child(pic)
 	b.pressed.connect(func():
@@ -142,29 +144,40 @@ func _marker_swatch(mode: String, n: int, group: ButtonGroup) -> Button:
 	return b
 
 
-func _picture_button(icon: String, on_press: Callable) -> Button:
+## A tool: its picture, with its word under it.
+func _picture_button(icon: String, on_press: Callable, words := "") -> Button:
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(56, 56)
-	b.tooltip_text = icon.trim_prefix("tool_").trim_prefix("ui_").capitalize()
 	b.pressed.connect(on_press)
-	var pic := UI.icon(icon, 42)
-	pic.position = Vector2(7, 7)
-	b.add_child(pic)
+	_dress(b, icon, words)
 	return b
 
 
-func _picture_toggle(icon: String, group: ButtonGroup, on_press: Callable) -> Button:
+func _picture_toggle(icon: String, group: ButtonGroup, on_press: Callable, words := "") -> Button:
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(56, 56)
 	b.toggle_mode = true
 	b.button_group = group
 	b.pressed.connect(on_press)
-	if icon != "":
-		b.tooltip_text = icon.trim_prefix("tool_").capitalize()
-		var pic := UI.icon(icon, 42)
-		pic.position = Vector2(7, 7)
-		b.add_child(pic)
+	_dress(b, icon, words)
 	return b
+
+
+## Brush sizes are 62 square; a tool with its word is 84 x 76, like the creature sheet's.
+func _dress(b: Button, icon: String, words: String) -> void:
+	b.custom_minimum_size = Vector2(84, 76) if words != "" else Vector2(62, 62)
+	if icon != "":
+		var px := 44.0
+		var pic := UI.icon(icon, px)
+		pic.position = Vector2((b.custom_minimum_size.x - px) / 2.0, 3.0 if words != "" else 9.0)
+		b.add_child(pic)
+	if words != "":
+		var l := UI.label(words, 16)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+		l.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		l.offset_top = -24
+		l.offset_bottom = -2
+		b.add_child(l)
 
 
 func _select_tool(t: DrawCanvas.Tool) -> void:

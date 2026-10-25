@@ -145,7 +145,9 @@ specific parts after, like tentacles". Still one sheet: first "What will your pe
 eyes, ears, arms, legs, tails, - and +), then the sheet asks for each one in turn ("LEG 2 of 4!
 Draw it - or copy the last one", Next leg, No more legs), the plan's parts on the right with a dot
 for each one, and "Anything else?" at the end for wings, horns, tentacles and the rest. The tools
-have their words under them (Clear, Move...). Next: watch a kid use it.
+have their words under them (Clear, Move...). Then, from the phone: every button bigger and its
+words readable, and what to draw now in a banner across the top of the sheet. Next: watch a kid
+use it.
 
 ## M1.20 - Every game shows what to do (built)
 

@@ -115,33 +115,34 @@ const TYPES := {
 		"zoom": 3.0, "pairs": false, "spread": 0.3},
 }
 
-## Drawing the creature on one sheet (CreatureSheet): what each part's button says to draw, and
-## where. The kid draws it right where it goes - touching what it grows from.
+## Drawing the creature on one sheet (CreatureSheet): what to draw, big across the top of the
+## sheet, and where or how, under it. The kid draws it right where it goes - touching what it
+## grows from.
 const DRAW := {
-	"body": "Draw a big BODY, facing right. No legs yet!",
-	"head": "Draw its HEAD, touching the body.",
-	"eye": "Draw an EYE on its head. It blinks!",
-	"mouth": "Draw its MOUTH WIDE OPEN - it eats and talks!",
-	"nose": "Draw its NOSE on its head. It sniffs!",
-	"ear": "Draw an EAR on its head.",
-	"horn": "Draw a HORN on its head, touching it.",
-	"antenna": "Draw an ANTENNA on its head. Boing!",
-	"hair": "Draw its HAIR or MANE on its head.",
-	"leg": "Draw a LEG, coming down from the body. It walks!",
-	"arm": "Draw an ARM, coming out of the body. It waves!",
-	"wing": "Draw a WING, touching the body. It flaps!",
-	"tail": "Draw its TAIL, coming out of the body. It wags!",
-	"fin": "Draw a FIN, touching the body. It swims!",
-	"spike": "Draw its SPIKES along its back.",
-	"tentacle": "Draw a TENTACLE, dangling from the body.",
-	"other": "Draw anything else - a shell? A jetpack?",
-	"hand": "Draw a HAND on the end of an arm.",
-	"foot": "Draw a FOOT on the bottom of a leg.",
-	"claw": "Draw CLAWS on a foot or a hand.",
+	"body": ["Draw its BODY", "Big, and facing right. No legs yet!"],
+	"head": ["Draw its HEAD", "Touching the body."],
+	"eye": ["Draw an EYE", "On its head. It blinks!"],
+	"mouth": ["Draw its MOUTH", "Wide open - it eats and talks!"],
+	"nose": ["Draw its NOSE", "On its head. It sniffs!"],
+	"ear": ["Draw an EAR", "On its head."],
+	"horn": ["Draw a HORN", "On its head, touching it."],
+	"antenna": ["Draw an ANTENNA", "On its head. Boing!"],
+	"hair": ["Draw its HAIR", "Or a mane - on its head."],
+	"leg": ["Draw a LEG", "Coming down from the body. It walks!"],
+	"arm": ["Draw an ARM", "Coming out of the body. It waves!"],
+	"wing": ["Draw a WING", "Touching the body. It flaps!"],
+	"tail": ["Draw its TAIL", "Coming out of the body. It wags!"],
+	"fin": ["Draw a FIN", "Touching the body. It swims!"],
+	"spike": ["Draw its SPIKES", "Along its back."],
+	"tentacle": ["Draw a TENTACLE", "Dangling from the body."],
+	"other": ["Draw anything else", "A shell? A jetpack?"],
+	"hand": ["Draw a HAND", "On the end of an arm."],
+	"foot": ["Draw a FOOT", "On the bottom of a leg."],
+	"claw": ["Draw CLAWS", "On a foot or a hand."],
 }
-## The next of several ("LEG 2 of 4!"), and after "Copy this leg".
-const DRAW_NEXT := "%s %d of %d! Draw it - or copy the last one."
-const DRAG_COPY := "Drag it where it goes!"
+## The next of several ("LEG 2 of 4"), and after "Copy this leg".
+const DRAW_NEXT := ["%s %d of %d", "Draw it - or copy the last one."]
+const DRAG_COPY := "Drag the copy where it goes!"
 ## A creature needs a body, and eyes and a mouth on it somewhere.
 const NEEDED := ["body", "eye", "mouth"]
 

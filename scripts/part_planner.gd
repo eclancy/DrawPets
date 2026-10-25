@@ -94,7 +94,7 @@ func _build_more() -> void:
 	var heading := UI.title("Anything else?", 40)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(heading)
-	_hint = UI.label("Tap the parts you want to add.", 20, true)
+	_hint = UI.label("Tap the parts you want to add.", 22, true)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.add_theme_color_override("font_color", UI.INK_SOFT)
 	col.add_child(_hint)
@@ -107,7 +107,7 @@ func _build_more() -> void:
 	var w := 136.0 if grid.columns > 7 else 150.0
 	for type in types:
 		counts[type] = 0
-		grid.add_child(_card(type, w, 64.0))
+		grid.add_child(_card(type, w, 70.0))
 	var centre := CenterContainer.new()
 	centre.add_child(grid)
 	col.add_child(centre)
@@ -160,7 +160,7 @@ func _card(type: String, w: float, px: float) -> Control:
 	pic.add_child(tick)
 	_ticks[type] = tick
 	col.add_child(pic)
-	var called := UI.label(PartTypes.info(type)["plural"], 26 if mode == "start" else 18)
+	var called := UI.label(PartTypes.info(type)["plural"], 26 if mode == "start" else 21)
 	called.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(called)
 	var stepper := HBoxContainer.new()
@@ -168,14 +168,14 @@ func _card(type: String, w: float, px: float) -> Control:
 	stepper.add_theme_constant_override("separation", 4)
 	var big := mode == "start"
 	var bunch := PartTypes.BUNCH.has(type)
-	stepper.add_child(_step_button("ui_minus", type, -1, 54.0 if big else 42.0, bunch))
-	var count := UI.label("", 44 if big else 28)
+	stepper.add_child(_step_button("ui_minus", type, -1, 54.0 if big else 46.0, bunch))
+	var count := UI.label("", 44 if big else 30)
 	count.custom_minimum_size = Vector2(46 if big else 36, 0)
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	count.modulate.a = 0.0 if bunch else 1.0
 	_labels[type] = count
 	stepper.add_child(count)
-	stepper.add_child(_step_button("ui_plus", type, 1, 54.0 if big else 42.0, bunch))
+	stepper.add_child(_step_button("ui_plus", type, 1, 54.0 if big else 46.0, bunch))
 	col.add_child(stepper)
 	return card
 
