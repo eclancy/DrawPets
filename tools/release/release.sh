@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish a new version of DrawPets. Every Windows copy picks it up the next time it starts; an
+# Publish a new version of DrawPets. Every Windows and Linux copy picks it up the next time it starts; an
 # Android copy says on its home screen that a grown-up can get it.
 #
 #   bash tools/release/release.sh 0.1.0 ["What changed, for players"]
@@ -10,10 +10,11 @@
 # "What's new". The download instructions are always appended below it, and must keep starting
 # with "Download **": that page strips the paragraph that starts that way.
 #
-# Commits the version bump, tags it, exports Windows, Android and the web, and makes a GitHub
+# Commits the version bump, tags it, exports Windows, Linux, Android and the web, and makes a GitHub
 # Release with the installer (DrawPets-Setup.exe, Inno Setup, installer.iss), the full zip (the
-# portable version), the small patch zip, the Android APK (DrawPets.apk, signed with the release
-# key), the web version (DrawPets-web.zip) and version.json. ecec.dev/drawpets/version.json
+# portable version), the small patch zip, the Linux download (DrawPets-linux.tar.gz, with an
+# install.sh) and its patch, the Android APK (DrawPets.apk, signed with the release key), the web
+# version (DrawPets-web.zip) and version.json. ecec.dev/drawpets/version.json
 # redirects to the newest release's version.json; the web version needs ecec.dev redeployed, which
 # the script starts at the end. See .ai/releasing.md. Ported from Wizard Survivors'.
 set -euo pipefail
@@ -25,7 +26,7 @@ if [ "$CHANGES" = "--build-only" ]; then
 	BUILD_ONLY=1
 	CHANGES=""
 fi
-HOW_TO="Download **DrawPets-Setup.exe** and run it, then play from the Start menu or the desktop. It keeps itself up to date from then on. No installer? DrawPets-windows.zip is the portable version: unzip it anywhere you can write to and run DrawPets.exe. On an Android phone or tablet, download **DrawPets.apk** and open it (a grown-up allows the install). On an iPad, iPhone, Chromebook or Mac, play in the browser at https://ecec.dev/drawpets/play/ - and add it to the Home Screen. Download page: https://ecec.dev/drawpets/download"
+HOW_TO="Download **DrawPets-Setup.exe** and run it, then play from the Start menu or the desktop. It keeps itself up to date from then on. No installer? DrawPets-windows.zip is the portable version: unzip it anywhere you can write to and run DrawPets.exe. On an Android phone or tablet, download **DrawPets.apk** and open it (a grown-up allows the install). On Linux, download **DrawPets-linux.tar.gz**, unpack it and run **./install.sh** - it adds DrawPets to your app menu and keeps itself up to date too. On an iPad, iPhone, Chromebook or Mac, play in the browser at https://ecec.dev/drawpets/play/ - and add it to the Home Screen. Download page: https://ecec.dev/drawpets/download"
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "usage: bash tools/release/release.sh X.Y.Z [\"what changed\" | --build-only]" >&2
 	exit 1
@@ -98,13 +99,17 @@ CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
 sed -i "s/^config\/version=\".*\"$/config\/version=\"$VERSION\"/" project.godot
 sed -i "s/^version\/code=.*$/version\/code=$CODE/; s/^version\/name=.*$/version\/name=\"$VERSION\"/" export_presets.cfg
 
-rm -rf build/windows build/release
-mkdir -p build/windows build/release
+rm -rf build/windows build/linux build/release
+mkdir -p build/windows build/linux build/release
 # Godot does not create the export folder itself, and on an export error it can sit there
 # instead of exiting - hence the timeout.
 timeout 900 "$GODOT_BIN" --headless --path . --export-release "Windows Desktop" build/windows/DrawPets.exe \
 	> build/export.log 2>&1 || { tail -20 build/export.log; echo "Windows export failed - see build/export.log" >&2; undo; exit 1; }
 [ -f build/windows/DrawPets.pck ] || { echo "the Windows export produced no .pck - see build/export.log" >&2; undo; exit 1; }
+# The same game for Linux. Needs the linux_* export templates (.ai/releasing.md).
+timeout 900 "$GODOT_BIN" --headless --path . --export-release "Linux" build/linux/DrawPets.x86_64 \
+	> build/export_linux.log 2>&1 || { tail -20 build/export_linux.log; echo "Linux export failed - see build/export_linux.log" >&2; undo; exit 1; }
+[ -f build/linux/DrawPets.pck ] || { echo "the Linux export produced no .pck - see build/export_linux.log" >&2; undo; exit 1; }
 
 # Gradle's daemon would otherwise hold the console open long after the APK is done
 # (.ai/android.md).
@@ -142,6 +147,7 @@ git push -q origin HEAD "v$VERSION"
 gh release create "v$VERSION" --repo eclancy/DrawPets \
 	build/release/DrawPets-Setup.exe build/release/DrawPets-windows.zip \
 	build/release/DrawPets-patch.zip build/release/DrawPets.apk build/release/DrawPets-web.zip \
+	build/release/DrawPets-linux.tar.gz build/release/DrawPets-linux-patch.zip \
 	build/release/version.json \
 	--title "DrawPets $VERSION" \
 	--notes "${CHANGES:+$CHANGES
@@ -154,4 +160,4 @@ gh workflow run deploy.yml --repo eclancy/EricClancyEngineeringAndCrafts \
 	&& echo "Started ecec.dev's deploy - /drawpets/play/ gets v$VERSION in a few minutes." \
 	|| echo "Could not start ecec.dev's deploy - run its Deploy workflow by hand for the web version." >&2
 
-echo "Released v$VERSION - every Windows copy updates the next time it starts."
+echo "Released v$VERSION - every Windows and Linux copy updates the next time it starts."

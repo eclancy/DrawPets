@@ -1,6 +1,6 @@
 class_name UpdateScreen
 extends Control
-## The first thing a downloaded Windows copy shows: checks ecec.dev for a newer version and, if
+## The first thing a downloaded Windows or Linux copy shows: checks ecec.dev for a newer version and, if
 ## there is one, installs it and restarts - no questions. The same design as DrawFight's, Wizard
 ## Wars' and Wizard Survivors' UpdateScreen (C# there, GDScript here); how a release is laid out
 ## is in .ai/releasing.md.
@@ -13,6 +13,10 @@ extends Control
 ##
 ## Anything that goes wrong, from no internet onwards, just goes on into the game. An update is
 ## never worth not being able to play.
+##
+## Linux works the same, from version.json's own "linux" pair, with a shell script instead of a
+## .cmd - and the script unpacks the full download itself (`tar -xzf`): it is a tarball, so the
+## game binary keeps its permission to run, and GDScript cannot read one.
 ##
 ## On Android a game cannot replace itself, so there it only finds out (check_quietly), in the
 ## background, and the home screen tells a grown-up where to get the new one.
@@ -54,10 +58,10 @@ static func engine_version() -> String:
 	return "%d.%d.%d" % [v["major"], v["minor"], v["patch"]]
 
 
-## Only an exported Windows build updates itself, and only once per launch. Running from the
-## editor or from `godot --path .` never does, and `--no-update` turns it off for testing a build.
+## Only an exported Windows or Linux build updates itself, and only once per launch. Running from
+## the editor or from `godot --path .` never does, and `--no-update` turns it off for testing a build.
 static func should_check() -> bool:
-	if _checked or not OS.has_feature("template") or OS.get_name() != "Windows":
+	if _checked or not OS.has_feature("template") or not (OS.get_name() == "Windows" or _linux()):
 		return false
 	return not ("--no-update" in OS.get_cmdline_user_args() or "--no-update" in OS.get_cmdline_args())
 
@@ -72,6 +76,10 @@ static func is_newer(candidate: String, current: String) -> bool:
 		if x != y:
 			return x > y
 	return false
+
+
+static func _linux() -> bool:
+	return OS.get_name() == "Linux"
 
 
 static func _url() -> String:
@@ -192,10 +200,18 @@ func _on_version(result: int, code: int, _headers_in: PackedStringArray, body: P
 		print("UpdateScreen: %s is out, but %s is not writable" % [latest, install_dir])
 		_finish()
 		return
-	# The patch only works on the engine it was built with; anything else takes the full zip.
-	var url := str(info.get("full", ""))
-	if str(info.get("engine", "")) == engine_version() and str(info.get("patch", "")) != "":
-		url = str(info["patch"])
+	# Linux has its own pair; a release from before there was a Linux build has none.
+	var files: Dictionary = info
+	if _linux():
+		if typeof(info.get("linux")) != TYPE_DICTIONARY:
+			print("UpdateScreen: %s has no Linux build" % latest)
+			_finish()
+			return
+		files = info["linux"]
+	# The patch only works on the engine it was built with; anything else takes the full download.
+	var url := str(files.get("full", ""))
+	if str(info.get("engine", "")) == engine_version() and str(files.get("patch", "")) != "":
+		url = str(files["patch"])
 	if url == "":
 		_finish()
 		return
@@ -212,7 +228,7 @@ func _download(url: String) -> void:
 	_http.request_completed.connect(_on_downloaded)
 	# The five seconds were for the check, not for a full zip on a slow connection.
 	_http.timeout = DOWNLOAD_TIMEOUT
-	_http.download_file = _work + "/update.zip"
+	_http.download_file = _work + ("/update.tar.gz" if url.ends_with(".tar.gz") else "/update.zip")
 	if _http.request(url, _headers()) != OK:
 		_finish()
 
@@ -227,6 +243,9 @@ func _on_downloaded(result: int, code: int, _headers_in: PackedStringArray, _bod
 
 
 func _install() -> void:
+	if _linux():
+		_install_linux()
+		return
 	var from := _unpack(_work + "/update.zip", _work + "/files")
 	if from == "":
 		print("UpdateScreen: the update has no %s" % PCK)
@@ -243,6 +262,33 @@ func _install() -> void:
 	print("UpdateScreen: %s -> %s ready, restarting" % [current_version(), _new_version])
 	# The script waits for this process to end, so it has to be started first.
 	OS.create_process("cmd.exe", PackedStringArray(["/c", _win(script)]))
+	get_tree().quit()
+
+
+## Linux: the patch is a zip, unpacked here as on Windows; the full download is a tarball, which
+## apply.sh unpacks. Either way apply.sh copies the new files over, once the game has closed.
+func _install_linux() -> void:
+	var tarball := _work + "/update.tar.gz"
+	var from := _work + "/files"
+	if FileAccess.file_exists(tarball):
+		DirAccess.make_dir_recursive_absolute(from)
+	else:
+		from = _unpack(_work + "/update.zip", from)
+		tarball = ""
+		if from == "":
+			print("UpdateScreen: the update has no %s" % PCK)
+			_finish()
+			return
+	var script := _work + "/apply.sh"
+	var f := FileAccess.open(script, FileAccess.WRITE)
+	if f == null:
+		_finish()
+		return
+	f.store_string(_apply_script_linux(tarball, from, OS.get_executable_path().get_base_dir(),
+		OS.get_executable_path(), OS.get_process_id()))
+	f.close()
+	print("UpdateScreen: %s -> %s ready, restarting" % [current_version(), _new_version])
+	OS.create_process("/bin/sh", PackedStringArray([script]))
 	get_tree().quit()
 
 
@@ -314,6 +360,30 @@ static func _apply_script(from: String, to: String, exe: String, pid: int) -> St
 		"robocopy \"%s\" \"%s\" /E /R:10 /W:1 /NFL /NDL /NJH /NJS /NP >nul\r\n" % [_win(from), _win(to)] +
 		"start \"\" \"%s\"\r\n" % _win(exe) +
 		"rmdir /s /q \"%s\"\r\n" % _win(from))
+
+
+## The same on Linux: wait for the game to close, unpack the tarball if that is what came (into
+## `from`, then use the folder in it that holds DrawPets.pck), copy the new files over, keep the
+## game runnable, and start it again.
+static func _apply_script_linux(tarball: String, from: String, to: String, exe: String, pid: int) -> String:
+	var s := "#!/bin/sh\n"
+	s += "while kill -0 %d 2>/dev/null; do sleep 0.5; done\n" % pid
+	# Whatever happens, the game starts again: a download that will not unpack is just skipped.
+	if tarball != "":
+		s += "tar -xzf %s -C %s 2>/dev/null\n" % [_quoted(tarball), _quoted(from)]
+	s += "PCK=$(find %s -name %s | head -n 1)\n" % [_quoted(from), PCK]
+	s += "[ -n \"$PCK\" ] && cp -Rf \"$(dirname \"$PCK\")/.\" %s\n" % _quoted(to + "/")
+	s += "chmod +x %s\n" % _quoted(exe)
+	s += "rm -rf %s\n" % _quoted(from)
+	if tarball != "":
+		s += "rm -f %s\n" % _quoted(tarball)
+	s += "cd %s && nohup %s >/dev/null 2>&1 &\n" % [_quoted(to), _quoted(exe)]
+	return s
+
+
+## A path in single quotes for sh, with any quote in it kept.
+static func _quoted(path: String) -> String:
+	return "'" + path.replace("'", "'\\''") + "'"
 
 
 func _finish() -> void:

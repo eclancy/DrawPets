@@ -5,7 +5,7 @@ and how it stays up to date. The same design as DrawFight's, Wizard Wars' and Wi
 (their `.ai/releasing.md`), plus an Android APK.
 
 **In one line:** `bash tools/release/release.sh X.Y.Z` makes a GitHub Release. The next time a
-Windows copy starts it updates itself; an Android copy says on its home screen that a grown-up
+Windows or Linux copy starts it updates itself; an Android copy says on its home screen that a grown-up
 can get the new one.
 
 **Live since 2026-10-19** with 0.1.0: the repo went public (its history checked for keys,
@@ -62,6 +62,36 @@ never runs in the editor, from `godot --path .`, with `--demo`, or with `--no-up
 
 Anything that goes wrong - no internet, GitHub down, a folder it cannot write to - just goes on
 into the game. **An update is never worth not being able to play.**
+
+## Linux
+
+Added 2026-10-25, on Eric's call, for every game on ecec.dev (the same design as DrawFight's).
+release.sh exports the `Linux` preset to `build/linux/` too, and `package.py` makes two more files:
+
+- **`DrawPets-linux.tar.gz`**: the game in a `DrawPets/` folder - `DrawPets.x86_64` and
+  `DrawPets.pck` - plus `install.sh`, `icon.png` and `How to play.txt`. A tarball rather than a
+  zip, because a tarball carries the "can be run" permission on the binary and the script;
+  `package.py` sets it, which it can do from Windows.
+- **`DrawPets-linux-patch.zip`**: the Linux export's `DrawPets.pck`.
+
+Both are listed in `version.json` under `linux`, which Windows copies never read.
+
+**`install.sh`** (`tools/release/install.sh`) is the Linux installer: it copies the game to
+`~/.local/share/DrawPets` and adds `drawpets.desktop` to `~/.local/share/applications`, so it is on
+the app menu. No sudo, nothing outside the home folder - the game updates itself, so its folder
+must stay writable by the player. `./install.sh --uninstall` takes it out again; the pets (in
+`~/.local/share/godot/app_userdata/DrawPets`) are never touched. Running `./DrawPets.x86_64`
+straight from the unpacked folder works too.
+
+**Updating** works as on Windows, from the `linux` pair: the patch (a zip, unpacked by the game) on
+the same engine, the tarball otherwise. The game writes `apply.sh`, starts it with `/bin/sh` and
+quits; it waits for the game to close, unpacks the tarball with `tar -xzf` if that is what came
+(GDScript cannot read a tarball), copies the new files over, `chmod +x`es the binary and starts it
+again - whether or not the unpacking worked. A release from before Linux has no `linux` pair, and
+a Linux copy just goes on into the game.
+
+**Tested so far:** the export, the packaging and the permissions in the tarball, on Windows. Not
+yet run on Linux - Eric is testing it on a Linux machine.
 
 ## Android
 
@@ -127,7 +157,7 @@ Gradle build and the installer's maximum compression are most of it.
 Version numbers: bump the last number for fixes, the middle one for something new to do.
 
 **One-time setup on a new machine:** Godot's export templates for the exact editor version
-(`windows_*` and `android_*` in `%APPDATA%\Godot\export_templates\<version>.stable.mono\`), Inno
+(`windows_*`, `android_*` and `linux_*.x86_64` in `%APPDATA%\Godot\export_templates\<version>.stable.mono\`), Inno
 Setup 6 (`winget install JRSoftware.InnoSetup`), the Android setup in `.ai/android.md`, and the
 release key folder restored from its backup.
 
