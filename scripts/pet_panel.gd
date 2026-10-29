@@ -43,7 +43,7 @@ func _ready() -> void:
 	_hearts_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hearts_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(_hearts_holder)
-	top.add_child(UI.button("X", func(): on_close.call(), Vector2(48, 44), 22))
+	top.add_child(UI.button("X", func(): on_close.call(), Vector2(64, 60), 26))
 	col.add_child(top)
 
 	var cols := HBoxContainer.new()
@@ -74,11 +74,11 @@ func _ready() -> void:
 	for stat in Stats.LIST:
 		var row := HBoxContainer.new()
 		row.add_child(UI.icon(Stats.INFO[stat]["icon"], 30))
-		var name := UI.label(Stats.label(stat), 18)
-		name.custom_minimum_size = Vector2(84, 0)
+		var name := UI.label(Stats.label(stat), 21)
+		name.custom_minimum_size = Vector2(96, 0)
 		row.add_child(name)
-		var lvl := UI.label("1", 18)
-		lvl.custom_minimum_size = Vector2(34, 0)
+		var lvl := UI.label("1", 21)
+		lvl.custom_minimum_size = Vector2(38, 0)
 		row.add_child(lvl)
 		var bar := ProgressBar.new()
 		bar.max_value = Stats.MAX
@@ -95,11 +95,11 @@ func _ready() -> void:
 	_today = UI.label("", 22, true)
 	_today.visible = not advanced
 	right.add_child(_today)
-	_words = UI.label("", 18, true)
+	_words = UI.label("", 20, true)
 	_words.custom_minimum_size = Vector2(210, 0)
 	_words.add_theme_color_override("font_color", UI.INK_SOFT)
 	left.add_child(_words)
-	_take_off = UI.button("Take off clothes", func(): on_take_off.call(), Vector2(0, 44), 18)
+	_take_off = UI.button("Take off clothes", func(): on_take_off.call(), Vector2(0, 64), 22)
 	left.add_child(_take_off)
 
 	var actions := HBoxContainer.new()

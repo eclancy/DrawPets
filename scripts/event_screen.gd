@@ -106,10 +106,11 @@ func _build() -> void:
 		b.add_child(c)
 		c.setup(pet, 100.0)
 		# Two lines of words, kept inside the card's edge.
-		var l := UI.label("%s\n%s Lv%d" % [pet["name"], Stats.label(stat), Stats.level(Stats.value(pet, stat))], 17)
+		var l := UI.label("%s\n%s Lv%d" % [pet["name"], Stats.label(stat), Stats.level(Stats.value(pet, stat))], 20)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.position = Vector2(0, 132)
-		l.size = Vector2(170, 50)
+		l.add_theme_constant_override("line_spacing", -4)
+		l.position = Vector2(0, 128)
+		l.size = Vector2(170, 58)
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(l)
 		b.pressed.connect(func():
@@ -130,7 +131,7 @@ func _build() -> void:
 		var open := chosen.is_empty() or Events.tier_open(chosen, _kind, t)
 		var prize: Array = tier["prize"]
 		var text := "%s\nneeds %s Lv%d\n1st: %d stars" % [tier["name"], Stats.label(stat), int(tier["level"]), prize[0]]
-		var b := UI.button(text, _pick_tier.bind(t), Vector2(0, 110), 19)
+		var b := UI.button(text, _pick_tier.bind(t), Vector2(0, 110), 22)
 		b.toggle_mode = true
 		b.button_pressed = t == _tier
 		b.disabled = not open

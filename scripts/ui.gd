@@ -277,7 +277,7 @@ static func icon_button(id: String, text: String, on_press: Callable, px := 52.0
 	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	col.add_child(pic)
 	if text != "":
-		var l := label(text, 18)
+		var l := label(text, 22)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(l)
@@ -331,9 +331,9 @@ static func place_button(id: String, caption: String, min_size := Vector2(150, 9
 		var lock := icon("icon_lock", 34)
 		lock.position = Vector2(8, 8)
 		b.add_child(lock)
-	var name := title(caption, 17)
+	var name := title(caption, 21)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name.add_theme_constant_override("outline_size", 7)
+	name.add_theme_constant_override("outline_size", 8)
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	name.grow_horizontal = Control.GROW_DIRECTION_BOTH

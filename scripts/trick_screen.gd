@@ -318,7 +318,7 @@ func _card_button(t: String) -> Button:
 			status.add_child(UI.icon("icon_star", 24))
 	else:
 		status.add_child(UI.icon("tool_crayon", 24))
-		var s := UI.label("Draw a card", 16)
+		var s := UI.label("Draw a card", 20)
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		status.add_child(s)
 	col.add_child(status)

@@ -79,7 +79,7 @@ func _ready() -> void:
 	row.add_child(col)
 	var name: String = target.get("name", "")
 	col.add_child(UI.title(title_text if title_text != "" else "What does %s sound like?" % (name if name != "" else "it"), 30))
-	_message = UI.label("Pick a sound to start from - or record your own!", 18, true)
+	_message = UI.label("Pick a sound to start from - or record your own!", 21, true)
 	_message.add_theme_color_override("font_color", UI.INK_SOFT)
 	col.add_child(_message)
 	var grid := GridContainer.new()
@@ -90,15 +90,15 @@ func _ready() -> void:
 		grid.add_child(_base_button(base, "snd_" + base))
 	grid.add_child(_base_button("recording", "snd_record"))
 	var rec := Button.new()
-	rec.custom_minimum_size = Vector2(76, 66)
+	rec.custom_minimum_size = Vector2(80, 80)
 	rec.tooltip_text = "Record your own"
 	rec.add_theme_stylebox_override("normal", UI._box(Color("#ffe4e0"), Color("#d0482a"), 3, 14))
-	var rec_pic := UI.icon("snd_record", 40)
+	var rec_pic := UI.icon("snd_record", 44)
 	rec_pic.position = Vector2(18, 4)
 	rec.add_child(rec_pic)
-	var rec_l := UI.label("Record", 11)
+	var rec_l := UI.label("Record", 17)
 	rec_l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	rec_l.offset_top = -22
+	rec_l.offset_top = -27
 	rec_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rec_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rec.add_child(rec_l)
@@ -125,12 +125,12 @@ func _ready() -> void:
 
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 8)
-	_backwards = UI.icon_button("snd_backwards", "Backwards", toggle_backwards, 40, Vector2(130, 84))
+	_backwards = UI.icon_button("snd_backwards", "Backwards", toggle_backwards, 40, Vector2(148, 84))
 	_backwards.toggle_mode = true
 	bottom.add_child(_backwards)
-	bottom.add_child(UI.icon_button("snd_dice", "Surprise me", surprise, 40, Vector2(130, 84)))
+	bottom.add_child(UI.icon_button("snd_dice", "Surprise me", surprise, 40, Vector2(148, 84)))
 	if on_skip.is_valid():
-		bottom.add_child(UI.icon_button("tool_skip", "No sound", func(): on_skip.call(), 40, Vector2(130, 84)))
+		bottom.add_child(UI.icon_button("tool_skip", "No sound", func(): on_skip.call(), 40, Vector2(148, 84)))
 	var done := UI.big_icon_button("tool_done", "Done!", press_done)
 	done.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bottom.add_child(done)
@@ -140,15 +140,15 @@ func _ready() -> void:
 
 func _base_button(base: String, icon: String) -> Button:
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(76, 66)
+	b.custom_minimum_size = Vector2(80, 80)
 	b.toggle_mode = true
 	b.tooltip_text = base.capitalize()
-	var pic := UI.icon(icon, 40)
+	var pic := UI.icon(icon, 44)
 	pic.position = Vector2(18, 4)
 	b.add_child(pic)
-	var l := UI.label("Mine" if base == "recording" else base.capitalize(), 11)
+	var l := UI.label("Mine" if base == "recording" else base.capitalize(), 17)
 	l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	l.offset_top = -22
+	l.offset_top = -27
 	l.clip_text = true
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE

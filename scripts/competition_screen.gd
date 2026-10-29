@@ -132,10 +132,11 @@ func _intro() -> void:
 		c.setup(e["pet"], 100.0)
 		if not (e["who"] is String):
 			c.facing = -1.0
-		var l := UI.label("%s\n%s Lv%d" % [e["name"], Stats.label(stat), Stats.level(Stats.value(e["pet"], stat))], 18)
+		var l := UI.label("%s\n%s Lv%d" % [e["name"], Stats.label(stat), Stats.level(Stats.value(e["pet"], stat))], 20)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.position = Vector2(0, 132)
-		l.size = Vector2(190, 48)
+		l.add_theme_constant_override("line_spacing", -4)
+		l.position = Vector2(0, 130)
+		l.size = Vector2(190, 52)
 		holder.add_child(l)
 		row.add_child(card)
 	col.add_child(row)
@@ -382,7 +383,7 @@ func _podium(scores: Array, place: int) -> void:
 			l.add_theme_color_override("font_color", UI.ACCENT)
 		row.add_child(l)
 		row.add_child(UI.icon(Stats.INFO[stat]["icon"], 26))
-		var lv := UI.label("Lv%d" % Stats.level(Stats.value(e["pet"], stat)), 18)
+		var lv := UI.label("Lv%d" % Stats.level(Stats.value(e["pet"], stat)), 21)
 		lv.add_theme_color_override("font_color", UI.INK_SOFT)
 		lv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(lv)

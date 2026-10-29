@@ -149,6 +149,16 @@ have their words under them (Clear, Move...). Then, from the phone: every button
 words readable, and what to draw now in a banner across the top of the sheet. Next: watch a kid
 use it.
 
+## M1.22 - Readable on a phone (built)
+
+The whole game was laid out for a computer; on a phone its 720 units are about 6.5 cm tall. A
+check (`UIAudit`, the demo with `--audit` at 1616 x 720) measures every word and button as the
+phone shows them; the first run found 428 too small. Icon-button words and place names went up
+(18 to 22, 17 to 21), and the shop, item picker, voice maker (11 px names), calendar, pet panel,
+competitions and both drawing screens got bigger words and buttons; nothing spills out of its
+button. What is left is small on purpose (colour swatches, - and +, grown-ups' hold buttons, the
+version number) or describing words at 17-19 px under a big name.
+
 ## M1.20 - Every game shows what to do (built)
 
 Eric: "the games can be confusing ... each game should be clear what to do." Every game now shows

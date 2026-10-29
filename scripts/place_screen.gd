@@ -356,9 +356,9 @@ func _build_hud() -> void:
 	right.add_theme_constant_override("separation", 10)
 	right.add_child(UI.star_counter(game.profile, 40))
 	right.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(game.go_place.bind(home["id"])),
-		40, Vector2(84, 84)))
+		40, Vector2(100, 84)))
 	right.add_child(UI.icon_button("icon_calendar", "Events" if game.profile.advanced() else "Fun days",
-		func(): game.go_calendar(), 40, Vector2(84, 84)))
+		func(): game.go_calendar(), 40, Vector2(100, 84)))
 	root.add_child(right)
 
 	_hint = UI.title("", 22)
@@ -395,7 +395,7 @@ func _build_hud() -> void:
 	row.add_theme_constant_override("separation", 8)
 	bar.add_child(row)
 	for t in TABS:
-		var b := UI.icon_button(t[1], t[2], open_tab.bind(t[0]), 52, Vector2(100, 104))
+		var b := UI.icon_button(t[1], t[2], open_tab.bind(t[0]), 52, Vector2(110, 104))
 		b.toggle_mode = true
 		_tab_buttons[t[0]] = b
 		row.add_child(b)

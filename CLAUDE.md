@@ -71,6 +71,11 @@ decision; do not restate it here.
   competitions. **It plays on whatever save it finds**, so give it a fresh one that leaves the
   real save alone: `APPDATA=<an empty folder> "$GODOT_BIN" --path . -- --demo --quit` (Godot puts
   `user://` under `APPDATA`; the shots still go to `.shots/`).
+- **`"$GODOT_BIN" --path . --resolution 1616x720 -- --demo --quit --audit`** - the demo at a
+  phone's shape, measuring every word and button as the phone shows them (`UIAudit`): words under
+  20 px, buttons under 64 px and words spilling out of their button are listed by screen in
+  `.shots/ui_audit.txt`. On a phone the whole screen is about 6.5 cm tall, so check it after any
+  UI change. Colour swatches, steppers and the grown-ups' hold buttons are small on purpose.
 - `--screen=place|create|shop|calendar|swap` boots straight into a screen; `--stars=N` adds stars;
   `--shot=N` screenshots frame N; `--hour=21.5` pretends it is that time (night, dusk, morning);
   F12 grabs a frame.

@@ -344,7 +344,7 @@ func _offer_draft() -> void:
 	row.add_child(keep)
 	row.add_child(UI.button("Start a new one", _start_fresh, Vector2(300, 84), 24))
 	col.add_child(row)
-	var note := UI.label("Starting a new one throws that drawing away.", 18)
+	var note := UI.label("Starting a new one throws that drawing away.", 22)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_color_override("font_color", UI.INK_SOFT)
 	col.add_child(note)

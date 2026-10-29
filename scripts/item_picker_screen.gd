@@ -37,7 +37,7 @@ func _list() -> void:
 	flow.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(flow)
 
-	var draw := UI.icon_button("icon_draw", "Draw a new one!", _draw_new, 72, Vector2(170, 170))
+	var draw := UI.icon_button("icon_draw", "Draw a new one!", _draw_new, 72, Vector2(190, 170))
 	draw.add_theme_stylebox_override("normal", UI._box(Color("#fff0c2"), UI.INK, 4))
 	flow.add_child(draw)
 	for id in Items.available(game.profile, category):
@@ -55,11 +55,11 @@ func _card(item: Dictionary) -> Button:
 	var pic := UI.item_picture(item, 100)
 	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	col.add_child(pic)
-	var name := UI.label(Items.display_name(item), 18)
+	var name := UI.label(Items.display_name(item), 22)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name)
-	var words := UI.label(", ".join(item.get("words", [])), 15)
+	var words := UI.label(", ".join(item.get("words", [])), 18)
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.add_theme_color_override("font_color", UI.INK_SOFT)
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE

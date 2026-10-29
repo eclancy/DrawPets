@@ -20,12 +20,12 @@ func _ready() -> void:
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(heading)
 	top.add_child(UI.star_counter(game.profile, 48))
-	top.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(), 48, Vector2(96, 96)))
+	top.add_child(UI.icon_button("icon_shop", "Shop", func(): game.go_shop(), 48, Vector2(108, 96)))
 	top.add_child(UI.icon_button("icon_calendar", "Events" if game.profile.advanced() else "Fun days",
-		func(): game.go_calendar(), 48, Vector2(96, 96)))
-	top.add_child(UI.icon_button("icon_friends", "Friends", func(): game.go_swap(), 48, Vector2(96, 96)))
-	top.add_child(UI.icon_button("icon_album", "Album", func(): game.go_album(), 48, Vector2(96, 96)))
-	top.add_child(UI.icon_button("ui_settings", "Settings", func(): game.go_settings(), 48, Vector2(96, 96)))
+		func(): game.go_calendar(), 48, Vector2(108, 96)))
+	top.add_child(UI.icon_button("icon_friends", "Friends", func(): game.go_swap(), 48, Vector2(108, 96)))
+	top.add_child(UI.icon_button("icon_album", "Album", func(): game.go_album(), 48, Vector2(108, 96)))
+	top.add_child(UI.icon_button("ui_settings", "Settings", func(): game.go_settings(), 48, Vector2(108, 96)))
 	col.add_child(top)
 
 	# On Android a new version cannot install itself (UpdateScreen): say where a grown-up gets it.

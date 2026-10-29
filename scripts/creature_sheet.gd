@@ -37,12 +37,12 @@ const ONE_OF := ["body", "head", "mouth", "nose", "tail", "hair", "other"]
 const HOW_COPIES := 3
 ## A tool on the left, two to a row, with its word under its picture - big enough for a small
 ## finger on a phone, where the whole screen is about 7 cm tall.
-const TOOL_SIZE := Vector2(84, 76)
+const TOOL_SIZE := Vector2(90, 76)
 ## The parts, the crayons and Done, on the right.
 const SIDE_W := 420.0
 ## The plan's parts: three rows of them, as wide as fits.
-const TILE_H := 76.0
-const STRIP_HEIGHT := 240.0
+const TILE_H := 84.0
+const STRIP_HEIGHT := 264.0
 ## What to draw now, across the top of the drawing: where the kid is looking.
 const BANNER_H := 76.0
 
@@ -149,7 +149,7 @@ func _ready() -> void:
 	sizes.add_theme_constant_override("separation", 6)
 	var size_group := ButtonGroup.new()
 	for entry in BRUSHES:
-		var b := _picture_button("", _set_brush.bind(entry[0]), size_group, Vector2(54, 54))
+		var b := _picture_button("", _set_brush.bind(entry[0]), size_group, Vector2(56, 56))
 		var d := DrawScreen.SizeDot.new()
 		d.radius = entry[1]
 		b.add_child(UI.full_rect(d))
@@ -212,7 +212,7 @@ func _ready() -> void:
 	side.add_child(_row)
 
 	var colours := GridContainer.new()
-	colours.columns = 9
+	colours.columns = 7
 	colours.add_theme_constant_override("h_separation", 4)
 	colours.add_theme_constant_override("v_separation", 4)
 	var colour_group := ButtonGroup.new()
@@ -317,7 +317,7 @@ func _build_strip() -> void:
 	_dots.clear()
 	_ticks.clear()
 	var n := types.size() + 1
-	var cols := 5 if n <= 15 else (6 if n <= 18 else 7)
+	var cols := 4 if n <= 12 else (5 if n <= 15 else (6 if n <= 18 else 7))
 	_strip.columns = cols
 	var w := floorf((SIDE_W - 6.0 * (cols - 1)) / cols)
 	for type in types:
@@ -362,11 +362,11 @@ func _tile_button(w: float, on_press: Callable) -> Button:
 
 
 static func _tile_icon(w: float) -> float:
-	return 40.0 if w >= 70.0 else 34.0
+	return 42.0 if w >= 70.0 else 34.0
 
 
 static func _tile_font(w: float) -> int:
-	return 15 if w >= 70.0 else 13
+	return 20 if w >= 95.0 else (17 if w >= 70.0 else 14)
 
 
 ## Words along the bottom of a button.
@@ -1303,7 +1303,7 @@ func _dress(b: Button, text: String, pics: Array) -> void:
 		pic.size = Vector2(p[2], p[2])
 		pic.modulate.a = float(p[3])
 		art.add_child(pic)
-	var l := UI.label(text, 16, true)
+	var l := UI.label(text, 20 if w > 150.0 else 18, true)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1478,7 +1478,7 @@ func _picture_button(icon: String, on_press: Callable, group: ButtonGroup = null
 		pic.position = Vector2((min_size.x - px) / 2.0, (min_size.y - px) / 2.0 if words == "" else 3.0)
 		b.add_child(pic)
 	if words != "":
-		b.add_child(_words(words, 16))
+		b.add_child(_words(words, 19))
 	return b
 
 
@@ -1486,12 +1486,12 @@ func _swatch(c: Color, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(42, 42)
+	b.custom_minimum_size = Vector2(56, 56)
 	var light := c.get_luminance() > 0.8
 	for state_name in ["normal", "hover"]:
-		b.add_theme_stylebox_override(state_name, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 21, 4))
+		b.add_theme_stylebox_override(state_name, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 28, 4))
 	for state_name in ["pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(state_name, UI._box(c, UI.ACCENT, 7, 21, 4))
+		b.add_theme_stylebox_override(state_name, UI._box(c, UI.ACCENT, 8, 28, 4))
 	b.button_pressed = c == UI.PALETTE[0]
 	b.pressed.connect(_pick_colour.bind(c, ""))
 	return b
@@ -1502,9 +1502,9 @@ func _marker_swatch(mode: String, n: int, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(42, 42)
+	b.custom_minimum_size = Vector2(56, 56)
 	b.tooltip_text = "%s marker (%d left)" % [mode.capitalize(), n]
-	var pic := UI.icon(Items.MARKERS[mode][0], 38)
+	var pic := UI.icon(Items.MARKERS[mode][0], 50)
 	pic.position = Vector2(2, 2)
 	b.add_child(pic)
 	b.pressed.connect(_pick_colour.bind(Items.MARKERS[mode][1], mode))

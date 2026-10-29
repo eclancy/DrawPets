@@ -104,7 +104,7 @@ func _fun_cell(ev: Dictionary, today: Dictionary) -> Button:
 	row.offset_left = 8
 	row.add_child(UI.label(str(ev["day"]), 22))
 	row.add_child(UI.icon(info["icon"], 34, "none"))
-	var name := UI.label(info["name"], 14, true)
+	var name := UI.label(info["name"], 19, true)
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name)
@@ -142,7 +142,7 @@ func _day_cell(ev: Dictionary, today: Dictionary) -> Button:
 	row.offset_left = 8
 	row.add_child(UI.label(str(ev["day"]), 22))
 	row.add_child(UI.icon(Events.icon(ev["kind"]), 34, "none"))
-	var name := UI.label(Events.info(ev["kind"])["name"], 14, true)
+	var name := UI.label(Events.info(ev["kind"])["name"], 19, true)
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name)

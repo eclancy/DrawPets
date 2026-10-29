@@ -65,7 +65,7 @@ func _ready() -> void:
 	for id in Places.ORDER:
 		places.add_child(_place_button(id, place_group))
 	left.add_child(places)
-	_place_words = UI.label("", 19)
+	_place_words = UI.label("", 21)
 	_place_words.add_theme_color_override("font_color", UI.INK_SOFT)
 	left.add_child(_place_words)
 

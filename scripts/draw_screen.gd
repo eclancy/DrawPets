@@ -110,12 +110,12 @@ func _swatch(c: Color, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(52, 52)
+	b.custom_minimum_size = Vector2(58, 58)
 	var light := c.get_luminance() > 0.8
 	for state in ["normal", "hover"]:
-		b.add_theme_stylebox_override(state, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 26))
+		b.add_theme_stylebox_override(state, UI._box(c, UI.INK_SOFT if light else c.darkened(0.25), 3, 29))
 	for state in ["pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(state, UI._box(c, UI.ACCENT, 7, 26))
+		b.add_theme_stylebox_override(state, UI._box(c, UI.ACCENT, 8, 29))
 	b.button_pressed = c == UI.PALETTE[0]
 	b.pressed.connect(func():
 		canvas.color = c
@@ -130,9 +130,9 @@ func _marker_swatch(mode: String, n: int, group: ButtonGroup) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.button_group = group
-	b.custom_minimum_size = Vector2(52, 52)
+	b.custom_minimum_size = Vector2(58, 58)
 	b.tooltip_text = "%s marker (%d left)" % [mode.capitalize(), n]
-	var pic := UI.icon(Items.MARKERS[mode][0], 44)
+	var pic := UI.icon(Items.MARKERS[mode][0], 50)
 	pic.position = Vector2(4, 4)
 	b.add_child(pic)
 	b.pressed.connect(func():
@@ -161,16 +161,16 @@ func _picture_toggle(icon: String, group: ButtonGroup, on_press: Callable, words
 	return b
 
 
-## Brush sizes are 62 square; a tool with its word is 84 x 76, like the creature sheet's.
+## Brush sizes are 64 square; a tool with its word is 86 x 76, like the creature sheet's.
 func _dress(b: Button, icon: String, words: String) -> void:
-	b.custom_minimum_size = Vector2(84, 76) if words != "" else Vector2(62, 62)
+	b.custom_minimum_size = Vector2(86, 76) if words != "" else Vector2(64, 64)
 	if icon != "":
 		var px := 44.0
 		var pic := UI.icon(icon, px)
 		pic.position = Vector2((b.custom_minimum_size.x - px) / 2.0, 3.0 if words != "" else 9.0)
 		b.add_child(pic)
 	if words != "":
-		var l := UI.label(words, 16)
+		var l := UI.label(words, 20)
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)

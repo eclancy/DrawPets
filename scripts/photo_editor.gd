@@ -112,7 +112,7 @@ func _ready() -> void:
 	frames.add_theme_constant_override("v_separation", 6)
 	for kind in FRAMES:
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(92, 60)
+		b.custom_minimum_size = Vector2(92, 68)
 		b.pressed.connect(set_frame.bind(kind))
 		var mini := FrameArt.new()
 		mini.kind = kind

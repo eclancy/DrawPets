@@ -39,7 +39,7 @@ func _ready() -> void:
 	var tabs := HBoxContainer.new()
 	var group := ButtonGroup.new()
 	for t in TABS:
-		var b := UI.button(t[1], show_tab.bind(t[0]), Vector2(0, 56), 20)
+		var b := UI.button(t[1], show_tab.bind(t[0]), Vector2(0, 68), 24)
 		b.toggle_mode = true
 		b.button_group = group
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -125,7 +125,7 @@ func _adopt_cards() -> void:
 	tabs.add_theme_constant_override("separation", 8)
 	var group := ButtonGroup.new()
 	for g in Adoptables.GROUPS:
-		var b := UI.button(Adoptables.GROUP_NAMES[g], _pick_group.bind(g), Vector2(0, 50), 19)
+		var b := UI.button(Adoptables.GROUP_NAMES[g], _pick_group.bind(g), Vector2(0, 64), 22)
 		b.toggle_mode = true
 		b.button_group = group
 		b.button_pressed = g == adopt_group
@@ -223,7 +223,7 @@ func meet(id: String) -> void:
 	var title := UI.title(pet["name"], 46)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
-	top.add_child(UI.button("X", func(): _close_meet(), Vector2(56, 56), 24))
+	top.add_child(UI.button("X", func(): _close_meet(), Vector2(68, 68), 28))
 	col.add_child(top)
 	var size_row := HBoxContainer.new()
 	size_row.add_child(UI.icon("size_" + pet["size"], 54))
@@ -246,8 +246,8 @@ func meet(id: String) -> void:
 	for stat in (Stats.LIST if game.profile.advanced() else []):
 		var srow := HBoxContainer.new()
 		srow.add_child(UI.icon(Stats.INFO[stat]["icon"], 30))
-		var sl := UI.label(Stats.label(stat), 17)
-		sl.custom_minimum_size = Vector2(90, 0)
+		var sl := UI.label(Stats.label(stat), 20)
+		sl.custom_minimum_size = Vector2(104, 0)
 		srow.add_child(sl)
 		var bar := ProgressBar.new()
 		bar.max_value = Stats.MAX
@@ -272,7 +272,7 @@ func meet(id: String) -> void:
 		var adopt := UI.big_icon_button("ui_adopt", "Adopt for %d stars" % price, func(): game.adopt(id))
 		if gate != "" or game.profile.stars() < price:
 			adopt.disabled = true
-			var why := UI.label(gate if gate != "" else "You need %d more stars" % (price - game.profile.stars()), 18)
+			var why := UI.label(gate if gate != "" else "You need %d more stars" % (price - game.profile.stars()), 20)
 			why.add_theme_color_override("font_color", UI.ACCENT)
 			col.add_child(why)
 		col.add_child(adopt)
@@ -303,7 +303,7 @@ func _item_card(id: String) -> PanelContainer:
 	var name := UI.label(item["name"], 21)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(name)
-	var words := UI.label(item.get("note", ", ".join(item.get("words", []))), 15, true)
+	var words := UI.label(item.get("note", ", ".join(item.get("words", []))), 18, true)
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.add_theme_color_override("font_color", UI.INK_SOFT)
 	words.custom_minimum_size = Vector2(176, 0)
@@ -327,7 +327,7 @@ func _place_card(id: String) -> PanelContainer:
 	var b := UI.place_button(id, Places.display_name(id), Vector2(260, 160), not game.profile.place_unlocked(id))
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(b)
-	var words := UI.label(", ".join(Places.tags(id)), 16)
+	var words := UI.label(", ".join(Places.tags(id)), 19)
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.add_theme_color_override("font_color", UI.INK_SOFT)
 	col.add_child(words)
@@ -360,7 +360,7 @@ func _room_cards() -> void:
 	plot.add_child(col)
 	col.add_child(UI.icon("icon_home", 90))
 	col.add_child(UI.label("New home plot", 22))
-	col.add_child(UI.label("You have %d of %d" % [p.home_slots(), Profile.MAX_HOMES], 16))
+	col.add_child(UI.label("You have %d of %d" % [p.home_slots(), Profile.MAX_HOMES], 21))
 	var price := p.next_home_price()
 	if price < 0:
 		col.add_child(_tag("All the land is yours!"))
@@ -384,7 +384,7 @@ func _room_cards() -> void:
 		var b := UI.place_button(h["place"], Places.display_name(h["place"]), Vector2(260, 120))
 		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		c.add_child(b)
-		c.add_child(UI.label("Rooms: %d of %d" % [int(h["rooms"]), Profile.MAX_ROOMS], 18))
+		c.add_child(UI.label("Rooms: %d of %d" % [int(h["rooms"]), Profile.MAX_ROOMS], 21))
 		var rp := p.next_room_price(h)
 		if rp < 0:
 			c.add_child(_tag("Full size!"))
@@ -409,7 +409,7 @@ func _room_cards() -> void:
 func _buy_button(price: int, on_buy: Callable, gate: String) -> Control:
 	var col := VBoxContainer.new()
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(150, 56)
+	b.custom_minimum_size = Vector2(150, 66)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -423,14 +423,14 @@ func _buy_button(price: int, on_buy: Callable, gate: String) -> Control:
 	col.add_child(b)
 	if gate != "":
 		b.disabled = true
-		var why := UI.label(gate, 15, true)
+		var why := UI.label(gate, 19, true)
 		why.custom_minimum_size = Vector2(176, 0)
 		why.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		why.add_theme_color_override("font_color", UI.ACCENT)
 		col.add_child(why)
 	elif game.profile.stars() < price:
 		b.disabled = true
-		var need := UI.label("Need %d more" % (price - game.profile.stars()), 15)
+		var need := UI.label("Need %d more" % (price - game.profile.stars()), 19)
 		need.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		need.add_theme_color_override("font_color", UI.INK_SOFT)
 		col.add_child(need)

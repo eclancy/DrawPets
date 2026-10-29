@@ -47,6 +47,7 @@ static func _check(c: Control, shot: String, view: Rect2) -> void:
 		return
 	if c is Label and (c as Label).text.strip_edges() != "":
 		_text(c, (c as Label).text, c.get_theme_font_size("font_size") * k, shot)
+		_spill(c as Label, k, shot)
 	elif c is RichTextLabel and (c as RichTextLabel).get_parsed_text().strip_edges() != "":
 		_text(c, (c as RichTextLabel).get_parsed_text(), c.get_theme_font_size("normal_font_size") * k, shot)
 	elif c is Button:
@@ -56,6 +57,22 @@ static func _check(c: Control, shot: String, view: Rect2) -> void:
 		if not b.disabled and b.mouse_filter != Control.MOUSE_FILTER_IGNORE \
 				and minf(box.size.x, box.size.y) < SMALL_TARGET:
 			_note("button", c, _name_of(b), minf(box.size.x, box.size.y), shot)
+
+
+## Words wider than the button they are on (bigger words in a button that stayed the same size).
+static func _spill(l: Label, k: float, shot: String) -> void:
+	if l.autowrap_mode != TextServer.AUTOWRAP_OFF or l.clip_text:
+		return
+	var b: Node = l.get_parent()
+	for i in 3:
+		if b == null or b is Button:
+			break
+		b = b.get_parent()
+	if not (b is Button):
+		return
+	var over := l.get_minimum_size().x * k - (b as Control).size.x * absf((b as Control).get_global_transform_with_canvas().get_scale().x)
+	if over > 2.0:
+		_note("spills", l, l.text.strip_edges().replace("\n", " ").left(48), over, shot)
 
 
 static func _text(c: Control, text: String, px: float, shot: String) -> void:
@@ -123,7 +140,7 @@ static func _write() -> void:
 	var rows: Array = _found.values()
 	rows.sort_custom(_before)
 	var out := PackedStringArray()
-	out.append("Too small on a phone: words under %d px, buttons under %d px either way." % [SMALL_TEXT, SMALL_TARGET])
+	out.append("Too small on a phone: words under %d px, buttons under %d px either way; words spilling out of their button (by how many px)." % [SMALL_TEXT, SMALL_TARGET])
 	out.append("screen | kind | size | what | first seen in (times seen)")
 	for r in rows:
 		out.append("%s | %s | %d | %s | %s (%d)" % [r["screen"], r["kind"], roundi(r["size"]), r["what"],

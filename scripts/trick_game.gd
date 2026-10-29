@@ -243,7 +243,7 @@ func _card_button(t: String) -> Button:
 	pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(pic)
-	var l := UI.label(Tricks.display_name(t), 18)
+	var l := UI.label(Tricks.display_name(t), 22)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(l)
