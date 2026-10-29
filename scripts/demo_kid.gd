@@ -39,6 +39,9 @@ func run() -> void:
 
 func _shot(name: String) -> void:
 	_n += 1
+	# --audit: every word and button too small for a phone, listed in .shots/ui_audit.txt.
+	if game.dev.has("audit"):
+		UIAudit.scan(get_tree().root, "demo_%02d_%s" % [_n, name])
 	await game.capture("demo_%02d_%s" % [_n, name])
 
 
