@@ -13,7 +13,7 @@ extends Node
 ##                   shops and competes, screenshotting every step into .shots/demo_*.png
 ##   --quit          with --demo, quit when it is done
 ##   --stars=N       start with N gold stars (for trying the shop)
-##   --screen=place|create|shop|calendar|swap   boot straight into a screen
+##   --screen=place|create|shop|calendar|swap|feedback   boot straight into a screen
 ##   --shot=N        screenshot frame N to .shots/shot.png. F12 grabs a frame any time.
 ##   --hour=H        pretend it is H o'clock (0-24, e.g. 21.5) - to see dusk, night and morning
 ##   --no-update     an exported Windows build skips its update check (UpdateScreen)
@@ -27,6 +27,11 @@ var _toasts: VBoxContainer
 ## Whether a screen wants the toasts aside (toasts_aside), and whether they are there now.
 var _toasts_aside := false
 var _toasts_right := false
+## The last real screen as the player saw it, for a grown-up's bug report (FeedbackScreen): taken
+## on the way to Settings or feedback from anywhere else, shrunk, and kept in memory only - never
+## written to disk. Settings itself is no use in a bug report, so going on from Settings to
+## feedback keeps the screen from before Settings. Null when there is nothing worth showing.
+var report_picture: Image = null
 
 
 func _ready() -> void:
@@ -78,6 +83,8 @@ func open_first_screen() -> void:
 			go_shop()
 		"calendar":
 			go_calendar()
+		"feedback":
+			_dev_feedback()
 		_:
 			if dev.has("demo"):
 				var kid := DemoKid.new()
@@ -382,6 +389,9 @@ func show_screen(node: Node) -> void:
 
 
 func _swap(node: Node) -> void:
+	# Back to a real screen: the picture of the one before is out of date, and goes.
+	if not _is_report_route(node):
+		report_picture = null
 	if screen != null and is_instance_valid(screen):
 		remove_child(screen)
 		screen.queue_free()
@@ -452,15 +462,29 @@ func _music_for(node: Node) -> void:
 
 
 ## Feedback for a grown-up (FeedbackScreen), from Settings or the drawing's Stop box.
+## From the Stop box the picture it can offer is the drawing in progress; from Settings, the screen
+## before Settings.
 func go_feedback(back: Callable) -> void:
+	await _remember_screen()
 	var s := FeedbackScreen.new()
 	s.game = self
 	s.on_back = back
+	s.picture = report_picture
 	show_screen(s)
+
+
+## --screen=feedback: home, Settings, then the grown-ups' feedback, the way a grown-up gets there.
+func _dev_feedback() -> void:
+	go_home()
+	await get_tree().create_timer(0.8).timeout
+	await go_settings()
+	await get_tree().create_timer(0.4).timeout
+	go_feedback(go_settings.bind(go_home))
 
 
 ## The settings screen, then back where the kid was.
 func go_settings(back := Callable()) -> void:
+	await _remember_screen()
 	var s := SettingsScreen.new()
 	s.game = self
 	s.on_back = back if back.is_valid() else go_home
@@ -592,6 +616,37 @@ func _unhandled_input(event: InputEvent) -> void:
 ## A minimised window draws no frames, so this never waits on one for long: after a moment it
 ## draws one itself (or the demo would sit silent forever).
 func capture(shot_name: String) -> void:
+	var img := await _drawn_frame(shot_name)
+	# res:// is read-only in an exported game (a phone): there, shots go to user://shots, and come
+	# off the device with adb (.ai/android.md).
+	var dir := ProjectSettings.globalize_path("res://.shots" if OS.has_feature("editor") else "user://shots")
+	DirAccess.make_dir_recursive_absolute(dir)
+	img.save_png(dir + "/" + shot_name + ".png")
+	print("Screenshot: .shots/%s.png" % shot_name)
+
+
+## Settings and feedback: the screens a bug report's picture is kept across.
+func _is_report_route(node: Node) -> bool:
+	return node is SettingsScreen or node is FeedbackScreen
+
+
+## On the way to Settings or feedback from a real screen, keeps a picture of it (report_picture)
+## for a bug report - in memory, shrunk, never on disk. The frame is one drawn after this press, so
+## a dialog that has just closed (the Stop box) is not in it. From Settings or feedback themselves
+## it keeps the picture it has.
+func _remember_screen() -> void:
+	if _is_report_route(screen):
+		return
+	report_picture = null
+	if screen == null or not is_instance_valid(screen) or screen is UpdateScreen:
+		return
+	var img := await _drawn_frame("")
+	if img != null and not img.is_empty():
+		report_picture = FeedbackScreen.shrink(img)
+
+
+## The next frame the window draws, as an image.
+func _drawn_frame(why: String) -> Image:
 	var drawn := [false]
 	var mark := func(): drawn[0] = true
 	RenderingServer.frame_post_draw.connect(mark, CONNECT_ONE_SHOT)
@@ -601,12 +656,7 @@ func capture(shot_name: String) -> void:
 		waited += 1
 	if not drawn[0]:
 		RenderingServer.frame_post_draw.disconnect(mark)
-		print("capture: no frame drawn (window hidden?) - drawing one for %s" % shot_name)
+		if why != "":
+			print("capture: no frame drawn (window hidden?) - drawing one for %s" % why)
 		RenderingServer.force_draw()
-	var img := get_viewport().get_texture().get_image()
-	# res:// is read-only in an exported game (a phone): there, shots go to user://shots, and come
-	# off the device with adb (.ai/android.md).
-	var dir := ProjectSettings.globalize_path("res://.shots" if OS.has_feature("editor") else "user://shots")
-	DirAccess.make_dir_recursive_absolute(dir)
-	img.save_png(dir + "/" + shot_name + ".png")
-	print("Screenshot: .shots/%s.png" % shot_name)
+	return get_viewport().get_texture().get_image()

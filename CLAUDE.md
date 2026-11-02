@@ -57,7 +57,9 @@ decision; do not restate it here.
 7. **No AI**, including speech recognition. The mic is loudness and playback only, and it is
    optional - every mic feature has a touch equivalent.
 8. **Nothing a child recorded leaves the device**, and nothing they drew ever goes to a server:
-   pets travel only phone to phone, between kids who are together (`.ai/sharing.md`).
+   pets travel only phone to phone, between kids who are together (`.ai/sharing.md`). The one
+   exception: a grown-up's bug report can carry a picture of the game's screen, only when they
+   tick the box after seeing that exact picture (`FeedbackScreen`).
 
 ## Build & run
 

@@ -118,10 +118,22 @@ starts, with nothing about the player in the request. Nothing a kid made ever go
 web version is a web page: loading it is an ordinary visit to ecec.dev, and its saves stay in the
 browser.
 
-**Feedback** (`FeedbackScreen`, Settings): a grown-up holds a button to report a bug or send an
-idea, typed, to ecec.dev's intake, which saves it and emails it to Eric. No name field, a line
-asking for nothing personal, and only the message, its kind (bug, idea, other) and the game's
-version and platform are sent and kept - no address, nothing a kid drew or recorded.
+**Feedback** (`FeedbackScreen`, from Settings or the drawing's Stop box): a grown-up holds a
+button to report a bug or send an idea, typed, to ecec.dev's intake, which saves it and emails it
+to Eric. No name field, a line asking for nothing personal, and the message, its kind (bug, idea,
+other) and the game's version and platform are sent and kept - no address. **One picture of the
+game's own screen** goes with it only if the grown-up ticks "Include a picture of the game" after
+seeing that exact picture beside a line asking them to check it has no names or faces. The box
+starts off every time and is never remembered. The picture is the screen the player was on before
+Settings, or, from the Stop box, the drawing in progress - so it can show something a kid drew,
+which is what the check is for. It is read from the game's own window and kept in memory only
+(never written to the device, never the camera, the photo picker or another app), shrunk to 1280
+px and sent as a JPEG; with nothing worth showing there is no box. Recordings, photos and names
+are still never sent.
+
+**Before the next Google Play release**, the Data safety form must list this: "Photos and videos >
+Photos" (or app screenshots), collected, optional, for app functionality / diagnostics, not
+shared, sent encrypted (`.ai/android.md`, Later).
 
 ## Visiting
 
