@@ -301,4 +301,7 @@ mdns services` shows it, and `adb connect <ip:port>` gets it back with no pairin
   Release, downloaded from ecec.dev/drawpets/download - see `releasing.md`.
 - Sideloading for the family vs the Play Store: the Play Store means a developer account, a
   privacy policy and the Families policy (the players are under 13 - see `sharing.md`).
+  Its Data safety form must list everything that goes online (`sharing.md`, "What else goes
+  online"), including the bug report's optional picture of the game: "Photos and videos > Photos"
+  (or app screenshots) - collected, optional, not shared. Check this before any Play release.
 - iOS: needs a Mac with Xcode and an Apple developer account.

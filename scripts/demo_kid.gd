@@ -90,6 +90,17 @@ func _draft_round_trip() -> Creator:
 	creator.on_quit_for_demo()
 	await _wait(0.4)
 	await _shot("stop_drawing")
+	# A grown-up's bug report from the Stop box: its picture is the drawing, without the box.
+	creator._report_bug()
+	await _wait(1.0)
+	var fb := game.screen as FeedbackScreen
+	fb.set_include_picture(true)
+	await _wait(0.3)
+	await _shot("stop_feedback_picture")
+	fb._back()
+	await _wait(1.0)
+	creator = game.screen as Creator
+	await _shot("stop_feedback_back")
 	await creator._quit_save()
 	await _wait(1.0)
 	creator = game.start_creator()
@@ -389,6 +400,26 @@ func _settings() -> void:
 	game.go_settings()
 	await _wait(0.6)
 	await _shot("settings")
+	await _feedback()
+
+
+## A grown-up's bug report from Settings: the picture box starts off; ticked, it shows the picture
+## of the screen before Settings. It is only sent to a test intake (DRAWPETS_SITE) - never to
+## ecec.dev, which emails a person.
+func _feedback() -> void:
+	game.go_feedback(game.go_settings.bind(game.go_home))
+	await _wait(0.6)
+	var fb := game.screen as FeedbackScreen
+	fb._text.text = "The demo kid: testing the bug report."
+	fb._on_typed()
+	await _shot("feedback")
+	fb.set_include_picture(true)
+	await _wait(0.3)
+	await _shot("feedback_picture")
+	if OS.get_environment(FeedbackScreen.SITE_OVERRIDE) != "":
+		fb.send()
+		await _wait(3.0)
+		await _shot("feedback_sent")
 
 
 ## The shop's Adopt tab: meet Pip and take it home.
